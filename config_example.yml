@@ -1,0 +1,24 @@
+# 项目名称, 会用来向Jumpserver注册, 识别而已, 不能重复
+# NAME: {{ Hostname }}
+
+# Jumpserver项目的url, api请求注册会使用
+CORE_HOST: http://127.0.0.1:8080
+
+# Bootstrap Token, 预共享秘钥, 用来注册使用的service account和terminal
+# 请和jumpserver 配置文件中保持一致，注册完成后可以删除
+BOOTSTRAP_TOKEN: <PleasgeChangeSameWithJumpserver>
+
+# 启动时绑定的ip, 默认 0.0.0.0
+# BIND_HOST: 0.0.0.0
+
+# 监听的HTTP/WS端口号，默认5000
+# HTTPD_PORT: 8081
+
+# 设置日志级别 [DEBUG, INFO, WARN, ERROR, FATAL, CRITICAL]
+# LOG_LEVEL: INFO
+
+# Guacamole Server ip， 默认127.0.0.1
+# GUA_HOST: 127.0.0.1
+
+# Guacamole Server 端口号，默认4822
+# GUA_PORT: 4822
