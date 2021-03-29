@@ -23,7 +23,15 @@
     <!--        <el-dropdown-item command="e">快捷键5</el-dropdown-item>-->
     <!--      </el-dropdown-menu>-->
     <!--    </el-dropdown>-->
-    <div id="display"></div>
+    <el-card class="box-card">
+      <div slot="header" class="clearfix">
+        <span>卡片名称</span>
+        <el-button style="float: right;" type="text">操作按钮</el-button>
+        <el-button style="float: right;" type="text">操作按钮2</el-button>
+      </div>
+      <div id="display" v-bind:style="divStyle"></div>
+    </el-card>
+
   </el-container>
 
 </template>
@@ -80,15 +88,16 @@ export default {
       let optimal_dpi = pixel_density * 96
       let optimal_width = window.innerWidth * pixel_density
       let optimal_height = window.innerHeight * pixel_density
-
+      this.displayHeight = window.innerHeight * pixel_density - 50
+      this.displayWidth = window.innerWidth * pixel_density
     })
   },
   methods: {
     handleChange() {
-      console.log('changed');
+      console.log('changed')
     },
     inputChanged(value) {
-      this.activeNames = value;
+      this.activeNames = value
     },
     toggle() {
       this.drawer = !this.drawer
