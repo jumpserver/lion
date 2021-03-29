@@ -1,29 +1,28 @@
 <template>
   <el-container>
-      <el-button round size="small" @click="toggle" type="primary" style="position: fixed">
-        更多
-      </el-button>
-      <el-drawer
-          direction="ltr"
-          :visible.sync="drawer">
-        <div>
-          剪切板
-          <textarea v-model="clipboardText"></textarea>
-        </div>
-      </el-drawer>
-      <el-dropdown @command="handleCommand">
-  <span class="el-dropdown-link">
-    快捷键<i class="el-icon-arrow-down el-icon--right"></i>
-  </span>
-        <el-dropdown-menu slot="dropdown">
-          <el-dropdown-item command="a">快捷键1</el-dropdown-item>
-          <el-dropdown-item command="b">快捷键2</el-dropdown-item>
-          <el-dropdown-item command="c">快捷键3</el-dropdown-item>
-          <el-dropdown-item command="d">快捷键4</el-dropdown-item>
-          <el-dropdown-item command="e">快捷键5</el-dropdown-item>
-        </el-dropdown-menu>
-      </el-dropdown>
-
+    <!--    <el-button round size="small" @click="toggle" type="primary" style="float: top; position: absolute; top: 50px; left: 100px">-->
+    <!--      侧边栏-->
+    <!--    </el-button>-->
+    <!--    <el-drawer-->
+    <!--        direction="ltr"-->
+    <!--        :visible.sync="drawer">-->
+    <!--      <span>-->
+    <!--        剪切板-->
+    <!--        <textarea v-model="clipboardText"></textarea>-->
+    <!--      </span>-->
+    <!--    </el-drawer>-->
+    <!--    <el-dropdown @command="handleDropAction" style="float: top;position: absolute; top: 50px; left: 150px">-->
+    <!--  <span class="el-dropdown-link">-->
+    <!--    快捷键<i class="el-icon-arrow-down el-icon&#45;&#45;right"></i>-->
+    <!--  </span>-->
+    <!--      <el-dropdown-menu slot="dropdown">-->
+    <!--        <el-dropdown-item command="a">快捷键1</el-dropdown-item>-->
+    <!--        <el-dropdown-item command="b">快捷键2</el-dropdown-item>-->
+    <!--        <el-dropdown-item command="c">快捷键3</el-dropdown-item>-->
+    <!--        <el-dropdown-item command="d">快捷键4</el-dropdown-item>-->
+    <!--        <el-dropdown-item command="e">快捷键5</el-dropdown-item>-->
+    <!--      </el-dropdown-menu>-->
+    <!--    </el-dropdown>-->
     <div id="display"></div>
   </el-container>
 
@@ -65,32 +64,47 @@ export default {
       files: {}
     }
   },
-  computed: {},
-  mounted: function () {
-    this.getConnectString("0000-0000-00").then(value => {
+  computed: {
+    divStyle: function() {
+      return {
+        width: this.displayWidth + 'px',
+        height: this.displayHeight + 'px'
+      }
+    }
+  },
+  mounted: function() {
+    this.getConnectString('0000-0000-00').then(value => {
       console.log(value)
       // this.createGuacamole(value)
+      let pixel_density = window.devicePixelRatio || 1
+      let optimal_dpi = pixel_density * 96
+      let optimal_width = window.innerWidth * pixel_density
+      let optimal_height = window.innerHeight * pixel_density
+
     })
   },
   methods: {
-    handleCommand(command) {
-      console.log(command)
+    handleChange() {
+      console.log('changed');
+    },
+    inputChanged(value) {
+      this.activeNames = value;
     },
     toggle() {
-      this.drawer = !this.drawer;
+      this.drawer = !this.drawer
     },
     getSupportedGuacAudios() {
-      return Guacamole.AudioPlayer.getSupportedTypes();
+      return Guacamole.AudioPlayer.getSupportedTypes()
     },
     getSupportedGuacVideos() {
-      return Guacamole.VideoPlayer.getSupportedTypes();
+      return Guacamole.VideoPlayer.getSupportedTypes()
     },
     getConnectString(sessionId) {
       // Calculate optimal width/height for display
-      let pixel_density = window.devicePixelRatio || 1;
-      let optimal_dpi = pixel_density * 96;
-      let optimal_width = window.innerWidth * pixel_density;
-      let optimal_height = window.innerHeight * pixel_density;
+      let pixel_density = window.devicePixelRatio || 1
+      let optimal_dpi = pixel_density * 96
+      let optimal_width = window.innerWidth * pixel_density
+      let optimal_height = window.innerHeight * pixel_density
       return new Promise((resolve, reject) => {
         Promise.all([
           GetSupportedMimetypes(),
@@ -98,23 +112,25 @@ export default {
           this.getSupportedGuacVideos()
         ]).then(values => {
           // ["image/jpeg", "image/png", "image/webp"]
-          let supportImages = values[0];
-          let supportAudios = values[1];
-          let supportVideos = values[2];
+          let supportImages = values[0]
+          let supportAudios = values[1]
+          let supportVideos = values[2]
+          this.displayWidth = optimal_width
+          this.displayHeight = optimal_height
           console.log(supportImages, supportAudios, supportVideos)
           var connectString =
-              "SESSION_ID=" + encodeURIComponent(sessionId)
-              + "&GUAC_WIDTH=" + Math.floor(optimal_width)
-              + "&GUAC_HEIGHT=" + Math.floor(optimal_height)
-              + "&GUAC_DPI=" + Math.floor(optimal_dpi);
-          supportImages.forEach(function (mimetype) {
-            connectString += "&GUAC_IMAGE=" + encodeURIComponent(mimetype);
-          });
-          supportAudios.forEach(function (mimetype) {
-            connectString += "&GUAC_AUDIO=" + encodeURIComponent(mimetype);
-          });
-          supportVideos.forEach(function (mimetype) {
-            connectString += "&GUAC_VIDEO=" + encodeURIComponent(mimetype);
+              'SESSION_ID=' + encodeURIComponent(sessionId)
+              + '&GUAC_WIDTH=' + Math.floor(optimal_width)
+              + '&GUAC_HEIGHT=' + Math.floor(optimal_height)
+              + '&GUAC_DPI=' + Math.floor(optimal_dpi)
+          supportImages.forEach(function(mimetype) {
+            connectString += '&GUAC_IMAGE=' + encodeURIComponent(mimetype)
+          })
+          supportAudios.forEach(function(mimetype) {
+            connectString += '&GUAC_AUDIO=' + encodeURIComponent(mimetype)
+          })
+          supportVideos.forEach(function(mimetype) {
+            connectString += '&GUAC_VIDEO=' + encodeURIComponent(mimetype)
           })
           resolve(connectString)
         })
@@ -321,15 +337,14 @@ export default {
         if (displayHeight === this.displayHeight && displayWidth === this.displayWidth) {
           return
         }
-        let pixel_density = window.devicePixelRatio || 1;
-        let optimal_width = window.innerWidth * pixel_density;
-        let optimal_height = window.innerHeight * pixel_density;
+        let pixel_density = window.devicePixelRatio || 1
+        let optimal_width = window.innerWidth * pixel_density
+        let optimal_height = window.innerHeight * pixel_density
         const width = optimal_width
         const height = optimal_height
         this.client.sendSize(width, height)
         this.displayWidth = width
         this.displayHeight = height
-        console.log(width, height)
       }
     },
 
@@ -472,17 +487,17 @@ export default {
       console.log(url)
 
     },
-    onsync: function (timestamp) {
+    onsync: function(timestamp) {
     },
-    filedragenter: function (e) {
+    filedragenter: function(e) {
       e.stopPropagation()
       e.preventDefault()
     },
-    filedragover: function (e) {
+    filedragover: function(e) {
       e.stopPropagation()
       e.preventDefault()
     },
-    filedrop: function (e) {
+    filedrop: function(e) {
       e.stopPropagation()
       e.preventDefault()
       const dt = e.dataTransfer
@@ -490,7 +505,7 @@ export default {
 
       this.handleFiles(files)
     },
-    handleFiles: function (files) {
+    handleFiles: function(files) {
       console.log(files)
       let file = files[0]
       console.log(file.type, file.name)
@@ -498,7 +513,7 @@ export default {
       let tunnel = this.tunnel
       // let stream;
       let stream = client.createFileStream(file.type, file.name)
-      let sanitizeFilename = this.sanitizeFilename;
+      let sanitizeFilename = this.sanitizeFilename
       // Upload file once stream is acknowledged
       stream.onack = function beginUpload(status) {
 
@@ -568,9 +583,10 @@ export default {
       }
     },
 
-    createGuacamole: function (connectionParams) {
+    createGuacamole(connectionParams) {
 
       let dropbox = document.getElementById('display')
+      console.log(dropbox)
       dropbox.addEventListener('dragenter', this.filedragenter, false)
       dropbox.addEventListener('dragover', this.filedragover, false)
       dropbox.addEventListener('drop', this.filedrop, false)
@@ -604,7 +620,7 @@ export default {
       // Handle any received files
       client.connect(connectionParams)
 
-      window.onunload = function () {
+      window.onunload = function() {
         client.disconnect()
       }
       var mouse = new Guacamole.Mouse(client.getDisplay().getElement())
@@ -613,12 +629,12 @@ export default {
 
       mouse.onmouseup = mouse.onmousemove = this.handleMouseState
       // Hide software cursor when mouse leaves display
-      mouse.onmouseout = function () {
+      mouse.onmouseout = function() {
         if (!client.getDisplay()) return
         client.getDisplay().showCursor(false)
       }
       client.getDisplay().oncursor = this.oncursor
-      client.getDisplay().getElement().onclick = function (e) {
+      client.getDisplay().getElement().onclick = function(e) {
         e.preventDefault()
         return false
       }
@@ -629,11 +645,11 @@ export default {
       // Keyboard
       var keyboard = new Guacamole.Keyboard(sink.getElement())
 
-      keyboard.onkeydown = function (keysym) {
+      keyboard.onkeydown = function(keysym) {
         client.sendKeyEvent(1, keysym)
       }
 
-      keyboard.onkeyup = function (keysym) {
+      keyboard.onkeyup = function(keysym) {
         client.sendKeyEvent(0, keysym)
       }
       let width = window.innerWidth
@@ -649,6 +665,10 @@ export default {
 </script>
 
 <style scoped>
+.container div {
+  margin: 0 auto;
+}
+
 .el-dropdown-link {
   cursor: pointer;
   color: #409EFF;
