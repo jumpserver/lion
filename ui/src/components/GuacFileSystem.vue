@@ -1,7 +1,8 @@
 <template>
   <div class="file-browser">
-    <di>{{ name }}</di>
-    <GuacFile v-for="(item ,index) in currentDirectory.files" :key="index" v-bind="item"></GuacFile>
+    <GuacFile v-for="(item ,index) in currentFolder.files" :key="index" v-bind:fileItem="item"
+              v-on:DownLoadFile="DownLoadFile"
+              v-on:ChangeFolder="ChangeFolder"/>
   </div>
 </template>
 
@@ -20,35 +21,44 @@ export default {
       type: Object,
       default: null
     },
-    name: {
-      type: String,
-      default: ''
-    }
-  },
-  data() {
-    const root = this.createFile({
-      mimetype: Guacamole.Object.STREAM_INDEX_MIMETYPE,
-      streamName: Guacamole.Object.ROOT_STREAM,
-      type: FileType.DIRECTORY
-
-    })
-    return {
-      root: this.createFile(root),
-      currentDirectory: this.createFile(root),
-      files: {},
+    currentFolder: {
+      type: Object,
+      default: null
     }
   },
   mounted: function() {
-    this.updateDirectory(this.currentDirectory)
-    console.log('mounted GuacFileSystem')
+    console.log('mounted GuacFileSystem ', this.currentFolder)
+    this.updateDirectory(this.currentFolder)
+
   },
   destroyed: function() {
     console.log('destroyed GuacFileSystem')
   },
-  computed: {
-
-  },
   methods: {
+    DownLoadFile(fileItem) {
+      let path = fileItem.streamName
+      let downloadStreamReceived = function downloadStreamReceived(stream, mimetype) {
+        // Parse filename from string
+        var filename = path.match(/(.*[\\/])?(.*)/)[2]
+        // Start download
+        this.$emit('DownLoadReceived', stream, mimetype, filename)
+      }.bind(this)
+      this.guacObject.requestInputStream(path, downloadStreamReceived)
+    },
+
+    ChangeFolder(fileItem) {
+      // this.updateDirectory(fileItem)
+      console.log('ChangeFolder ', fileItem)
+      this.$emit('ChangeFolder', fileItem)
+    },
+    ChangeParentFolder() {
+      if (this.currentFolder.parent === null) {
+        console.log('没有parent目录了')
+        return
+      }
+      console.log('切换到parent目录了', this.currentFolder)
+      this.$emit('ChangeParentFolder', this.currentFolder.parent)
+    },
     createFile(template) {
       return {
         mimetype: template.mimetype,

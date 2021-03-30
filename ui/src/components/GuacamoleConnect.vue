@@ -4,7 +4,6 @@
              @mouseleave.native="isCollapse = true"
              @mouseover.native="isCollapse = false"
     >
-
       <el-submenu index="1">
         <template slot="title">
           <i class="el-icon-position"></i>
@@ -29,9 +28,13 @@
       <el-menu-item><i class="el-icon-folder"></i>
         <span @click="toggleFile">文件管理</span>
         <el-drawer direction="ltr" :visible.sync="fileDrawer">
+          <div>{{ currentFilesystem.name }}</div>
+          <div @click="ChangeParentFolder">{{ currentFolder.streamName }}</div>
           <GuacFileSystem
               v-bind:guac-object="currentFilesystem.object"
-              v-bind:name="currentFilesystem.name"
+              v-bind:currentFolder="currentFolder"
+              v-on:ChangeFolder="ChangeFolder"
+              v-on:DownLoadReceived="DownLoadReceived"
           />
         </el-drawer>
       </el-menu-item>
@@ -78,14 +81,15 @@ export default {
         data: '',
       },
       currentFilesystem: {
-        object: {},
+        object: null,
         name: '',
-        root: {
-          mimetype: Guacamole.Object.STREAM_INDEX_MIMETYPE,
-          streamName: Guacamole.Object.ROOT_STREAM,
-          type: 'DIRECTORY',
-          files: {},
-        },
+      },
+      currentFolder: {
+        mimetype: Guacamole.Object.STREAM_INDEX_MIMETYPE,
+        streamName: Guacamole.Object.ROOT_STREAM,
+        type: 'DIRECTORY',
+        files: {},
+        parent: null,
       },
       files: {}
     }
@@ -108,6 +112,18 @@ export default {
     })
   },
   methods: {
+    DownLoadReceived(stream, mimetype, filename) {
+      console.log(stream, mimetype, filename)
+      this.clientFileReceived(stream, mimetype, filename)
+    },
+    ChangeFolder(fileItem) {
+      this.currentFolder = fileItem
+    },
+    ChangeParentFolder() {
+      if (this.currentFolder.parent !== null) {
+        this.currentFolder = this.currentFolder.parent
+      }
+    },
     ClipboardChange(data) {
       console.log('ClipboardChange emit ', data)
       this.clipboardText = data
@@ -497,7 +513,7 @@ export default {
           if (iframe.parentElement) {
             document.body.removeChild(iframe)
           }
-        }, 5000)
+        }, 500)
       }
 
       // Begin download
