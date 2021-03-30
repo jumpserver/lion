@@ -1,37 +1,45 @@
 <template>
   <el-container>
-    <!--    <el-button round size="small" @click="toggle" type="primary" style="float: top; position: absolute; top: 50px; left: 100px">-->
-    <!--      侧边栏-->
-    <!--    </el-button>-->
-    <!--    <el-drawer-->
-    <!--        direction="ltr"-->
-    <!--        :visible.sync="drawer">-->
-    <!--      <span>-->
-    <!--        剪切板-->
-    <!--        <textarea v-model="clipboardText"></textarea>-->
-    <!--      </span>-->
-    <!--    </el-drawer>-->
-    <!--    <el-dropdown @command="handleDropAction" style="float: top;position: absolute; top: 50px; left: 150px">-->
-    <!--  <span class="el-dropdown-link">-->
-    <!--    快捷键<i class="el-icon-arrow-down el-icon&#45;&#45;right"></i>-->
-    <!--  </span>-->
-    <!--      <el-dropdown-menu slot="dropdown">-->
-    <!--        <el-dropdown-item command="a">快捷键1</el-dropdown-item>-->
-    <!--        <el-dropdown-item command="b">快捷键2</el-dropdown-item>-->
-    <!--        <el-dropdown-item command="c">快捷键3</el-dropdown-item>-->
-    <!--        <el-dropdown-item command="d">快捷键4</el-dropdown-item>-->
-    <!--        <el-dropdown-item command="e">快捷键5</el-dropdown-item>-->
-    <!--      </el-dropdown-menu>-->
-    <!--    </el-dropdown>-->
-    <el-card class="box-card">
-      <div slot="header" class="clearfix">
-        <span>卡片名称</span>
-        <el-button style="float: right;" type="text">操作按钮</el-button>
-        <el-button style="float: right;" type="text">操作按钮2</el-button>
-      </div>
-      <div id="display" v-bind:style="divStyle"></div>
-    </el-card>
+    <el-menu default-active="1" :collapse="isCollapse"
+             @mouseleave.native="isCollapse = true"
+             @mouseover.native="isCollapse = false"
+    >
 
+      <el-submenu index="1">
+        <template slot="title">
+          <i class="el-icon-position"></i>
+          <span>快捷键</span>
+        </template>
+        <el-menu-item index="1-1">选项1</el-menu-item>
+        <el-menu-item index="1-2">选项2</el-menu-item>
+      </el-submenu>
+
+      <el-menu-item><i class="el-icon-document-copy"></i>
+        <span @click="toggleClipboard">剪切板</span>
+        <el-drawer direction="ltr" :visible.sync="clipboardDrawer">
+          <el-row>
+            <el-col :span="12" :offset="8">
+              <div class="grid-content bg-purple">
+                <textarea v-model="clipboardText"></textarea></div>
+            </el-col>
+          </el-row>
+        </el-drawer>
+      </el-menu-item>
+      <el-menu-item><i class="el-icon-folder"></i>
+        <span @click="toggleFile">文件管理</span>
+        <el-drawer direction="ltr" :visible.sync="fileDrawer">
+          <el-row>
+            文件系统
+          </el-row>
+        </el-drawer>
+      </el-menu-item>
+
+    </el-menu>
+    <el-main>
+      <el-row v-loading="loading" :element-loading-text="clientState" element-loading-background="rgba(0, 0, 0, 0.8">
+        <div v-bind:style="divStyle" id="display"></div>
+      </el-row>
+    </el-main>
   </el-container>
 
 </template>
@@ -39,19 +47,21 @@
 <script>
 import Guacamole from 'guacamole-common-js'
 import {GetSupportedMimetypes} from '../utils/image'
+import {sanitizeFilename} from '../utils/common'
 
 export default {
   name: 'GuacamoleConnect',
   data() {
     return {
-      drawer: false,
-      direction: 'rtl',
+      isCollapse: true,
+      clipboardDrawer: false,
+      fileDrawer: false,
       tunnelState: '',
-      clientState: '',
+      loading: true,
+      clientState: '连中。。。',
       localCursor: false,
-      client: {},
-      tunnel: {},
-      styleOverflow: 'hidden',
+      client: null,
+      tunnel: null,
       displayWidth: 0,
       displayHeight: 0,
       clipboardText: '',
@@ -81,6 +91,9 @@ export default {
     }
   },
   mounted: function() {
+    window.addEventListener('resize', this.onWindowResize)
+    window.onfocus = this.onWindowFocus
+
     this.getConnectString('0000-0000-00').then(value => {
       console.log(value)
       // this.createGuacamole(value)
@@ -88,19 +101,27 @@ export default {
       let optimal_dpi = pixel_density * 96
       let optimal_width = window.innerWidth * pixel_density
       let optimal_height = window.innerHeight * pixel_density
-      this.displayHeight = window.innerHeight * pixel_density - 50
-      this.displayWidth = window.innerWidth * pixel_density
+      this.displayHeight = optimal_height
+      this.displayWidth = window.innerWidth * pixel_density - 64
     })
   },
   methods: {
-    handleChange() {
-      console.log('changed')
+    handleDropAction(e) {
+      console.log(e)
     },
-    inputChanged(value) {
-      this.activeNames = value
+    resizeDisplaySize() {
+      let pixel_density = window.devicePixelRatio || 1
+      let optimal_dpi = pixel_density * 96
+      let optimal_width = window.innerWidth * pixel_density
+      let optimal_height = window.innerHeight * pixel_density
+      this.displayWidth = optimal_width
+      this.displayHeight = optimal_height
     },
-    toggle() {
-      this.drawer = !this.drawer
+    toggleClipboard() {
+      this.clipboardDrawer = !this.clipboardDrawer
+    },
+    toggleFile() {
+      this.fileDrawer = !this.fileDrawer
     },
     getSupportedGuacAudios() {
       return Guacamole.AudioPlayer.getSupportedTypes()
@@ -202,7 +223,6 @@ export default {
           // Connected
         case 3:
           this.clientState = 'Connected'
-          this.styleOverflow = ''
           console.log('clientState, Connected ')
           // Send any clipboard data already provided
           // if (managedClient.clipboardData)
@@ -338,23 +358,23 @@ export default {
     },
 
     onWindowResize() {
-      if (this.client) {
+      let pixel_density = window.devicePixelRatio || 1
+      let optimal_width = window.innerWidth * pixel_density
+      let optimal_height = window.innerHeight * pixel_density
+      const width = optimal_width - 64
+      const height = optimal_height
+      if (this.client !== null) {
         const display = this.client.getDisplay()
-
-        let displayHeight = display.getHeight()
+        let displayHeight = display.getHeight() * pixel_density
         let displayWidth = display.getWidth() * pixel_density
-        if (displayHeight === this.displayHeight && displayWidth === this.displayWidth) {
+        if (displayHeight === width && displayWidth === height) {
           return
         }
-        let pixel_density = window.devicePixelRatio || 1
-        let optimal_width = window.innerWidth * pixel_density
-        let optimal_height = window.innerHeight * pixel_density
-        const width = optimal_width
-        const height = optimal_height
         this.client.sendSize(width, height)
-        this.displayWidth = width
-        this.displayHeight = height
       }
+      this.displayWidth = width
+      this.displayHeight = height
+      console.log(width, height)
     },
 
     onWindowFocus() {
@@ -367,10 +387,6 @@ export default {
           })
         })
       }
-    },
-
-    sanitizeFilename(filename) {
-      return filename.replace(/[\\\/]+/g, '_')
     },
 
     fileSystemReceived(object, name) {
@@ -455,7 +471,7 @@ export default {
       var url = streamOrigin + '/guacamole'
           + '/api/tunnels/' + encodeURIComponent(this.tunnel.uuid)
           + '/streams/' + encodeURIComponent(stream.index)
-          + '/' + encodeURIComponent(this.sanitizeFilename(filename))
+          + '/' + encodeURIComponent(sanitizeFilename(filename))
 
       // Create temporary hidden iframe to facilitate download
       var iframe = document.createElement('iframe')
@@ -497,6 +513,7 @@ export default {
 
     },
     onsync: function(timestamp) {
+      console.log('onsync==> ', timestamp)
     },
     filedragenter: function(e) {
       e.stopPropagation()
@@ -522,7 +539,6 @@ export default {
       let tunnel = this.tunnel
       // let stream;
       let stream = client.createFileStream(file.type, file.name)
-      let sanitizeFilename = this.sanitizeFilename
       // Upload file once stream is acknowledged
       stream.onack = function beginUpload(status) {
 
@@ -665,8 +681,6 @@ export default {
       let height = window.innerHeight
       this.displayWidth = width
       this.displayHeight = height
-      window.addEventListener('resize', this.onWindowResize)
-      window.onfocus = this.onWindowFocus
     }
   }
 
@@ -674,8 +688,12 @@ export default {
 </script>
 
 <style scoped>
-.container div {
+.el-container {
   margin: 0 auto;
+}
+
+.el-main {
+  padding: 0;
 }
 
 .el-dropdown-link {
