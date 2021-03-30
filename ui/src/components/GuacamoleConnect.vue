@@ -29,9 +29,10 @@
       <el-menu-item><i class="el-icon-folder"></i>
         <span @click="toggleFile">文件管理</span>
         <el-drawer direction="ltr" :visible.sync="fileDrawer">
-          <el-row>
-            文件系统
-          </el-row>
+            <GuacFileSystem
+                v-bind:guac-object="currentFilesystem.object"
+                v-bind:name="currentFilesystem.name"
+            />
         </el-drawer>
       </el-menu-item>
 
@@ -50,11 +51,13 @@ import Guacamole from 'guacamole-common-js'
 import {GetSupportedMimetypes} from '../utils/image'
 import {sanitizeFilename} from '../utils/common'
 import GuacClipboard from './GuacClipboard'
+import GuacFileSystem from './GuacFileSystem'
 
 export default {
   name: 'GuacamoleConnect',
   components: {
     GuacClipboard,
+    GuacFileSystem,
   },
   data() {
     return {
@@ -384,7 +387,7 @@ export default {
       this.currentFilesystem.object = object
       this.currentFilesystem.name = name
 
-      this.currentFilesystem.object.requestInputStream(this.currentFilesystem.root.streamName, this.handleStream)
+      // this.currentFilesystem.object.requestInputStream(this.currentFilesystem.root.streamName, this.handleStream)
     },
 
     handleStream(stream, mimetype) {
@@ -406,7 +409,7 @@ export default {
       }
 
       // Reset contents of directory
-      var files = this.files
+      var files = {}
       reader.onend = function jsonReady() {
 
         // Determine the expected filename prefix of each stream
