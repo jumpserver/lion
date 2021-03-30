@@ -20,7 +20,8 @@
           <el-row>
             <el-col :span="12" :offset="8">
               <div class="grid-content bg-purple">
-                <textarea v-model="clipboardText"></textarea></div>
+                <GuacClipboard v-bind:value="clipboardText" v-on:ClipboardChange="ClipboardChange"/>
+              </div>
             </el-col>
           </el-row>
         </el-drawer>
@@ -48,9 +49,13 @@
 import Guacamole from 'guacamole-common-js'
 import {GetSupportedMimetypes} from '../utils/image'
 import {sanitizeFilename} from '../utils/common'
+import GuacClipboard from './GuacClipboard'
 
 export default {
   name: 'GuacamoleConnect',
+  components: {
+    GuacClipboard,
+  },
   data() {
     return {
       isCollapse: true,
@@ -64,7 +69,7 @@ export default {
       tunnel: null,
       displayWidth: 0,
       displayHeight: 0,
-      clipboardText: '',
+      clipboardText: 'test',
       clipboardData: {
         type: 'text/plain',
         data: '',
@@ -93,29 +98,16 @@ export default {
   mounted: function() {
     window.addEventListener('resize', this.onWindowResize)
     window.onfocus = this.onWindowFocus
-
-    this.getConnectString('0000-0000-00').then(value => {
-      console.log(value)
-      // this.createGuacamole(value)
-      let pixel_density = window.devicePixelRatio || 1
-      let optimal_dpi = pixel_density * 96
-      let optimal_width = window.innerWidth * pixel_density
-      let optimal_height = window.innerHeight * pixel_density
-      this.displayHeight = optimal_height
-      this.displayWidth = window.innerWidth * pixel_density - 64
+    this.getConnectString('0000-0000-00').then(connectionParams => {
+      console.log(connectionParams)
+      console.log(this.displayWidth, this.displayHeight)
+      this.createGuacamole(connectionParams)
     })
   },
   methods: {
-    handleDropAction(e) {
-      console.log(e)
-    },
-    resizeDisplaySize() {
-      let pixel_density = window.devicePixelRatio || 1
-      let optimal_dpi = pixel_density * 96
-      let optimal_width = window.innerWidth * pixel_density
-      let optimal_height = window.innerHeight * pixel_density
-      this.displayWidth = optimal_width
-      this.displayHeight = optimal_height
+    ClipboardChange(data) {
+      console.log('ClipboardChange emit ', data)
+      this.clipboardText = data
     },
     toggleClipboard() {
       this.clipboardDrawer = !this.clipboardDrawer
@@ -133,7 +125,7 @@ export default {
       // Calculate optimal width/height for display
       let pixel_density = window.devicePixelRatio || 1
       let optimal_dpi = pixel_density * 96
-      let optimal_width = window.innerWidth * pixel_density
+      let optimal_width = window.innerWidth * pixel_density - 64
       let optimal_height = window.innerHeight * pixel_density
       return new Promise((resolve, reject) => {
         Promise.all([
@@ -147,7 +139,6 @@ export default {
           let supportVideos = values[2]
           this.displayWidth = optimal_width
           this.displayHeight = optimal_height
-          console.log(supportImages, supportAudios, supportVideos)
           var connectString =
               'SESSION_ID=' + encodeURIComponent(sessionId)
               + '&GUAC_WIDTH=' + Math.floor(optimal_width)
@@ -224,6 +215,7 @@ export default {
         case 3:
           this.clientState = 'Connected'
           console.log('clientState, Connected ')
+          this.loading = false
           // Send any clipboard data already provided
           // if (managedClient.clipboardData)
           //     ManagedClient.setClipboard(managedClient, managedClient.clipboardData);
@@ -263,9 +255,8 @@ export default {
       console.log(stats)
     },
 
-    sendClipboard(data) {
+    sendClientClipboard(data) {
       let writer
-
       // Create stream with proper mimetype
       const stream = this.client.createClipboardStream(data.type)
 
@@ -290,10 +281,9 @@ export default {
       console.log('send: ', data)
     },
 
-    clientClipboardReceived(stream, mimetype) {
+    receiveClientClipboard(stream, mimetype) {
       console.log('recv: ', stream, mimetype)
       let reader
-
       // If the received data is text, read it as a simple string
       if (/^text\//.exec(mimetype)) {
 
@@ -307,15 +297,11 @@ export default {
 
         // Set clipboard contents once stream is finished
         reader.onend = async () => {
-
-          // message.info('您选择的内容已复制到您的粘贴板中，在右侧的输入框中可同时查看到。');
           this.clipboardText = data
-
           if (navigator.clipboard) {
             await navigator.clipboard.writeText(data)
           }
         }
-
       }
 
       // Otherwise read the clipboard data as a Blob
@@ -381,7 +367,11 @@ export default {
       console.log('onWindowFocus   ')
       if (navigator.clipboard && navigator.clipboard.readText && this.clientState === 'Connected') {
         navigator.clipboard.readText().then((text) => {
-          this.sendClipboard({
+          if (this.clipboardText === text) {
+            console.log('内容一样，可以不发送')
+            return
+          }
+          this.sendClientClipboard({
             'data': text,
             'type': 'text/plain'
           })
@@ -512,8 +502,9 @@ export default {
       console.log(url)
 
     },
+
     onsync: function(timestamp) {
-      console.log('onsync==> ', timestamp)
+      // console.log('onsync==> ', timestamp)
     },
     filedragenter: function(e) {
       e.stopPropagation()
@@ -616,7 +607,6 @@ export default {
       dropbox.addEventListener('dragover', this.filedragover, false)
       dropbox.addEventListener('drop', this.filedrop, false)
 
-
       var display = document.getElementById('display')
       var tunnel = new Guacamole.WebSocketTunnel('/guacamole/ws')
       var client = new Guacamole.Client(tunnel)
@@ -634,11 +624,9 @@ export default {
       this.display = this.client.getDisplay()
       display.appendChild(client.getDisplay().getElement())
       client.onstatechange = this.clientStateChanged
-
       client.onerror = this.clientOnErr
-
       // 处理从虚拟机收到的剪贴板内容
-      client.onclipboard = this.clientClipboardReceived
+      client.onclipboard = this.receiveClientClipboard
       client.onfilesystem = this.fileSystemReceived
       client.onfile = this.clientFileReceived
       client.onsync = this.onsync
@@ -677,10 +665,6 @@ export default {
       keyboard.onkeyup = function(keysym) {
         client.sendKeyEvent(0, keysym)
       }
-      let width = window.innerWidth
-      let height = window.innerHeight
-      this.displayWidth = width
-      this.displayHeight = height
     }
   }
 
