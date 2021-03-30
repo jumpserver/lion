@@ -29,10 +29,10 @@
       <el-menu-item><i class="el-icon-folder"></i>
         <span @click="toggleFile">文件管理</span>
         <el-drawer direction="ltr" :visible.sync="fileDrawer">
-            <GuacFileSystem
-                v-bind:guac-object="currentFilesystem.object"
-                v-bind:name="currentFilesystem.name"
-            />
+          <GuacFileSystem
+              v-bind:guac-object="currentFilesystem.object"
+              v-bind:name="currentFilesystem.name"
+          />
         </el-drawer>
       </el-menu-item>
 
@@ -48,8 +48,8 @@
 
 <script>
 import Guacamole from 'guacamole-common-js'
-import {GetSupportedMimetypes} from '../utils/image'
-import {sanitizeFilename} from '../utils/common'
+import { GetSupportedMimetypes } from '../utils/image'
+import { sanitizeFilename } from '../utils/common'
 import GuacClipboard from './GuacClipboard'
 import GuacFileSystem from './GuacFileSystem'
 

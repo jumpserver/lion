@@ -1,12 +1,13 @@
 <template>
-  <el-row class="file-browser">
+  <div class="file-browser">
+    <di>{{ name }}</di>
     <GuacFile v-for="(item ,index) in currentDirectory.files" :key="index" v-bind="item"></GuacFile>
-  </el-row>
+  </div>
 </template>
 
 <script>
 import Guacamole from 'guacamole-common-js'
-import {FileType} from '../utils/common'
+import { FileType } from '../utils/common'
 import GuacFile from './GuacFile'
 
 export default {
@@ -39,6 +40,13 @@ export default {
   },
   mounted: function() {
     this.updateDirectory(this.currentDirectory)
+    console.log('mounted GuacFileSystem')
+  },
+  destroyed: function() {
+    console.log('destroyed GuacFileSystem')
+  },
+  computed: {
+
   },
   methods: {
     createFile(template) {
