@@ -9,8 +9,9 @@
           <i class="el-icon-position"></i>
           <span>快捷键</span>
         </template>
-        <el-menu-item :disabled="menuDisable" index="1-1">选项1</el-menu-item>
-        <el-menu-item :disabled="menuDisable" index="1-2">选项2</el-menu-item>
+        <el-menu-item v-for="(item, i) in combinationKeys" :key="i" v-bind:index="menuIndex('1-',i)" @click="handleKeys(item.keys)">
+          {{ item.name }}
+        </el-menu-item>
       </el-submenu>
 
       <el-menu-item :disabled="menuDisable" index="2"><i class="el-icon-document-copy"></i>
@@ -93,6 +94,36 @@ export default {
         files: {},
         parent: null,
       },
+      combinationKeys: [
+        {
+          keys: ['65507', '65513', '65535'],
+          name: 'Ctrl+Alt+Delete',
+        },
+        {
+          keys: ['65507', '65513', '65288'],
+          name: 'Ctrl+Alt+Backspace',
+        },
+        {
+          keys: ['65515', '100'],
+          name: 'Windows+D',
+        },
+        {
+          keys: ['65515', '101'],
+          name: 'Windows+E',
+        },
+        {
+          keys: ['65515', '114'],
+          name: 'Windows+R',
+        },
+        {
+          keys: ['65515', '120'],
+          name: 'Windows+X',
+        },
+        {
+          keys: ['65515'],
+          name: 'Windows',
+        },
+      ]
     }
   },
   computed: {
@@ -116,6 +147,10 @@ export default {
     })
   },
   methods: {
+    menuIndex(index, num) {
+      return index + num
+    },
+
     UploadFile(files) {
       for (let i = 0; i < files.length; i++) {
         let streamName
@@ -607,6 +642,18 @@ export default {
       })
     },
 
+    handleKeys(keys) {
+      if (!this.client) {
+        return
+      }
+      for (let i = 0; i < keys.length; i++) {
+        this.client.sendKeyEvent(1, keys[i])
+
+      }
+      for (let i = 0; i < keys.length; i++) {
+        this.client.sendKeyEvent(0, keys[i])
+      }
+    },
     createGuacamole(connectionParams) {
 
       let dropbox = document.getElementById('display')
