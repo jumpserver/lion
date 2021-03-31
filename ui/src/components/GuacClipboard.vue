@@ -13,28 +13,10 @@ export default {
       default: ''
     }
   },
-  data() {
-    return {
-      clipboardData: {
-        type: 'text/plain',
-        data: ''
-      }
-    }
-  },
-
   methods: {
-    getLocalClipboard() {
-      if (navigator.clipboard && navigator.clipboard.readText) {
-        navigator.clipboard.readText().then(function textRead(text) {
-          this.clipboardData.data = text
-        })
-      }
-    },
     debounceInput(event) {
-      this.clipboardText = null
       clearTimeout(this.debounce)
       this.debounce = setTimeout(() => {
-        this.clipboardText = event.target.value
         this.$emit('ClipboardChange', event.target.value)
       }, 600)
     }

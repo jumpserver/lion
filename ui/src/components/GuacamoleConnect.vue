@@ -9,8 +9,8 @@
           <i class="el-icon-position"></i>
           <span>快捷键</span>
         </template>
-        <el-menu-item index="1-1">选项1</el-menu-item>
-        <el-menu-item index="1-2">选项2</el-menu-item>
+        <el-menu-item :disabled="menuDisable" index="1-1">选项1</el-menu-item>
+        <el-menu-item :disabled="menuDisable" index="1-2">选项2</el-menu-item>
       </el-submenu>
 
       <el-menu-item :disabled="menuDisable" index="2"><i class="el-icon-document-copy"></i>
@@ -103,7 +103,7 @@ export default {
       }
     },
     menuDisable: function() {
-      return !(this.clientState === 'Connected')
+      return !(this.clientState === 'Connected') || !(this.tunnelState === 'OPEN')
     }
   },
   mounted: function() {
@@ -143,11 +143,22 @@ export default {
     ClipboardChange(data) {
       console.log('ClipboardChange emit ', data)
       this.clipboardText = data
+      this.sendClientClipboard({
+        'data': data,
+        'type': 'text/plain'
+      })
+      this.setLocalClipboard(data)
     },
     toggleClipboard() {
+      if (this.menuDisable) {
+        return
+      }
       this.clipboardDrawer = !this.clipboardDrawer
     },
     toggleFile() {
+      if (this.menuDisable) {
+        return
+      }
       this.fileDrawer = !this.fileDrawer
     },
     getSupportedGuacAudios() {
@@ -192,6 +203,7 @@ export default {
         })
       })
     },
+
     onTunnelStateChanged(state) {
 
       switch (state) {
@@ -217,6 +229,7 @@ export default {
         case Guacamole.Tunnel.State.CLOSED:
           this.tunnelState = 'CLOSED'
           console.log('tunnelStateChanged Tunnel.State.CLOSED ')
+          this.closeDisplay('tunnelStateChanged CLOSED')
           break
         default:
           this.tunnelState = 'unknown'
@@ -280,6 +293,7 @@ export default {
         case 5: // Disconnected
           this.clientState = 'Disconnecting'
           console.log('clientState, Disconnected ')
+          this.closeDisplay('clientState Disconnecting')
           break
 
       }
@@ -287,21 +301,26 @@ export default {
 
     clientOnErr(stats) {
       this.client.disconnect()
+      this.closeDisplay(stats)
+    },
+
+    closeDisplay(stats) {
       console.log(stats)
-      this.$alert('连接关闭===', stats, {
+      this.$alert('关闭窗口===', stats, {
         confirmButtonText: '确定',
         callback: action => {
           let display = document.getElementById('display')
-          display.removeChild(this.client.getDisplay().getElement())
-          this.$message({
-            type: 'info',
-            message: `action: ${ action }`
-          })
+          if (this.client) {
+            display.removeChild(this.client.getDisplay().getElement())
+          }
         }
       })
     },
 
     sendClientClipboard(data) {
+      if (!this.client) {
+        return
+      }
       let writer
       // Create stream with proper mimetype
       const stream = this.client.createClipboardStream(data.type)
@@ -321,9 +340,6 @@ export default {
         // Begin sending data
         writer.sendBlob(data.data)
       }
-
-      this.clipboardText = data.data
-
       console.log('send: ', data)
     },
 
@@ -366,7 +382,11 @@ export default {
     oncursor(canvas, x, y) {
       this.localCursor = true
     },
-
+    setLocalClipboard(data) {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(data)
+      }
+    },
     handleMouseState(mouseState) {
 
       // Do not attempt to handle mouse state changes if the client
@@ -418,6 +438,7 @@ export default {
             console.log('内容一样，可以不发送')
             return
           }
+          this.clipboardText = text
           this.sendClientClipboard({
             'data': text,
             'type': 'text/plain'
