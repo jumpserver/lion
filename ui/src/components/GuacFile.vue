@@ -8,36 +8,19 @@
 </template>
 
 <script>
-import { FileType } from '../utils/common'
-
+import {FileType} from '../utils/common'
+/*
+{
+  mimetype:   String,
+  streamName: String,
+  type:       FileType.NORMAL,
+  name:       String,
+  parent:     FILE,
+  files:      {},
+}
+ */
 export default {
   name: 'GuacFile',
-  // props: {
-  //   mimetype: {
-  //     type: String,
-  //     default: ''
-  //   },
-  //   streamName: {
-  //     type: String,
-  //     default: ''
-  //   },
-  //   type: {
-  //     type: String,
-  //     default: FileType.NORMAL
-  //   },
-  //   name: {
-  //     type: String,
-  //     default: ''
-  //   },
-  //   parent: {
-  //     type: Object,
-  //     default: null
-  //   },
-  //   files: {
-  //     type: Object,
-  //     default: () => ({}),
-  //   }
-  // },
   props: {
     fileItem: {
       type: Object,
@@ -51,7 +34,6 @@ export default {
       } else {
         this.$emit('ChangeFolder', this.fileItem)
       }
-      console.log('click clickFile',this.fileItem)
     }
   }
 }

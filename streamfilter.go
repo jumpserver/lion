@@ -77,7 +77,6 @@ func (filter *OutputStreamInterceptingFilter) handleBlob(unfilteredInstruction *
 	index := args[0]
 	if stream, ok := filter.streams[index]; ok {
 		// Decode blob
-		fmt.Println("filter handleBlob index: ", index)
 		data := args[1]
 		blob, err := base64.StdEncoding.DecodeString(data)
 		if err != nil {

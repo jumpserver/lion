@@ -1,10 +1,10 @@
 <template>
   <el-container>
-    <el-menu default-active="1" :collapse="isCollapse"
-             @mouseleave.native="isCollapse = true"
+
+    <el-menu :collapse="isCollapse"
              @mouseover.native="isCollapse = false"
     >
-      <el-submenu index="1">
+      <el-submenu :disabled="menuDisable" index="1">
         <template slot="title">
           <i class="el-icon-position"></i>
           <span>快捷键</span>
@@ -13,7 +13,7 @@
         <el-menu-item index="1-2">选项2</el-menu-item>
       </el-submenu>
 
-      <el-menu-item><i class="el-icon-document-copy"></i>
+      <el-menu-item :disabled="menuDisable" index="2"><i class="el-icon-document-copy"></i>
         <span @click="toggleClipboard">剪切板</span>
         <el-drawer direction="ltr" :visible.sync="clipboardDrawer">
           <el-row>
@@ -25,17 +25,19 @@
           </el-row>
         </el-drawer>
       </el-menu-item>
-      <el-menu-item><i class="el-icon-folder"></i>
+      <el-menu-item :disabled="menuDisable" index="3"><i class="el-icon-folder"></i>
         <span @click="toggleFile">文件管理</span>
         <el-drawer direction="ltr" :visible.sync="fileDrawer">
-          <div>{{ currentFilesystem.name }}</div>
-          <div @click="ChangeParentFolder">{{ currentFolder.streamName }}</div>
-          <GuacFileSystem
-              v-bind:guac-object="currentFilesystem.object"
-              v-bind:currentFolder="currentFolder"
-              v-on:ChangeFolder="ChangeFolder"
-              v-on:DownLoadReceived="DownLoadReceived"
-          />
+          <el-row>
+            <div>{{ currentFilesystem.name }}</div>
+            <GuacFileSystem ref="filesystem"
+                            v-bind:guac-object="currentFilesystem.object"
+                            v-bind:currentFolder="currentFolder"
+                            v-on:ChangeFolder="ChangeFolder"
+                            v-on:DownLoadReceived="DownLoadReceived"
+                            v-on:UploadFile="UploadFile"
+            />
+          </el-row>
         </el-drawer>
       </el-menu-item>
 
@@ -51,8 +53,8 @@
 
 <script>
 import Guacamole from 'guacamole-common-js'
-import { GetSupportedMimetypes } from '../utils/image'
-import { sanitizeFilename } from '../utils/common'
+import {GetSupportedMimetypes} from '../utils/image'
+import {sanitizeFilename} from '../utils/common'
 import GuacClipboard from './GuacClipboard'
 import GuacFileSystem from './GuacFileSystem'
 
@@ -91,7 +93,6 @@ export default {
         files: {},
         parent: null,
       },
-      files: {}
     }
   },
   computed: {
@@ -100,6 +101,9 @@ export default {
         width: this.displayWidth + 'px',
         height: this.displayHeight + 'px'
       }
+    },
+    menuDisable: function() {
+      return !(this.clientState === 'Connected')
     }
   },
   mounted: function() {
@@ -112,6 +116,18 @@ export default {
     })
   },
   methods: {
+    UploadFile(files) {
+      for (let i = 0; i < files.length; i++) {
+        let streamName
+        if (this.currentFolder) {
+          streamName = this.currentFolder.streamName + '/' + files[i].name
+        }
+        console.log(streamName)
+        this.handleFiles(files[i], this.currentFilesystem.object, streamName).then(() => {
+          this.$refs.filesystem.refresh()
+        })
+      }
+    },
     DownLoadReceived(stream, mimetype, filename) {
       console.log(stream, mimetype, filename)
       this.clientFileReceived(stream, mimetype, filename)
@@ -272,6 +288,17 @@ export default {
     clientOnErr(stats) {
       this.client.disconnect()
       console.log(stats)
+      this.$alert('连接关闭===', stats, {
+        confirmButtonText: '确定',
+        callback: action => {
+          let display = document.getElementById('display')
+          display.removeChild(this.client.getDisplay().getElement())
+          this.$message({
+            type: 'info',
+            message: `action: ${ action }`
+          })
+        }
+      })
     },
 
     sendClientClipboard(data) {
@@ -355,6 +382,7 @@ export default {
     onmousedown(mouseState) {
       document.body.focus()
       this.handleMouseState(mouseState)
+      this.isCollapse = true
     },
 
     onmouseout(mouseState) {
@@ -402,73 +430,10 @@ export default {
       console.log('fileSystemReceived ', object, name)
       this.currentFilesystem.object = object
       this.currentFilesystem.name = name
-
-      // this.currentFilesystem.object.requestInputStream(this.currentFilesystem.root.streamName, this.handleStream)
-    },
-
-    handleStream(stream, mimetype) {
-      // Ignore stream if mimetype is wrong
-      if (mimetype !== Guacamole.Object.STREAM_INDEX_MIMETYPE) {
-        stream.sendAck('Unexpected mimetype', Guacamole.Status.Code.UNSUPPORTED)
-        return
-      }
-
-      // Signal server that data is ready to be received
-      stream.sendAck('Ready', Guacamole.Status.Code.SUCCESS)
-
-      // Read stream as JSON
-      var reader = new Guacamole.JSONReader(stream)
-
-      // Acknowledge received JSON blobs
-      reader.onprogress = function onprogress() {
-        stream.sendAck('Received', Guacamole.Status.Code.SUCCESS)
-      }
-
-      // Reset contents of directory
-      var files = {}
-      reader.onend = function jsonReady() {
-
-        // Determine the expected filename prefix of each stream
-        var expectedPrefix = '/'
-        if (expectedPrefix.charAt(expectedPrefix.length - 1) !== '/')
-          expectedPrefix += '/'
-
-        // For each received stream name
-        var mimetypes = reader.getJSON()
-        console.log(mimetypes)
-        for (var name in mimetypes) {
-          console.log(name)
-          // Assert prefix is correct
-          if (name.substring(0, expectedPrefix.length) !== expectedPrefix)
-            continue
-
-          // Extract filename from stream name
-          var filename = name.substring(expectedPrefix.length)
-
-          // Deduce type from mimetype
-          var type = 'NORMAL'
-          if (mimetypes[name] === Guacamole.Object.STREAM_INDEX_MIMETYPE)
-            type = 'DIRECTORY'
-
-          // Add file entry
-          console.log(this.files)
-          files[filename] = {
-            mimetype: mimetypes[name],
-            streamName: name,
-            type: type,
-            parent: '/',
-            name: filename
-          }
-
-        }
-      }
-
-
     },
 
     clientFileReceived(stream, mimetype, filename) {
       console.log('clientFileReceived, ', this.tunnel.uuid, stream, mimetype, filename)
-
       //  tunnelService.downloadStream(tunnel.uuid, stream, mimetype, filename);
       // Work-around for IE missing window.location.origin
       if (!window.location.origin)
@@ -538,84 +503,87 @@ export default {
       e.preventDefault()
       const dt = e.dataTransfer
       const files = dt.files
-
-      this.handleFiles(files)
+      this.handleFiles(files[0])
     },
-    handleFiles: function(files) {
-      console.log(files)
-      let file = files[0]
-      console.log(file.type, file.name)
+    handleFiles: function(file, object, streamName) {
       let client = this.client
       let tunnel = this.tunnel
-      // let stream;
-      let stream = client.createFileStream(file.type, file.name)
-      // Upload file once stream is acknowledged
-      stream.onack = function beginUpload(status) {
-
-        // Notify of any errors from the Guacamole server
-        if (status.isError()) {
-          console.log(status.code, status)
-          return
-        }
-
-        let uploadToStream = function uploadStream(tunnel, stream, file,
-                                                   progressCallback) {
-          let streamOrigin
-          if (!window.location.origin)
-            streamOrigin = window.location.protocol + '//' + window.location.hostname + (window.location.port ? (':' + window.location.port) : '')
-          else
-            streamOrigin = window.location.origin
-          // Build upload URL
-          let url = streamOrigin + window.location.pathname
-              + '/api/tunnels/' + encodeURIComponent(tunnel)
-              + '/streams/' + encodeURIComponent(stream.index)
-              + '/' + encodeURIComponent(sanitizeFilename(file.name))
-          let xhr = new XMLHttpRequest()
-          // Invoke provided callback if upload tracking is supported
-          if (progressCallback && xhr.upload) {
-            xhr.upload.addEventListener('progress', function updateProgress(e) {
-              progressCallback(e.loaded)
-            })
-          }
-
-          // Resolve/reject promise once upload has stopped
-          xhr.onreadystatechange = function uploadStatusChanged() {
-
-            // Ignore state changes prior to completion
-            if (xhr.readyState !== 4)
-              return
-
-            // Resolve if HTTP status code indicates success
-            if (xhr.status >= 200 && xhr.status < 300)
-              console.log('success upload ')
-
-            // Parse and reject with resulting JSON error
-            else if (xhr.getResponseHeader('Content-Type') === 'application/json')
-              console.log('failed upload ', xhr.responseText)
-            // Warn of lack of permission of a proxy rejects the upload
-            else if (xhr.status >= 400 && xhr.status < 500)
-              console.log('failed upload ', xhr.status)
-
-            // Assume internal error for all other cases
-            else
-              console.log('failed upload ', xhr.status)
-          }
-
-          // Perform upload
-          xhr.open('POST', url, true)
-          const fd = new FormData()
-          fd.append('file', file)
-          xhr.send(fd)
-        }
-        // Begin upload
-        uploadToStream(tunnel.uuid, stream, file, function uploadContinuing(length) {
-          console.log('process ', length)
-        })
-
-        // Ignore all further acks
-        stream.onack = null
-
+      let stream
+      if (!object) {
+        stream = client.createFileStream(file.type, file.name)
+      } else {
+        stream = object.createOutputStream(file.type, streamName)
       }
+      return new Promise(function(resolve, reject) {
+        // Upload file once stream is acknowledged
+        stream.onack = function beginUpload(status) {
+
+          // Notify of any errors from the Guacamole server
+          if (status.isError()) {
+            console.log(status.code, status)
+            reject(status)
+            return
+          }
+          let uploadToStream = function uploadStream(tunnel, stream, file,
+                                                     progressCallback) {
+            let streamOrigin
+            if (!window.location.origin)
+              streamOrigin = window.location.protocol + '//' + window.location.hostname + (window.location.port ? (':' + window.location.port) : '')
+            else
+              streamOrigin = window.location.origin
+            // Build upload URL
+            let url = streamOrigin + window.location.pathname
+                + '/api/tunnels/' + encodeURIComponent(tunnel)
+                + '/streams/' + encodeURIComponent(stream.index)
+                + '/' + encodeURIComponent(sanitizeFilename(file.name))
+            let xhr = new XMLHttpRequest()
+            // Invoke provided callback if upload tracking is supported
+            if (progressCallback && xhr.upload) {
+              xhr.upload.addEventListener('progress', function updateProgress(e) {
+                progressCallback(e)
+              })
+            }
+            // Resolve/reject promise once upload has stopped
+            xhr.onreadystatechange = function uploadStatusChanged() {
+
+              // Ignore state changes prior to completion
+              if (xhr.readyState !== 4)
+                return
+
+              // Resolve if HTTP status code indicates success
+              if (xhr.status >= 200 && xhr.status < 300) {
+                console.log('success upload ')
+                resolve()
+              }
+              // Parse and reject with resulting JSON error
+              else if (xhr.getResponseHeader('Content-Type') === 'application/json')
+                console.log('failed upload ', xhr.responseText)
+              // Warn of lack of permission of a proxy rejects the upload
+              else if (xhr.status >= 400 && xhr.status < 500) {
+                console.log('failed upload ', xhr.status)
+                reject(xhr.status)
+              }
+              // Assume internal error for all other cases
+              else {
+                console.log('failed upload ', xhr.status)
+                reject(xhr.status)
+              }
+            }
+            // Perform upload
+            xhr.open('POST', url, true)
+            const fd = new FormData()
+            fd.append('file', file)
+            xhr.send(fd)
+          }
+          // Begin upload
+          uploadToStream(tunnel.uuid, stream, file, function uploadContinuing(event) {
+            console.log('process ', event)
+          })
+
+          // Ignore all further acks
+          stream.onack = null
+        }
+      })
     },
 
     createGuacamole(connectionParams) {
