@@ -53,9 +53,9 @@ func (g *GuacamoleTunnelService) getClientInfo(ctx *gin.Context) guacd.ClientInf
 
 func (g *GuacamoleTunnelService) getConnectConfiguration(ctx *gin.Context) guacd.Configuration {
 	conf := guacd.NewConfiguration()
-	if rdpConfig := GetRDPConfiguration(ctx); rdpConfig.Protocol != "" {
-		//rdpConfig.UnSetParameter(guacd.RDPUsername)
-		//rdpConfig.UnSetParameter(guacd.RDPPassword)
+	if rdpConfig := GetVNCConfiguration(ctx); rdpConfig.Protocol != "" {
+		rdpConfig.UnSetParameter(guacd.RDPUsername)
+		rdpConfig.UnSetParameter(guacd.RDPPassword)
 		return rdpConfig
 	}
 	return conf

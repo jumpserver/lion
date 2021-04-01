@@ -71,7 +71,7 @@
 <script>
 import Guacamole from 'guacamole-common-js'
 import {GetSupportedMimetypes} from '../utils/image'
-import {OriginSite,BaseAPIURL, sanitizeFilename} from '../utils/common'
+import {BaseAPIURL, sanitizeFilename} from '../utils/common'
 import GuacClipboard from './GuacClipboard'
 import GuacFileSystem from './GuacFileSystem'
 
@@ -90,7 +90,7 @@ export default {
       fileDrawer: false,
       loading: true,
       tunnelState: '',
-      loadingText:'连中。。。',
+      loadingText: '连中。。。',
       clientState: '连中。。。',
       localCursor: false,
       client: null,
@@ -186,7 +186,7 @@ export default {
     cancelSubmitParams() {
       this.dialogFormVisible = false
       if (this.client) {
-        this.client.disconnect()
+        // this.client.disconnect()
       }
       this.requireParams = []
     },
@@ -395,7 +395,6 @@ export default {
     },
 
     clientOnErr(stats) {
-      this.client.disconnect()
       this.closeDisplay(stats)
     },
 
@@ -478,6 +477,7 @@ export default {
     oncursor(canvas, x, y) {
       this.localCursor = true
     },
+
     setLocalClipboard(data) {
       if (navigator.clipboard) {
         navigator.clipboard.writeText(data)
@@ -511,6 +511,7 @@ export default {
       console.log('onCloseDrawer', this.sink)
       this.sink.focus()
     },
+
     onWindowResize() {
       // 监听 window display的变化
       let pixel_density = window.devicePixelRatio || 1
@@ -531,12 +532,14 @@ export default {
       this.displayHeight = height
       console.log(width, height)
     },
+
     displayResize(width, height) {
       // 监听guacamole display的变化
       console.log('on display ', width, height)
       this.displayWidth = width
       this.displayHeight = height
     },
+
     onWindowFocus() {
       console.log('onWindowFocus   ')
       if (navigator.clipboard && navigator.clipboard.readText && this.clientState === 'Connected') {
@@ -713,6 +716,7 @@ export default {
         this.client.sendKeyEvent(0, keys[i])
       }
     },
+
     connectGuacamole(connectionParams) {
 
       let dropbox = document.getElementById('display')
