@@ -170,7 +170,7 @@ func (t *Tunnel) Flush() error {
 func (t *Tunnel) ReadInstruction() (instruction Instruction, err error) {
 	var ret string
 	for {
-		if err = t.conn.SetReadDeadline(time.Now().Add(time.Second * 15)); err != nil {
+		if err = t.conn.SetReadDeadline(time.Now().Add(defaultSocketTimeOut)); err != nil {
 			return Instruction{}, err
 		}
 		msg, err := t.rw.ReadString(ByteSemicolonDelimiter)

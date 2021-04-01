@@ -1,8 +1,15 @@
 <template>
   <el-container>
+    <el-main>
+      <el-row v-loading="loading" :element-loading-text="loadingText" element-loading-background="rgba(0, 0, 0, 0.8">
+        <div v-bind:style="divStyle">
+          <div id="display"></div>
+        </div>
+      </el-row>
+    </el-main>
 
-    <el-menu :collapse="isCollapse"
-             @mouseover.native="isCollapse = false"
+    <el-menu :collapse="isMenuCollapse"
+             @mouseover.native="isMenuCollapse = false"
     >
       <el-submenu :disabled="menuDisable" index="1">
         <template slot="title">
@@ -14,39 +21,49 @@
         </el-menu-item>
       </el-submenu>
 
-      <el-menu-item  :disabled="menuDisable" index="2"><i class="el-icon-document-copy"></i>
+      <el-menu-item :disabled="menuDisable" index="2"><i class="el-icon-document-copy"></i>
         <span @click="toggleClipboard">剪切板</span>
-        <el-drawer direction="ltr" :visible.sync="clipboardDrawer">
+        <el-drawer direction="ltr" :visible.sync="clipboardDrawer" @close="onCloseDrawer">
           <el-row>
             <el-col :span="12" :offset="8">
               <div class="grid-content bg-purple">
-                <GuacClipboard v-bind:value="clipboardText" v-on:ClipboardChange="ClipboardChange"/>
+                <GuacClipboard v-bind:value="clipboardText" v-on:ClipboardChange="onClipboardChange"/>
               </div>
             </el-col>
           </el-row>
         </el-drawer>
       </el-menu-item>
-        <el-menu-item  v-if="currentFilesystem.object" :disabled="menuDisable" index="3"><i class="el-icon-folder"></i>
-          <span @click="toggleFile">文件管理</span>
-          <el-drawer direction="ltr" :visible.sync="fileDrawer">
-            <el-row>
-              <div>{{ currentFilesystem.name }}</div>
-              <GuacFileSystem ref="filesystem"
-                              v-bind:guac-object="currentFilesystem.object"
-                              v-bind:currentFolder="currentFolder"
-                              v-on:ChangeFolder="ChangeFolder"
-                              v-on:DownLoadReceived="DownLoadReceived"
-                              v-on:UploadFile="UploadFile"
-              />
-            </el-row>
-          </el-drawer>
-        </el-menu-item>
+      <el-menu-item v-if="currentFilesystem.object" :disabled="menuDisable" index="3"><i class="el-icon-folder"></i>
+        <span @click="toggleFile">文件管理</span>
+        <el-drawer direction="ltr" :visible.sync="fileDrawer" @close="onCloseDrawer">
+          <el-row>
+            <div>{{ currentFilesystem.name }}</div>
+            <GuacFileSystem ref="filesystem"
+                            v-bind:guac-object="currentFilesystem.object"
+                            v-bind:currentFolder="currentFolder"
+                            v-on:ChangeFolder="onChangeFolder"
+                            v-on:DownLoadReceived="onDownloadFile"
+                            v-on:UploadFile="onUploadFiles"
+            />
+          </el-row>
+        </el-drawer>
+      </el-menu-item>
     </el-menu>
-    <el-main>
-      <el-row v-loading="loading" :element-loading-text="clientState" element-loading-background="rgba(0, 0, 0, 0.8">
-        <div v-bind:style="divStyle" id="display"></div>
-      </el-row>
-    </el-main>
+    <el-dialog title="认证参数" :visible="dialogFormVisible" @close="cancelSubmitParams">
+      <el-form label-position="left" label-width="80px" @submit.native.prevent="submitParams">
+        <el-form-item v-for="(item, index) in requireParams" :key="index" :label="item.name">
+          <template v-if="checkPasswordInput(item.name)">
+            <el-input v-model="item.value" show-password></el-input>
+          </template>
+          <template v-else>
+            <el-input v-model="item.value"></el-input>
+          </template>
+        </el-form-item>
+      </el-form>
+      <div slot="footer" class="dialog-footer">
+        <el-button type="primary" @click="submitParams">确 定</el-button>
+      </div>
+    </el-dialog>
   </el-container>
 
 </template>
@@ -54,7 +71,7 @@
 <script>
 import Guacamole from 'guacamole-common-js'
 import {GetSupportedMimetypes} from '../utils/image'
-import {sanitizeFilename} from '../utils/common'
+import {OriginSite,BaseAPIURL, sanitizeFilename} from '../utils/common'
 import GuacClipboard from './GuacClipboard'
 import GuacFileSystem from './GuacFileSystem'
 
@@ -66,22 +83,27 @@ export default {
   },
   data() {
     return {
-      isCollapse: true,
+      dialogFormVisible: false,
+      requireParams: [],
+      isMenuCollapse: true,
       clipboardDrawer: false,
       fileDrawer: false,
-      tunnelState: '',
       loading: true,
+      tunnelState: '',
+      loadingText:'连中。。。',
       clientState: '连中。。。',
       localCursor: false,
       client: null,
       tunnel: null,
       displayWidth: 0,
       displayHeight: 0,
-      clipboardText: 'test',
+      clipboardText: '',
       clipboardData: {
         type: 'text/plain',
         data: '',
       },
+      sink: null,
+      keyboard: null,
       currentFilesystem: {
         object: null,
         name: '',
@@ -142,33 +164,73 @@ export default {
     this.getConnectString('0000-0000-00').then(connectionParams => {
       console.log(connectionParams)
       console.log(this.displayWidth, this.displayHeight)
-      this.createGuacamole(connectionParams)
+      this.connectGuacamole(connectionParams)
     })
   },
   methods: {
+    checkPasswordInput(name) {
+      return name.match('password')
+    },
+    submitParams() {
+      if (this.client) {
+        for (let i = 0; i < this.requireParams.length; i++) {
+          var stream = this.client.createArgumentValueStream('text/plain', this.requireParams[i].name)
+          var writer = new Guacamole.StringWriter(stream)
+          writer.sendText(this.requireParams[i].value)
+          writer.sendEnd()
+        }
+      }
+      this.dialogFormVisible = false
+      this.requireParams = []
+    },
+    cancelSubmitParams() {
+      this.dialogFormVisible = false
+      if (this.client) {
+        this.client.disconnect()
+      }
+      this.requireParams = []
+    },
+    onRequireParams(params) {
+      this.requireParams = []
+      for (let i = 0; i < params.length; i++) {
+        this.requireParams.push({
+          name: params[i],
+          value: '',
+        })
+      }
+      this.dialogFormVisible = true
+    },
+
     menuIndex(index, num) {
       return index + num
     },
-    UploadFile(files) {
+
+    onUploadFiles(files) {
       for (let i = 0; i < files.length; i++) {
         let streamName
         if (this.currentFolder) {
           streamName = this.currentFolder.streamName + '/' + files[i].name
         }
         console.log(streamName)
+        this.loadingText = 'Upload Files'
+        this.loading = true
         this.handleFiles(files[i], this.currentFilesystem.object, streamName).then(() => {
+          this.loading = false
+          this.loadingText = ''
           this.$refs.filesystem.refresh()
         })
       }
     },
-    DownLoadReceived(stream, mimetype, filename) {
-      console.log(stream, mimetype, filename)
+
+    onDownloadFile(stream, mimetype, filename) {
       this.clientFileReceived(stream, mimetype, filename)
     },
-    ChangeFolder(fileItem) {
+
+    onChangeFolder(fileItem) {
       this.currentFolder = fileItem
     },
-    ClipboardChange(data) {
+
+    onClipboardChange(data) {
       console.log('ClipboardChange emit ', data)
       this.clipboardText = data
       this.sendClientClipboard({
@@ -177,24 +239,29 @@ export default {
       })
       this.setLocalClipboard(data)
     },
+
     toggleClipboard() {
       if (this.menuDisable) {
         return
       }
       this.clipboardDrawer = !this.clipboardDrawer
     },
+
     toggleFile() {
       if (this.menuDisable || !this.currentFilesystem.object) {
         return
       }
       this.fileDrawer = !this.fileDrawer
     },
+
     getSupportedGuacAudios() {
       return Guacamole.AudioPlayer.getSupportedTypes()
     },
+
     getSupportedGuacVideos() {
       return Guacamole.VideoPlayer.getSupportedTypes()
     },
+
     getConnectString(sessionId) {
       // Calculate optimal width/height for display
       let pixel_density = window.devicePixelRatio || 1
@@ -233,7 +300,6 @@ export default {
     },
 
     onTunnelStateChanged(state) {
-
       switch (state) {
           // Connection is being established
         case Guacamole.Tunnel.State.CONNECTING:
@@ -278,6 +344,7 @@ export default {
           // Ignore "connecting" state
         case 1: // Connecting
           this.clientState = 'Connecting'
+          this.loadingText = 'Connecting'
           console.log('clientState, Connecting')
           break
 
@@ -339,7 +406,8 @@ export default {
         callback: action => {
           let display = document.getElementById('display')
           if (this.client) {
-            display.removeChild(this.client.getDisplay().getElement())
+            // display.removeChild(this.client.getDisplay().getElement())
+            display.innerHTML = ''
           }
         }
       })
@@ -415,6 +483,7 @@ export default {
         navigator.clipboard.writeText(data)
       }
     },
+
     handleMouseState(mouseState) {
 
       // Do not attempt to handle mouse state changes if the client
@@ -430,7 +499,7 @@ export default {
     onmousedown(mouseState) {
       document.body.focus()
       this.handleMouseState(mouseState)
-      this.isCollapse = true
+      this.isMenuCollapse = true
     },
 
     onmouseout(mouseState) {
@@ -438,7 +507,12 @@ export default {
       this.display.showCursor(false)
     },
 
+    onCloseDrawer() {
+      console.log('onCloseDrawer', this.sink)
+      this.sink.focus()
+    },
     onWindowResize() {
+      // 监听 window display的变化
       let pixel_density = window.devicePixelRatio || 1
       let optimal_width = window.innerWidth * pixel_density
       let optimal_height = window.innerHeight * pixel_density
@@ -457,7 +531,12 @@ export default {
       this.displayHeight = height
       console.log(width, height)
     },
-
+    displayResize(width, height) {
+      // 监听guacamole display的变化
+      console.log('on display ', width, height)
+      this.displayWidth = width
+      this.displayHeight = height
+    },
     onWindowFocus() {
       console.log('onWindowFocus   ')
       if (navigator.clipboard && navigator.clipboard.readText && this.clientState === 'Connected') {
@@ -479,15 +558,8 @@ export default {
 
     clientFileReceived(stream, mimetype, filename) {
       console.log('clientFileReceived, ', this.tunnel.uuid, stream, mimetype, filename)
-      //  tunnelService.downloadStream(tunnel.uuid, stream, mimetype, filename);
-      // Work-around for IE missing window.location.origin
-      if (!window.location.origin)
-        var streamOrigin = window.location.protocol + '//' + window.location.hostname + (window.location.port ? (':' + window.location.port) : '')
-      else
-        var streamOrigin = window.location.origin
-
       // Build download URL
-      var url = streamOrigin + '/guacamole'
+      var url = BaseAPIURL
           + '/api/tunnels/' + encodeURIComponent(this.tunnel.uuid)
           + '/streams/' + encodeURIComponent(stream.index)
           + '/' + encodeURIComponent(sanitizeFilename(filename))
@@ -524,8 +596,11 @@ export default {
             document.body.removeChild(iframe)
           }
         }, 500)
-      }
-
+        this.loading = false
+        this.loadingText = ''
+      }.bind(this)
+      this.loading = true
+      this.loadingText = 'downloading file'
       // Begin download
       iframe.src = url
       console.log(url)
@@ -571,13 +646,8 @@ export default {
           }
           let uploadToStream = function uploadStream(tunnel, stream, file,
                                                      progressCallback) {
-            let streamOrigin
-            if (!window.location.origin)
-              streamOrigin = window.location.protocol + '//' + window.location.hostname + (window.location.port ? (':' + window.location.port) : '')
-            else
-              streamOrigin = window.location.origin
             // Build upload URL
-            let url = streamOrigin + window.location.pathname
+            let url = BaseAPIURL
                 + '/api/tunnels/' + encodeURIComponent(tunnel)
                 + '/streams/' + encodeURIComponent(stream.index)
                 + '/' + encodeURIComponent(sanitizeFilename(file.name))
@@ -643,7 +713,7 @@ export default {
         this.client.sendKeyEvent(0, keys[i])
       }
     },
-    createGuacamole(connectionParams) {
+    connectGuacamole(connectionParams) {
 
       let dropbox = document.getElementById('display')
       console.log(dropbox)
@@ -661,11 +731,14 @@ export default {
         console.log('tunnelAssignedUUID ', uuid)
         tunnel.uuid = uuid
       }
+      client.onrequired = this.onRequireParams
 
       tunnel.onstatechange = this.onTunnelStateChanged
       this.client = client
       this.tunnel = tunnel
       this.display = this.client.getDisplay()
+      this.display.onresize = this.displayResize
+      // client.getDisplay()
       display.appendChild(client.getDisplay().getElement())
       client.onstatechange = this.clientStateChanged
       client.onerror = this.clientOnErr
@@ -698,17 +771,16 @@ export default {
       const sink = new Guacamole.InputSink()
       display.appendChild(sink.getElement())
       sink.focus()
-
       // Keyboard
-      var keyboard = new Guacamole.Keyboard(sink.getElement())
-
+      const keyboard = new Guacamole.Keyboard(sink.getElement())
       keyboard.onkeydown = function(keysym) {
         client.sendKeyEvent(1, keysym)
       }
-
       keyboard.onkeyup = function(keysym) {
         client.sendKeyEvent(0, keysym)
       }
+      this.sink = sink
+      this.keyboard = keyboard
     }
   }
 
@@ -726,7 +798,7 @@ export default {
 
 .el-dropdown-link {
   cursor: pointer;
-  color: #409EFF;
+  color: #409eff;
 }
 
 .el-icon-arrow-down {

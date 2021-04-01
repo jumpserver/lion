@@ -1,10 +1,11 @@
 package config
 
 import (
-	"github.com/spf13/viper"
 	"log"
 	"os"
 	"path/filepath"
+
+	"github.com/spf13/viper"
 )
 
 var GlobalConfig *Config
@@ -81,15 +82,19 @@ func FileExists(path string) bool {
 		if os.IsNotExist(err) {
 			return false
 		}
-		// TODO: 未知错误的处理
-		panic(path)
+		return false
 	}
 	return true
 }
 
 func EnsureDirExist(path string) error {
 	if !FileExists(path) {
-		return os.MkdirAll(path, os.ModePerm)
+		if err := os.MkdirAll(path, os.ModePerm); err != nil {
+			if os.IsExist(err) {
+				return nil
+			}
+			return err
+		}
 	}
 	return nil
 }

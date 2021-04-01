@@ -20,9 +20,8 @@ type GuacamoleTunnelService struct {
 	jmsService *service.JMService
 }
 
-func (g *GuacamoleTunnelService) createClientInfo(ctx *gin.Context) guacd.ClientInformation {
+func (g *GuacamoleTunnelService) getClientInfo(ctx *gin.Context) guacd.ClientInformation {
 	info := guacd.NewClientInformation()
-
 	if supportImages, ok := ctx.GetQueryArray("GUAC_IMAGE"); ok {
 		info.ImageMimetypes = supportImages
 	}
@@ -52,6 +51,16 @@ func (g *GuacamoleTunnelService) createClientInfo(ctx *gin.Context) guacd.Client
 	return info
 }
 
+func (g *GuacamoleTunnelService) getConnectConfiguration(ctx *gin.Context) guacd.Configuration {
+	conf := guacd.NewConfiguration()
+	if rdpConfig := GetRDPConfiguration(ctx); rdpConfig.Protocol != "" {
+		//rdpConfig.UnSetParameter(guacd.RDPUsername)
+		//rdpConfig.UnSetParameter(guacd.RDPPassword)
+		return rdpConfig
+	}
+	return conf
+}
+
 func (g *GuacamoleTunnelService) Connect(ctx *gin.Context) {
 	ws, err := upGrader.Upgrade(ctx.Writer, ctx.Request, ctx.Writer.Header())
 	if err != nil {
@@ -60,19 +69,19 @@ func (g *GuacamoleTunnelService) Connect(ctx *gin.Context) {
 	}
 	sessionId, ok := ctx.GetQuery("SESSION_ID")
 	if !ok {
-
+		data := guacd.NewInstruction(
+			guacd.InstructionServerError, "no session id", "504")
+		_ = ws.WriteMessage(websocket.TextMessage, []byte(data.String()))
 		return
 	}
 
 	var tunnel *guacd.Tunnel
-	//rdpConfig := GetRDPConfiguration(ctx)
-	rdpConfig := GetVNCConfiguration(ctx)
-	//var rdpConfig guacd.Configuration
+
 	guacdAddr := net.JoinHostPort(config.GlobalConfig.GuaHost, config.GlobalConfig.GuaPort)
 	fmt.Println(guacdAddr, sessionId)
-	info := g.createClientInfo(ctx)
-
-	tunnel, err = guacd.NewTunnel(guacdAddr, rdpConfig, info)
+	info := g.getClientInfo(ctx)
+	conf := g.getConnectConfiguration(ctx)
+	tunnel, err = guacd.NewTunnel(guacdAddr, conf, info)
 	if err != nil {
 		fmt.Printf("%v\n", err)
 		data := guacd.NewInstruction(
