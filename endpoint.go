@@ -65,7 +65,8 @@ func (g *GuacamoleTunnelService) Connect(ctx *gin.Context) {
 	}
 
 	var tunnel *guacd.Tunnel
-	rdpConfig := GetRDPConfiguration(ctx)
+	//rdpConfig := GetRDPConfiguration(ctx)
+	rdpConfig := GetVNCConfiguration(ctx)
 	//var rdpConfig guacd.Configuration
 	guacdAddr := net.JoinHostPort(config.GlobalConfig.GuaHost, config.GlobalConfig.GuaPort)
 	fmt.Println(guacdAddr, sessionId)

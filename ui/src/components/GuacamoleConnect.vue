@@ -14,7 +14,7 @@
         </el-menu-item>
       </el-submenu>
 
-      <el-menu-item :disabled="menuDisable" index="2"><i class="el-icon-document-copy"></i>
+      <el-menu-item  :disabled="menuDisable" index="2"><i class="el-icon-document-copy"></i>
         <span @click="toggleClipboard">剪切板</span>
         <el-drawer direction="ltr" :visible.sync="clipboardDrawer">
           <el-row>
@@ -26,22 +26,21 @@
           </el-row>
         </el-drawer>
       </el-menu-item>
-      <el-menu-item :disabled="menuDisable" index="3"><i class="el-icon-folder"></i>
-        <span @click="toggleFile">文件管理</span>
-        <el-drawer direction="ltr" :visible.sync="fileDrawer">
-          <el-row>
-            <div>{{ currentFilesystem.name }}</div>
-            <GuacFileSystem ref="filesystem"
-                            v-bind:guac-object="currentFilesystem.object"
-                            v-bind:currentFolder="currentFolder"
-                            v-on:ChangeFolder="ChangeFolder"
-                            v-on:DownLoadReceived="DownLoadReceived"
-                            v-on:UploadFile="UploadFile"
-            />
-          </el-row>
-        </el-drawer>
-      </el-menu-item>
-
+        <el-menu-item  v-if="currentFilesystem.object" :disabled="menuDisable" index="3"><i class="el-icon-folder"></i>
+          <span @click="toggleFile">文件管理</span>
+          <el-drawer direction="ltr" :visible.sync="fileDrawer">
+            <el-row>
+              <div>{{ currentFilesystem.name }}</div>
+              <GuacFileSystem ref="filesystem"
+                              v-bind:guac-object="currentFilesystem.object"
+                              v-bind:currentFolder="currentFolder"
+                              v-on:ChangeFolder="ChangeFolder"
+                              v-on:DownLoadReceived="DownLoadReceived"
+                              v-on:UploadFile="UploadFile"
+              />
+            </el-row>
+          </el-drawer>
+        </el-menu-item>
     </el-menu>
     <el-main>
       <el-row v-loading="loading" :element-loading-text="clientState" element-loading-background="rgba(0, 0, 0, 0.8">
@@ -150,7 +149,6 @@ export default {
     menuIndex(index, num) {
       return index + num
     },
-
     UploadFile(files) {
       for (let i = 0; i < files.length; i++) {
         let streamName
@@ -170,11 +168,6 @@ export default {
     ChangeFolder(fileItem) {
       this.currentFolder = fileItem
     },
-    ChangeParentFolder() {
-      if (this.currentFolder.parent !== null) {
-        this.currentFolder = this.currentFolder.parent
-      }
-    },
     ClipboardChange(data) {
       console.log('ClipboardChange emit ', data)
       this.clipboardText = data
@@ -191,7 +184,7 @@ export default {
       this.clipboardDrawer = !this.clipboardDrawer
     },
     toggleFile() {
-      if (this.menuDisable) {
+      if (this.menuDisable || !this.currentFilesystem.object) {
         return
       }
       this.fileDrawer = !this.fileDrawer
@@ -469,10 +462,6 @@ export default {
       console.log('onWindowFocus   ')
       if (navigator.clipboard && navigator.clipboard.readText && this.clientState === 'Connected') {
         navigator.clipboard.readText().then((text) => {
-          if (this.clipboardText === text) {
-            console.log('内容一样，可以不发送')
-            return
-          }
           this.clipboardText = text
           this.sendClientClipboard({
             'data': text,

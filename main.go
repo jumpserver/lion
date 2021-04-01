@@ -83,6 +83,7 @@ func main() {
 	pprofRouter := eng.Group("/debug/pprof")
 	{
 		pprofRouter.GET("/", gin.WrapF(pprof.Index))
+		pprofRouter.GET("/allocs", gin.WrapF(pprof.Handler("allocs").ServeHTTP))
 		pprofRouter.GET("/cmdline", gin.WrapF(pprof.Cmdline))
 		pprofRouter.GET("/profile", gin.WrapF(pprof.Profile))
 		pprofRouter.POST("/symbol", gin.WrapF(pprof.Symbol))
@@ -104,7 +105,7 @@ func MustJMService() *service.JMService {
 		service.JMSAccessKey(key.ID, key.Secret),
 	)
 	if err != nil {
-		logger.Debug("创建JMS JMService 失败 " + err.Error())
+		logger.Debug("创建JMS Service 失败 " + err.Error())
 		os.Exit(1)
 	}
 	return jmsService
@@ -152,7 +153,7 @@ func MustValidKey(key model.AccessKey) model.AccessKey {
 			default:
 				logger.Debug("校验 access key failed: " + err.Error())
 			}
-			time.Sleep(10 * time.Second)
+			time.Sleep(5 * time.Second)
 			continue
 		}
 		return key
