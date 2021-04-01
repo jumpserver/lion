@@ -1,4 +1,4 @@
-package main
+package tunnel
 
 import (
 	"fmt"
@@ -14,13 +14,25 @@ import (
 	"guacamole-client-go/pkg/guacd"
 	"guacamole-client-go/pkg/jms-sdk-go/service"
 )
+const (
+	defaultBufferSize = 1024
+)
 
-type GuacamoleTunnelService struct {
-	tunnels    map[string]*TunnelConn
-	jmsService *service.JMService
+var upGrader = websocket.Upgrader{
+	ReadBufferSize:  defaultBufferSize,
+	WriteBufferSize: defaultBufferSize,
+	Subprotocols:    []string{"guacamole"},
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
 }
 
-func (g *GuacamoleTunnelService) getClientInfo(ctx *gin.Context) guacd.ClientInformation {
+type GuacamoleTunnelServer struct {
+	Tunnels    map[string]*TunnelConn
+	JmsService *service.JMService
+}
+
+func (g *GuacamoleTunnelServer) getClientInfo(ctx *gin.Context) guacd.ClientInformation {
 	info := guacd.NewClientInformation()
 	if supportImages, ok := ctx.GetQueryArray("GUAC_IMAGE"); ok {
 		info.ImageMimetypes = supportImages
@@ -51,17 +63,12 @@ func (g *GuacamoleTunnelService) getClientInfo(ctx *gin.Context) guacd.ClientInf
 	return info
 }
 
-func (g *GuacamoleTunnelService) getConnectConfiguration(ctx *gin.Context) guacd.Configuration {
+func (g *GuacamoleTunnelServer) getConnectConfiguration(ctx *gin.Context) guacd.Configuration {
 	conf := guacd.NewConfiguration()
-	if rdpConfig := GetVNCConfiguration(ctx); rdpConfig.Protocol != "" {
-		rdpConfig.UnSetParameter(guacd.RDPUsername)
-		rdpConfig.UnSetParameter(guacd.RDPPassword)
-		return rdpConfig
-	}
 	return conf
 }
 
-func (g *GuacamoleTunnelService) Connect(ctx *gin.Context) {
+func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	ws, err := upGrader.Upgrade(ctx.Writer, ctx.Request, ctx.Writer.Header())
 	if err != nil {
 		ctx.AbortWithStatus(http.StatusBadRequest)
@@ -105,24 +112,24 @@ func (g *GuacamoleTunnelService) Connect(ctx *gin.Context) {
 	}
 	conn.outputFilter = &outFilter
 	conn.inputFilter = &inputFilter
-	g.tunnels[conn.guacdTunnel.UUID] = &conn
+	g.Tunnels[conn.guacdTunnel.UUID] = &conn
 	err = conn.Run(ctx)
 
 }
 
-func (g *GuacamoleTunnelService) CreateSession(ctx *gin.Context) {
+func (g *GuacamoleTunnelServer) CreateSession(ctx *gin.Context) {
 	Id := common.UUID()
 	//data := make(map[string]string)
 	ctx.JSON(http.StatusCreated, Id)
 }
 
-func (g *GuacamoleTunnelService) download(ctx *gin.Context) {
+func (g *GuacamoleTunnelServer) DownloadFile(ctx *gin.Context) {
 	tid := ctx.Param("tid")
 	index := ctx.Param("index")
 	filename := ctx.Param("filename")
 
 	fmt.Println(tid, index, filename)
-	if tun, ok := g.tunnels[tid]; ok {
+	if tun, ok := g.Tunnels[tid]; ok {
 		ctx.Writer.Header().Set("content-disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
 		out := OutStreamResource{
 			streamIndex: index,
@@ -133,10 +140,10 @@ func (g *GuacamoleTunnelService) download(ctx *gin.Context) {
 		tun.outputFilter.addOutStream(out)
 		out.Wait()
 	}
-	fmt.Println("download ", filename, " ", index, " finished")
+	fmt.Println("DownloadFile ", filename, " ", index, " finished")
 }
 
-func (g *GuacamoleTunnelService) upload(ctx *gin.Context) {
+func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 	tid := ctx.Param("tid")
 	index := ctx.Param("index")
 	filename := ctx.Param("filename")
@@ -149,7 +156,7 @@ func (g *GuacamoleTunnelService) upload(ctx *gin.Context) {
 		return
 	}
 
-	if tun, ok := g.tunnels[tid]; ok {
+	if tun, ok := g.Tunnels[tid]; ok {
 		files := form.File["file"]
 		for _, file := range files {
 			fmt.Println(file.Filename)
@@ -167,5 +174,5 @@ func (g *GuacamoleTunnelService) upload(ctx *gin.Context) {
 			_ = fdReader.Close()
 		}
 	}
-	fmt.Println("upload ", filename, " ", index, " finished")
+	fmt.Println("UploadFile ", filename, " ", index, " finished")
 }

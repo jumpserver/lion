@@ -7,7 +7,7 @@ import (
 )
 
 func TestNewJSONTime(t *testing.T) {
-	jsonT := NewUTCTime( time.Now())
+	jsonT := NewUTCTime(time.Now())
 	var s struct {
 		T UTCTime
 	}
@@ -21,6 +21,7 @@ func TestNewJSONTime(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("%v", s2.T)
-
+	j2, _ := json.Marshal(s2)
+	t.Logf("%v %v", s2, s)
+	t.Logf("%s\n", j2)
 }

@@ -1,13 +1,13 @@
-package main
+package tunnel
 
 import (
-	"guacamole-client-go/pkg/config"
 	"io/ioutil"
 	"os"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 
+	"guacamole-client-go/pkg/config"
 	"guacamole-client-go/pkg/guacd"
 )
 

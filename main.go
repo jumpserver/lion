@@ -5,19 +5,18 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net/http"
 	"net/http/pprof"
 	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
 	"github.com/spf13/viper"
 
 	"guacamole-client-go/pkg/config"
 	"guacamole-client-go/pkg/jms-sdk-go/model"
 	"guacamole-client-go/pkg/jms-sdk-go/service"
 	"guacamole-client-go/pkg/logger"
+	"guacamole-client-go/pkg/tunnel"
 )
 
 var (
@@ -34,19 +33,6 @@ var (
 func init() {
 	flag.StringVar(&configPath, "f", "config.yml", "config.yml path")
 	flag.BoolVar(&infoFlag, "V", false, "version info")
-}
-
-const (
-	defaultBufferSize = 1024
-)
-
-var upGrader = websocket.Upgrader{
-	ReadBufferSize:  defaultBufferSize,
-	WriteBufferSize: defaultBufferSize,
-	Subprotocols:    []string{"guacamole"},
-	CheckOrigin: func(r *http.Request) bool {
-		return true
-	},
 }
 
 func main() {
@@ -67,17 +53,20 @@ func main() {
 	eng.Use(gin.Recovery())
 	eng.Use(gin.Logger())
 
-	tunnelService := GuacamoleTunnelService{
-		tunnels:    map[string]*TunnelConn{},
-		jmsService: MustJMService(),
+	tunnelService := tunnel.GuacamoleTunnelServer{
+		Tunnels:    map[string]*tunnel.TunnelConn{},
+		JmsService: MustJMService(),
 	}
 
 	guacamoleGroup := eng.Group("/guacamole")
 	{
 		guacamoleGroup.GET("/ws", tunnelService.Connect)
-		guacamoleGroup.POST("/session", tunnelService.CreateSession)
-		guacamoleGroup.GET("/api/tunnels/:tid/streams/:index/:filename", tunnelService.download)
-		guacamoleGroup.POST("/api/tunnels/:tid/streams/:index/:filename", tunnelService.upload)
+	}
+	guacamoleAPIGroup := guacamoleGroup.Group("/api")
+	{
+		guacamoleAPIGroup.POST("/session", tunnelService.CreateSession)
+		guacamoleAPIGroup.GET("/tunnels/:tid/streams/:index/:filename", tunnelService.DownloadFile)
+		guacamoleAPIGroup.POST("/tunnels/:tid/streams/:index/:filename", tunnelService.UploadFile)
 	}
 
 	pprofRouter := eng.Group("/debug/pprof")
@@ -128,7 +117,7 @@ func MustRegisterTerminalAccount() (key model.AccessKey) {
 			conf.Name, conf.BootstrapToken)
 		if err != nil {
 			logger.Debug(err.Error())
-			time.Sleep(10 * time.Second)
+			time.Sleep(5 * time.Second)
 			continue
 		}
 		key.ID = terminal.ServiceAccount.AccessKey.ID
