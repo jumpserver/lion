@@ -3,7 +3,6 @@ package tunnel
 import (
 	"encoding/base64"
 	"fmt"
-	"io"
 	"net/http"
 	"strconv"
 	"sync"
@@ -141,6 +140,8 @@ func (filter *OutputStreamInterceptingFilter) sendAck(index, msg string, status 
 }
 
 func (filter *OutputStreamInterceptingFilter) closeInterceptedStream(index string) {
+	filter.Lock()
+	defer filter.Unlock()
 	if outStream, ok := filter.streams[index]; ok {
 		fmt.Println("closeInterceptedStream index ", index)
 		close(outStream.done)
@@ -158,93 +159,7 @@ func (filter *OutputStreamInterceptingFilter) addOutStream(out OutStreamResource
 	}
 }
 
-type InputStreamInterceptingFilter struct {
-	tunnel  *TunnelConn
-	streams map[string]*InputStreamResource
-	sync.Mutex
-	acknowledgeBlobs bool
-}
-
-func (filter *InputStreamInterceptingFilter) Filter(unfilteredInstruction *guacd.Instruction) *guacd.Instruction {
-	filter.Lock()
-	defer filter.Unlock()
-	if unfilteredInstruction.Opcode == guacd.InstructionStreamingAck {
-		filter.handleAck(unfilteredInstruction)
-	}
-	return unfilteredInstruction
-}
-
-func (filter *InputStreamInterceptingFilter) handleAck(unfilteredInstruction *guacd.Instruction) {
-	//io.Copy()
-
-	// Verify all required arguments are present
-	args := unfilteredInstruction.Args
-	if len(args) < 3 {
-		return
-	}
-	index := args[0]
-	if stream, ok := filter.streams[index]; ok {
-		status := args[2]
-		if status != "0" {
-
-			return
-		}
-
-		// Send next blob
-		filter.readNextBlob(stream)
-
-		//stream.reader.Read()
-	}
-	return
-}
-
-func (filter *InputStreamInterceptingFilter) readNextBlob(stream *InputStreamResource) {
-	buf := make([]byte, 6048)
-	nr, err := stream.reader.Read(buf)
-	if nr > 0 {
-		filter.sendBlob(stream.streamIndex, buf[:nr])
-	}
-	if err != nil {
-		if err != io.EOF {
-			stream.err = err
-		}
-		filter.closeInterceptedStream(stream.streamIndex)
-		return
-	}
-
-}
-
-func (filter *InputStreamInterceptingFilter) sendBlob(index string, p []byte) {
-	err := filter.tunnel.WriteTunnelMessage(guacd.NewInstruction(
-		guacd.InstructionStreamingBlob, index, base64.StdEncoding.EncodeToString(p)))
-	if err != nil {
-		fmt.Println(err)
-	}
-}
-
-func (filter *InputStreamInterceptingFilter) closeInterceptedStream(index string) {
-	if outStream, ok := filter.streams[index]; ok {
-		fmt.Println("closeInterceptedStream index ", index)
-		close(outStream.done)
-	}
-	delete(filter.streams, index)
-}
-
-func (filter *InputStreamInterceptingFilter) sendEnd(index string) {
-	err := filter.tunnel.WriteTunnelMessage(guacd.NewInstruction(
-		guacd.InstructionStreamingEnd, index))
-	if err != nil {
-		fmt.Println(err)
-	}
-}
-
-func (filter *InputStreamInterceptingFilter) addInputStream(stream *InputStreamResource) {
-	filter.Lock()
-	defer filter.Unlock()
-	filter.streams[stream.streamIndex] = stream
-	filter.readNextBlob(stream)
-}
-
+//下载文件的对象
 type OutStreamResource struct {
 	streamIndex string
 	mediaType   string // application/octet-stream
@@ -252,23 +167,6 @@ type OutStreamResource struct {
 	done        chan struct{}
 }
 
-func (o *OutStreamResource) Wait() {
-	<-o.done
-}
-
-type InputStreamResource struct {
-	streamIndex string
-	mediaType   string // application/octet-stream
-	reader      io.ReadCloser
-	done        chan struct{}
-
-	err error
-}
-
-func (o *InputStreamResource) Wait() {
-	<-o.done
-}
-
-func (o *InputStreamResource) WaitErr() error {
-	return o.err
+func (r *OutStreamResource) Wait() {
+	<-r.done
 }

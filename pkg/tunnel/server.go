@@ -14,6 +14,7 @@ import (
 	"guacamole-client-go/pkg/guacd"
 	"guacamole-client-go/pkg/jms-sdk-go/service"
 )
+
 const (
 	defaultBufferSize = 1024
 )
@@ -65,6 +66,9 @@ func (g *GuacamoleTunnelServer) getClientInfo(ctx *gin.Context) guacd.ClientInfo
 
 func (g *GuacamoleTunnelServer) getConnectConfiguration(ctx *gin.Context) guacd.Configuration {
 	conf := guacd.NewConfiguration()
+	if rdp := GetRDPConfiguration(ctx); rdp.Protocol != "" {
+		return rdp
+	}
 	return conf
 }
 
@@ -159,7 +163,6 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 	if tun, ok := g.Tunnels[tid]; ok {
 		files := form.File["file"]
 		for _, file := range files {
-			fmt.Println(file.Filename)
 			fdReader, err := file.Open()
 			if err != nil {
 				return
@@ -171,6 +174,9 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 			}
 			tun.inputFilter.addInputStream(&stream)
 			stream.Wait()
+			if err := stream.WaitErr(); err != nil {
+				fmt.Println("UploadFile ", filename, " ", index, " WaitErr ", err.Error())
+			}
 			_ = fdReader.Close()
 		}
 	}

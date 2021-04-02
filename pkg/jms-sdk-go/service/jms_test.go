@@ -1,8 +1,9 @@
 package service
 
 import (
-	"guacamole-client-go/pkg/jms-sdk-go/httplib"
 	"testing"
+
+	"guacamole-client-go/pkg/jms-sdk-go/httplib"
 )
 
 func setup() *JMService {
@@ -10,7 +11,7 @@ func setup() *JMService {
 		KeyID:    "25bfc52e-48de-4c0c-9b1c-44c79aeb238a",
 		SecretID: "e275a9d9-2c9b-4823-be41-a9012d5cd0c3",
 	}
-	jms, err := NewAuthJMService(JMSAuthSign(&auth),
+	jms, err := NewAuthJMService(JMSAccessKey(auth.KeyID, auth.SecretID),
 		JMSCoreHost("http://10.1.88.5:8080"))
 	if err != nil {
 		panic(err)
