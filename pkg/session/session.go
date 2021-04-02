@@ -15,6 +15,9 @@ type Session struct {
 	Asset      *model.Asset
 	SystemUser *model.SystemUser
 	User       *model.User
+	platform *model.Platform
+
+	domain *model.Domain
 
 
 	ConnectedCallback    func() error

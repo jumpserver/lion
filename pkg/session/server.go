@@ -10,7 +10,7 @@ type Server struct {
 	JmsService *service.JMService
 }
 
-func (s *Server) Creat(user model.User, assetId, systemUserId string) (Session, error) {
+func (s *Server) Creat(user *model.User, assetId, systemUserId string) (Session, error) {
 	asset, err := s.JmsService.GetAssetById(assetId)
 	if err != nil {
 		return Session{}, err
@@ -19,12 +19,31 @@ func (s *Server) Creat(user model.User, assetId, systemUserId string) (Session, 
 	if err != nil {
 		return Session{}, err
 	}
+	platform, err := s.JmsService.GetAssetPlatform(asset)
+	if err != nil {
+		return Session{}, err
+	}
+	var (
+		assetDomain *model.Domain
+	)
+
+	if asset.Domain != "" {
+		domain, err := s.JmsService.GetDomainGateways(asset.Domain)
+		if err != nil {
+			return Session{}, err
+		}
+		assetDomain = &domain
+	}
+
 	newSession := Session{
 		ID:         common.UUID(),
 		Created:    common.NewNowUTCTime(),
-		Asset:      asset,
-		SystemUser: sysUser,
 		User:       user,
+		Asset:      &asset,
+		SystemUser: &sysUser,
+
+		platform: &platform,
+		domain:   assetDomain,
 	}
 	return newSession, nil
 }
