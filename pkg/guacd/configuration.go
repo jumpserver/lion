@@ -1,8 +1,8 @@
 package guacd
 
-func NewConfiguration() (ret Configuration) {
-	ret.Parameters = make(map[string]string)
-	return ret
+func NewConfiguration() (conf Configuration) {
+	conf.Parameters = make(map[string]string)
+	return conf
 }
 
 type Configuration struct {
@@ -11,14 +11,14 @@ type Configuration struct {
 	Parameters   map[string]string
 }
 
-func (opt *Configuration) SetParameter(name, value string) {
-	opt.Parameters[name] = value
+func (conf *Configuration) SetParameter(name, value string) {
+	conf.Parameters[name] = value
 }
 
-func (opt *Configuration) UnSetParameter(name string) {
-	delete(opt.Parameters, name)
+func (conf *Configuration) UnSetParameter(name string) {
+	delete(conf.Parameters, name)
 }
 
-func (opt *Configuration) GetParameter(name string) string {
-	return opt.Parameters[name]
+func (conf *Configuration) GetParameter(name string) string {
+	return conf.Parameters[name]
 }
