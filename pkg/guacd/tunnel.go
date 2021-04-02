@@ -17,7 +17,7 @@ const (
 	Version = "VERSION_1_3_0"
 )
 
-func NewTunnel(address string, config Configuration, info ClientInformation) (ret *Tunnel, err error) {
+func NewTunnel(address string, config Configuration, info ClientInformation) (tunnel *Tunnel, err error) {
 	var conn net.Conn
 	conn, err = net.DialTimeout("tcp", address, defaultSocketTimeOut)
 	if err != nil {
@@ -30,10 +30,10 @@ func NewTunnel(address string, config Configuration, info ClientInformation) (re
 			log.Printf("关闭连接防止conn未关闭,%s\n", err.Error())
 		}
 	}()
-	ret = &Tunnel{}
-	ret.conn = conn
-	ret.rw = bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn))
-	ret.Config = config
+	tunnel = &Tunnel{}
+	tunnel.conn = conn
+	tunnel.rw = bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn))
+	tunnel.Config = config
 
 	selectArg := config.ConnectionID
 	if selectArg == "" {
@@ -41,14 +41,14 @@ func NewTunnel(address string, config Configuration, info ClientInformation) (re
 	}
 
 	// Send requested protocol or connection ID
-	if err = ret.WriteInstructionAndFlush(NewInstruction("select", selectArg)); err != nil {
+	if err = tunnel.WriteInstructionAndFlush(NewInstruction("select", selectArg)); err != nil {
 		fmt.Println(err)
 		return nil, err
 	}
 	var connectArgs Instruction
 
 	// Wait for server args
-	connectArgs, err = ret.expect("args")
+	connectArgs, err = tunnel.expect("args")
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +67,7 @@ func NewTunnel(address string, config Configuration, info ClientInformation) (re
 	width := info.OptimalScreenWidth
 	height := info.OptimalScreenHeight
 	dpi := info.OptimalResolution
-	if err = ret.WriteInstructionAndFlush(NewInstruction(
+	if err = tunnel.WriteInstructionAndFlush(NewInstruction(
 		"size",
 		strconv.Itoa(width),
 		strconv.Itoa(height),
@@ -78,7 +78,7 @@ func NewTunnel(address string, config Configuration, info ClientInformation) (re
 	// Send supported audio formats
 	supportedAudios := info.AudioMimetypes
 
-	if err = ret.WriteInstructionAndFlush(NewInstruction(
+	if err = tunnel.WriteInstructionAndFlush(NewInstruction(
 		"audio", supportedAudios...)); err != nil {
 		return nil, err
 	}
@@ -86,14 +86,14 @@ func NewTunnel(address string, config Configuration, info ClientInformation) (re
 	// Send supported video formats
 	supportedVideos := info.VideoMimetypes
 
-	if err = ret.WriteInstructionAndFlush(NewInstruction(
+	if err = tunnel.WriteInstructionAndFlush(NewInstruction(
 		"video", supportedVideos...)); err != nil {
 		return nil, err
 	}
 
 	// Send supported image formats
 	supportedImages := info.ImageMimetypes
-	if err = ret.WriteInstructionAndFlush(NewInstruction(
+	if err = tunnel.WriteInstructionAndFlush(NewInstruction(
 		"image", supportedImages...)); err != nil {
 		return nil, err
 	}
@@ -101,19 +101,19 @@ func NewTunnel(address string, config Configuration, info ClientInformation) (re
 	// Send client timezone, if supported and available
 	clientTimezone := info.Timezone
 
-	if err = ret.WriteInstructionAndFlush(NewInstruction(
+	if err = tunnel.WriteInstructionAndFlush(NewInstruction(
 		"timezone", clientTimezone)); err != nil {
 		return nil, err
 	}
 
 	// Send args
-	if err = ret.WriteInstructionAndFlush(NewInstruction(
+	if err = tunnel.WriteInstructionAndFlush(NewInstruction(
 		"connect", connectArgsValues...)); err != nil {
 		return nil, err
 	}
 
 	// Wait for ready, store ID
-	ready, err := ret.expect("ready")
+	ready, err := tunnel.expect("ready")
 	if err != nil {
 		return nil, err
 	}
@@ -123,9 +123,9 @@ func NewTunnel(address string, config Configuration, info ClientInformation) (re
 		return nil, err
 	}
 
-	ret.UUID = ready.Args[0]
-	ret.IsOpen = true
-	return ret, nil
+	tunnel.UUID = ready.Args[0]
+	tunnel.IsOpen = true
+	return tunnel, nil
 }
 
 type Tunnel struct {

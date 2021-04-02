@@ -16,7 +16,7 @@ const (
 	PINGOPCODE         = "ping"
 )
 
-type TunnelConn struct {
+type Connection struct {
 	guacdTunnel *guacd.Tunnel
 
 	ws *websocket.Conn
@@ -29,28 +29,28 @@ type TunnelConn struct {
 	inputFilter *InputStreamInterceptingFilter
 }
 
-func (t *TunnelConn) SendWsMessage(msg guacd.Instruction) error {
+func (t *Connection) SendWsMessage(msg guacd.Instruction) error {
 	return t.writeWsMessage([]byte(msg.String()))
 }
 
-func (t *TunnelConn) writeWsMessage(p []byte) error {
+func (t *Connection) writeWsMessage(p []byte) error {
 	t.wsLock.Lock()
 	defer t.wsLock.Unlock()
 	return t.ws.WriteMessage(websocket.TextMessage, p)
 }
 
-func (t *TunnelConn) WriteTunnelMessage(msg guacd.Instruction) (err error) {
+func (t *Connection) WriteTunnelMessage(msg guacd.Instruction) (err error) {
 	_, err = t.writeTunnelMessage([]byte(msg.String()))
 	return err
 }
 
-func (t *TunnelConn) writeTunnelMessage(p []byte) (int, error) {
+func (t *Connection) writeTunnelMessage(p []byte) (int, error) {
 	t.guacdLock.Lock()
 	defer t.guacdLock.Unlock()
 	return t.guacdTunnel.WriteAndFlush(p)
 }
 
-func (t *TunnelConn) readTunnelMessage() ([]byte, error) {
+func (t *Connection) readTunnelMessage() ([]byte, error) {
 	for {
 		instruction, err := t.guacdTunnel.ReadInstruction()
 		if err != nil {
@@ -71,7 +71,7 @@ func (t *TunnelConn) readTunnelMessage() ([]byte, error) {
 
 }
 
-func (t *TunnelConn) Run(ctx *gin.Context) (err error) {
+func (t *Connection) Run(ctx *gin.Context) (err error) {
 	// 需要发送 uuid 返回给 guacamole tunnel
 	err = t.SendWsMessage(guacd.NewInstruction(
 		INTERNALDATAOPCODE, t.guacdTunnel.UUID))
@@ -80,7 +80,7 @@ func (t *TunnelConn) Run(ctx *gin.Context) (err error) {
 		return err
 	}
 	exit := make(chan error, 2)
-	go func(t *TunnelConn) {
+	go func(t *Connection) {
 		for {
 			instructionBytes, err := t.readTunnelMessage()
 			if err != nil {
@@ -131,6 +131,6 @@ func (t *TunnelConn) Run(ctx *gin.Context) (err error) {
 		_ = t.guacdTunnel.Close()
 	default:
 	}
-	log.Println("TunnelConn goroutines are terminated.")
+	log.Println("Connection goroutines are terminated.")
 	return
 }

@@ -43,5 +43,11 @@ type SystemUserAuthInfo struct {
 	LoginMode  string `json:"login_mode"`
 	Password   string `json:"password"`
 	PrivateKey string `json:"private_key"`
+	AdDomain   string `json:"ad_domain"`
 	Token      string `json:"token"`
+	OrgId      string `json:"org_id"`
+	OrgName    string `json:"org_name"`
+	PublicKey  string `json:"public_key"`
+
+	UsernameSameWithUser bool `json:"username_same_with_user"`
 }

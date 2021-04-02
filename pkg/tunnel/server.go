@@ -29,8 +29,8 @@ var upGrader = websocket.Upgrader{
 }
 
 type GuacamoleTunnelServer struct {
-	Tunnels    map[string]*TunnelConn
-	JmsService *service.JMService
+	JmsService  *service.JMService
+	ConnStorage *GuaTunnelStorage
 }
 
 func (g *GuacamoleTunnelServer) getClientInfo(ctx *gin.Context) guacd.ClientInformation {
@@ -101,7 +101,7 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 		return
 	}
 	defer tunnel.Close()
-	conn := TunnelConn{
+	conn := Connection{
 		guacdTunnel: tunnel,
 		ws:          ws,
 	}
@@ -116,9 +116,9 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	}
 	conn.outputFilter = &outFilter
 	conn.inputFilter = &inputFilter
-	g.Tunnels[conn.guacdTunnel.UUID] = &conn
+	g.ConnStorage.Add(&conn)
 	err = conn.Run(ctx)
-
+	g.ConnStorage.Delete(&conn)
 }
 
 func (g *GuacamoleTunnelServer) CreateSession(ctx *gin.Context) {
@@ -133,7 +133,7 @@ func (g *GuacamoleTunnelServer) DownloadFile(ctx *gin.Context) {
 	filename := ctx.Param("filename")
 
 	fmt.Println(tid, index, filename)
-	if tun, ok := g.Tunnels[tid]; ok {
+	if tun := g.ConnStorage.Get(tid); tun != nil {
 		ctx.Writer.Header().Set("content-disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
 		out := OutStreamResource{
 			streamIndex: index,
@@ -153,14 +153,12 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 	filename := ctx.Param("filename")
 	fmt.Println(tid, index, filename)
 	form, err := ctx.MultipartForm()
-
 	if err != nil {
 		fmt.Println(err)
 		ctx.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-
-	if tun, ok := g.Tunnels[tid]; ok {
+	if tun := g.ConnStorage.Get(tid); tun != nil {
 		files := form.File["file"]
 		for _, file := range files {
 			fdReader, err := file.Open()
@@ -179,6 +177,7 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 			}
 			_ = fdReader.Close()
 		}
+		return
 	}
-	fmt.Println("UploadFile ", filename, " ", index, " finished")
+	ctx.AbortWithStatus(http.StatusNotFound)
 }

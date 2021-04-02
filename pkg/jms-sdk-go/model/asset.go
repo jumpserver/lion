@@ -10,7 +10,7 @@ type Asset struct {
 	Hostname  string   `json:"hostname"`
 	IP        string   `json:"ip"`
 	Os        string   `json:"os"`
-	Domain    string   `json:"domain"`
+	Domain    string   `json:"domain"` // 是否需要走网域
 	Comment   string   `json:"comment"`
 	Protocols []string `json:"protocols"`
 	OrgID     string   `json:"org_id"`

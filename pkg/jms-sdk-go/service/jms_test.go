@@ -28,3 +28,55 @@ func TestJMService_GetProfile(t *testing.T) {
 	t.Logf("%v", user)
 
 }
+
+func TestJMService_GetSystemUserById(t *testing.T) {
+	jms := setup()
+	systemId := "33511e29-3058-49c5-85da-56a296494714"
+	sysUser, err := jms.GetSystemUserById(systemId)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("%v", sysUser)
+
+}
+
+func TestJMService_GetSystemUserAuthById(t *testing.T) {
+	jms := setup()
+	systemId := "33511e29-3058-49c5-85da-56a296494714"
+	sysUser, err := jms.GetSystemUserAuthById(systemId, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("%+v", sysUser)
+
+}
+
+func TestJMService_GetAssetById(t *testing.T) {
+	jms := setup()
+	assetIds := []string{
+		"2e73f0e4-13ec-4f64-b03e-4ecbadab7233", // 有网域
+		"bd87e0b9-9a94-48df-9fa1-4aab4c9f49a5", // 无网域
+	}
+	for i := range assetIds {
+		asset, err := jms.GetAssetById(assetIds[i])
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Logf("%+v\n", asset)
+	}
+
+}
+
+func TestJMService_GetDomainGateways(t *testing.T) {
+	jms := setup()
+	domains := []string{
+		"aad81461-5f10-40f6-9064-ed6de855d0c7",
+	}
+	for i := range domains {
+		asset, err := jms.GetDomainGateways(domains[i])
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Logf("%+v\n", asset)
+	}
+}

@@ -11,7 +11,7 @@ import (
 )
 
 type OutputStreamInterceptingFilter struct {
-	tunnel  *TunnelConn
+	tunnel  *Connection
 	streams map[string]OutStreamResource
 	sync.Mutex
 	acknowledgeBlobs bool
