@@ -26,7 +26,6 @@ func (s *Server) Creat(user *model.User, assetId, systemUserId string) (Session,
 	var (
 		assetDomain *model.Domain
 	)
-
 	if asset.Domain != "" {
 		domain, err := s.JmsService.GetDomainGateways(asset.Domain)
 		if err != nil {
@@ -41,13 +40,21 @@ func (s *Server) Creat(user *model.User, assetId, systemUserId string) (Session,
 		User:       user,
 		Asset:      &asset,
 		SystemUser: &sysUser,
-
-		platform: &platform,
-		domain:   assetDomain,
+		Platform:   &platform,
+		Domain:     assetDomain,
 	}
 	return newSession, nil
 }
 
+func (s *Server) GetSession(sid string) Session {
+	return Session{}
+}
+
 func (s *Server) UpdateSession(sid string) {
 
+}
+
+func (s *Server) ValidateConnectionPerms(session *Session) error {
+
+	return nil
 }

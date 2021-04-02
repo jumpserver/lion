@@ -10,15 +10,14 @@ import (
 )
 
 type Session struct {
-	ID         string
-	Created    common.UTCTime
-	Asset      *model.Asset
-	SystemUser *model.SystemUser
-	User       *model.User
-	platform *model.Platform
+	ID         string            `json:"id"`
+	Created    common.UTCTime    `json:"-"`
+	Asset      *model.Asset      `json:"asset"`
+	SystemUser *model.SystemUser `json:"system_user"`
+	User       *model.User       `json:"user"`
+	Platform   *model.Platform   `json:"platform"`
 
-	domain *model.Domain
-
+	Domain *model.Domain `json:"domain"`
 
 	ConnectedCallback    func() error
 	DisConnectedCallback func() error
@@ -37,15 +36,15 @@ const (
 func (s Session) GuaConfiguration() guacd.Configuration {
 	switch strings.ToLower(s.SystemUser.Protocol) {
 	case vnc:
-		return s.ConfigurationVNC()
+		return s.configurationVNC()
 	case rdp:
-		return s.ConfigurationRDP()
+		return s.configurationRDP()
 	default:
 	}
 	return guacd.Configuration{}
 }
 
-func (s Session) ConfigurationVNC() guacd.Configuration {
+func (s Session) configurationVNC() guacd.Configuration {
 	conf := guacd.NewConfiguration()
 	var (
 		username string
@@ -61,7 +60,7 @@ func (s Session) ConfigurationVNC() guacd.Configuration {
 
 	return conf
 }
-func (s Session) ConfigurationRDP() guacd.Configuration {
+func (s Session) configurationRDP() guacd.Configuration {
 	var (
 		username string
 		password string

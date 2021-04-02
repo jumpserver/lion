@@ -9,10 +9,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 
-	"guacamole-client-go/pkg/common"
 	"guacamole-client-go/pkg/config"
 	"guacamole-client-go/pkg/guacd"
+	"guacamole-client-go/pkg/jms-sdk-go/model"
 	"guacamole-client-go/pkg/jms-sdk-go/service"
+	"guacamole-client-go/pkg/session"
 )
 
 const (
@@ -29,8 +30,9 @@ var upGrader = websocket.Upgrader{
 }
 
 type GuacamoleTunnelServer struct {
-	JmsService  *service.JMService
-	ConnStorage *GuaTunnelStorage
+	JmsService     *service.JMService
+	ConnStorage    *GuaTunnelStorage
+	SessionService *session.Server
 }
 
 func (g *GuacamoleTunnelServer) getClientInfo(ctx *gin.Context) guacd.ClientInformation {
@@ -65,11 +67,14 @@ func (g *GuacamoleTunnelServer) getClientInfo(ctx *gin.Context) guacd.ClientInfo
 }
 
 func (g *GuacamoleTunnelServer) getConnectConfiguration(ctx *gin.Context) guacd.Configuration {
-	conf := guacd.NewConfiguration()
-	if rdp := GetRDPConfiguration(ctx); rdp.Protocol != "" {
-		return rdp
+
+	sessionId, ok := ctx.GetQuery("SESSION_ID")
+	if !ok {
+		return guacd.Configuration{}
 	}
-	return conf
+	tunnelSession := g.SessionService.GetSession(sessionId)
+
+	return tunnelSession.GuaConfiguration()
 }
 
 func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
@@ -122,9 +127,20 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 }
 
 func (g *GuacamoleTunnelServer) CreateSession(ctx *gin.Context) {
-	Id := common.UUID()
-	//data := make(map[string]string)
-	ctx.JSON(http.StatusCreated, Id)
+	assetId, ok := ctx.GetQuery("asset_id")
+	if !ok {
+		return
+	}
+	sysUserId, ok := ctx.GetQuery("system_user_id")
+	if !ok {
+		return
+	}
+	var user *model.User
+	connectSession, err := g.SessionService.Creat(user, assetId, sysUserId)
+	if err != nil {
+		return
+	}
+	ctx.JSON(http.StatusCreated, connectSession)
 }
 
 func (g *GuacamoleTunnelServer) DownloadFile(ctx *gin.Context) {
