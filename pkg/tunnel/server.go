@@ -66,14 +66,8 @@ func (g *GuacamoleTunnelServer) getClientInfo(ctx *gin.Context) guacd.ClientInfo
 	return info
 }
 
-func (g *GuacamoleTunnelServer) getConnectConfiguration(ctx *gin.Context) guacd.Configuration {
-
-	sessionId, ok := ctx.GetQuery("SESSION_ID")
-	if !ok {
-		return guacd.Configuration{}
-	}
+func (g *GuacamoleTunnelServer) getConnectConfiguration(sessionId string) guacd.Configuration {
 	tunnelSession := g.SessionService.GetSession(sessionId)
-
 	return tunnelSession.GuaConfiguration()
 }
 
@@ -94,9 +88,8 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	var tunnel *guacd.Tunnel
 
 	guacdAddr := net.JoinHostPort(config.GlobalConfig.GuaHost, config.GlobalConfig.GuaPort)
-	fmt.Println(guacdAddr, sessionId)
 	info := g.getClientInfo(ctx)
-	conf := g.getConnectConfiguration(ctx)
+	conf := g.getConnectConfiguration(sessionId)
 	tunnel, err = guacd.NewTunnel(guacdAddr, conf, info)
 	if err != nil {
 		fmt.Printf("%v\n", err)
