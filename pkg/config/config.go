@@ -77,22 +77,19 @@ func getPwdDirPath() string {
 	return ""
 }
 
-func FileExists(path string) bool {
-	if _, err := os.Stat(path); err != nil {
-		if os.IsNotExist(err) {
-			return false
-		}
-		return false
-	}
-	return true
+func have(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
+func haveDir(file string) bool {
+	fi, err := os.Stat(file)
+	return err == nil && fi.IsDir()
 }
 
 func EnsureDirExist(path string) error {
-	if !FileExists(path) {
+	if !haveDir(path) {
 		if err := os.MkdirAll(path, os.ModePerm); err != nil {
-			if os.IsExist(err) {
-				return nil
-			}
 			return err
 		}
 	}

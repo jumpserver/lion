@@ -1,6 +1,7 @@
 package session
 
 import (
+	"strconv"
 	"strings"
 
 	"guacamole-client-go/pkg/common"
@@ -9,7 +10,7 @@ import (
 	"guacamole-client-go/pkg/jms-sdk-go/model"
 )
 
-type Session struct {
+type ConnectSession struct {
 	ID         string            `json:"id"`
 	Created    common.UTCTime    `json:"-"`
 	Asset      *model.Asset      `json:"asset"`
@@ -33,7 +34,7 @@ const (
 	BoolEnable  = "true"
 )
 
-func (s Session) GuaConfiguration() guacd.Configuration {
+func (s ConnectSession) GuaConfiguration() guacd.Configuration {
 	switch strings.ToLower(s.SystemUser.Protocol) {
 	case vnc:
 		return s.configurationVNC()
@@ -44,7 +45,7 @@ func (s Session) GuaConfiguration() guacd.Configuration {
 	return guacd.Configuration{}
 }
 
-func (s Session) configurationVNC() guacd.Configuration {
+func (s ConnectSession) configurationVNC() guacd.Configuration {
 	conf := guacd.NewConfiguration()
 	var (
 		username string
@@ -60,18 +61,26 @@ func (s Session) configurationVNC() guacd.Configuration {
 
 	return conf
 }
-func (s Session) configurationRDP() guacd.Configuration {
+func (s ConnectSession) configurationRDP() guacd.Configuration {
 	var (
 		username string
 		password string
 		ip       string
 		port     string
 	)
+	ip = s.Asset.IP
+	port = strconv.Itoa(s.Asset.ProtocolPort(s.SystemUser.Protocol))
+	username = s.SystemUser.Username
+	password = s.SystemUser.Password
+
 	conf := guacd.NewConfiguration()
-	conf.SetParameter(guacd.RDPUsername, username)
-	conf.SetParameter(guacd.RDPPassword, password)
+	conf.Protocol = rdp
 	conf.SetParameter(guacd.RDPHostname, ip)
 	conf.SetParameter(guacd.RDPPort, port)
+
+	conf.SetParameter(guacd.RDPUsername, username)
+	conf.SetParameter(guacd.RDPPassword, password)
+
 	conf.SetParameter(guacd.RDPSecurity, "any")
 	conf.SetParameter(guacd.RDPIgnoreCert, BoolEnable)
 

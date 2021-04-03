@@ -10,18 +10,18 @@ type Server struct {
 	JmsService *service.JMService
 }
 
-func (s *Server) Creat(user *model.User, assetId, systemUserId string) (Session, error) {
+func (s *Server) Creat(user *model.User, assetId, systemUserId string) (ConnectSession, error) {
 	asset, err := s.JmsService.GetAssetById(assetId)
 	if err != nil {
-		return Session{}, err
+		return ConnectSession{}, err
 	}
 	sysUser, err := s.JmsService.GetSystemUserById(systemUserId)
 	if err != nil {
-		return Session{}, err
+		return ConnectSession{}, err
 	}
 	platform, err := s.JmsService.GetAssetPlatform(asset)
 	if err != nil {
-		return Session{}, err
+		return ConnectSession{}, err
 	}
 	var (
 		assetDomain *model.Domain
@@ -29,12 +29,12 @@ func (s *Server) Creat(user *model.User, assetId, systemUserId string) (Session,
 	if asset.Domain != "" {
 		domain, err := s.JmsService.GetDomainGateways(asset.Domain)
 		if err != nil {
-			return Session{}, err
+			return ConnectSession{}, err
 		}
 		assetDomain = &domain
 	}
 
-	newSession := Session{
+	newSession := ConnectSession{
 		ID:         common.UUID(),
 		Created:    common.NewNowUTCTime(),
 		User:       user,
@@ -46,15 +46,15 @@ func (s *Server) Creat(user *model.User, assetId, systemUserId string) (Session,
 	return newSession, nil
 }
 
-func (s *Server) GetSession(sid string) Session {
-	return Session{}
+func (s *Server) GetSession(sid string) ConnectSession {
+	return ConnectSession{}
 }
 
 func (s *Server) UpdateSession(sid string) {
 
 }
 
-func (s *Server) ValidateConnectionPerms(session *Session) error {
+func (s *Server) ValidateConnectionPerms(session *ConnectSession) error {
 
 	return nil
 }
