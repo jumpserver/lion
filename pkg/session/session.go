@@ -81,7 +81,11 @@ func (s ConnectSession) configurationRDP() guacd.Configuration {
 	conf.SetParameter(guacd.RDPUsername, username)
 	conf.SetParameter(guacd.RDPPassword, password)
 
-	conf.SetParameter(guacd.RDPSecurity, "any")
+	if s.SystemUser.AdDomain != "" {
+		conf.SetParameter(guacd.RDPDomain, s.SystemUser.AdDomain)
+	}
+
+	conf.SetParameter(guacd.RDPSecurity, SecurityAny)
 	conf.SetParameter(guacd.RDPIgnoreCert, BoolEnable)
 
 	conf.SetParameter(guacd.RDPResizeMethod, "reconnect")
@@ -94,3 +98,12 @@ func (s ConnectSession) configurationRDP() guacd.Configuration {
 	conf.SetParameter(guacd.RDPDriveName, "Jumpserver")
 	return conf
 }
+
+const (
+	SecurityAny       = "any"
+	SecurityNla       = "nla"
+	SecurityNlaExt    = "nla-ext"
+	SecurityTls       = "tls"
+	SecurityVmConnect = "vmconnect"
+	SecurityRdp       = "rdp"
+)

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 
 	"guacamole-client-go/pkg/jms-sdk-go/httplib"
@@ -39,6 +40,9 @@ func NewAuthJMService(opts ...Option) (*JMService, error) {
 
 type JMService struct {
 	authClient *httplib.Client
+
+	sync.Mutex
+	remoteConfig *model.TerminalConfig
 }
 
 func (s *JMService) GetUserById(userID string) (user *model.User, err error) {
@@ -64,4 +68,3 @@ func (s *JMService) GetTerminalConfig() (model.TerminalConfig, error) {
 	_, err := s.authClient.Get(TerminalConfigURL, &conf)
 	return conf, err
 }
-

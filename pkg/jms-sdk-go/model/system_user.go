@@ -19,6 +19,7 @@ type SystemUser struct {
 	Username             string   `json:"username"`
 	Priority             int      `json:"priority"`
 	Protocol             string   `json:"protocol"`
+	AdDomain             string   `json:"ad_domain"`
 	Comment              string   `json:"comment"`
 	LoginMode            string   `json:"login_mode"`
 	Password             string   `json:"password"`
