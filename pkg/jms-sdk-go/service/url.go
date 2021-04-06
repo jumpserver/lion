@@ -66,3 +66,9 @@ const (
 const (
 	StatURL = "/api/v1/terminal/components/state/"
 )
+
+const (
+	PermissionURL = "/api/v1/perms/asset-permissions/user/actions/?user_id=%s&asset_id=%s&system_user_id=%s"
+
+	RemoteAPPURL = "/api/v1/applications/remote-apps/%s/connection-info/"
+)

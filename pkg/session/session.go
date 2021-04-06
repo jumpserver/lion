@@ -30,8 +30,8 @@ const (
 )
 
 const (
-	BoolDisable = "false"
-	BoolEnable  = "true"
+	BoolFalse = "false"
+	BoolTrue  = "true"
 )
 
 func (s ConnectSession) GuaConfiguration() guacd.Configuration {
@@ -86,13 +86,13 @@ func (s ConnectSession) configurationRDP() guacd.Configuration {
 	}
 
 	conf.SetParameter(guacd.RDPSecurity, SecurityAny)
-	conf.SetParameter(guacd.RDPIgnoreCert, BoolEnable)
+	conf.SetParameter(guacd.RDPIgnoreCert, BoolTrue)
 
 	conf.SetParameter(guacd.RDPResizeMethod, "reconnect")
-	conf.SetParameter(guacd.RDPDisableGlyphCaching, BoolEnable)
+	conf.SetParameter(guacd.RDPDisableGlyphCaching, BoolTrue)
 
-	conf.SetParameter(guacd.RDPEnableDrive, BoolEnable)
-	conf.SetParameter(guacd.RDPCreateDrivePath, BoolEnable)
+	conf.SetParameter(guacd.RDPEnableDrive, BoolTrue)
+	conf.SetParameter(guacd.RDPCreateDrivePath, BoolTrue)
 
 	conf.SetParameter(guacd.RDPDrivePath, config.GlobalConfig.DrivePath)
 	conf.SetParameter(guacd.RDPDriveName, "Jumpserver")
@@ -107,3 +107,10 @@ const (
 	SecurityVmConnect = "vmconnect"
 	SecurityRdp       = "rdp"
 )
+
+func ConvertBoolToString(b bool) string {
+	if b {
+		return BoolTrue
+	}
+	return BoolFalse
+}

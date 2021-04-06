@@ -6,12 +6,19 @@ import (
 	"guacamole-client-go/pkg/jms-sdk-go/service"
 )
 
+
+const (
+	TypeRDP       = "rdp"
+	TypeVNC       = "vnc"
+	TypeRemoteApp = "remoteapp"
+)
+
 type Server struct {
 	JmsService *service.JMService
 }
 
-func (s *Server) Creat(user *model.User, assetId, systemUserId string) (ConnectSession, error) {
-	asset, err := s.JmsService.GetAssetById(assetId)
+func (s *Server) Creat(user *model.User, targetType, targetId, systemUserId string) (ConnectSession, error) {
+	asset, err := s.JmsService.GetAssetById(targetId)
 	if err != nil {
 		return ConnectSession{}, err
 	}

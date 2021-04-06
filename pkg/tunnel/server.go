@@ -31,7 +31,7 @@ var upGrader = websocket.Upgrader{
 
 type GuacamoleTunnelServer struct {
 	JmsService     *service.JMService
-	ConnStorage    *GuaTunnelStorage
+	Cache          *GuaTunnelCache
 	SessionService *session.Server
 }
 
@@ -114,13 +114,19 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	}
 	conn.outputFilter = &outFilter
 	conn.inputFilter = &inputFilter
-	g.ConnStorage.Add(&conn)
+	g.Cache.Add(&conn)
 	err = conn.Run(ctx)
-	g.ConnStorage.Delete(&conn)
+	g.Cache.Delete(&conn)
 }
 
+const ctxKeyJMSUser = "JMSUSER"
+
 func (g *GuacamoleTunnelServer) CreateSession(ctx *gin.Context) {
-	assetId, ok := ctx.GetQuery("asset_id")
+	targetId, ok := ctx.GetQuery("target_id")
+	if !ok {
+		return
+	}
+	targetType, ok := ctx.GetQuery("type")
 	if !ok {
 		return
 	}
@@ -128,8 +134,12 @@ func (g *GuacamoleTunnelServer) CreateSession(ctx *gin.Context) {
 	if !ok {
 		return
 	}
-	var user *model.User
-	connectSession, err := g.SessionService.Creat(user, assetId, sysUserId)
+	value, ok := ctx.Get(ctxKeyJMSUser)
+	if !ok {
+		return
+	}
+	user := value.(*model.User)
+	connectSession, err := g.SessionService.Creat(user, targetType, targetId, sysUserId)
 	if err != nil {
 		return
 	}
@@ -142,7 +152,7 @@ func (g *GuacamoleTunnelServer) DownloadFile(ctx *gin.Context) {
 	filename := ctx.Param("filename")
 
 	fmt.Println(tid, index, filename)
-	if tun := g.ConnStorage.Get(tid); tun != nil {
+	if tun := g.Cache.Get(tid); tun != nil {
 		ctx.Writer.Header().Set("content-disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
 		out := OutStreamResource{
 			streamIndex: index,
@@ -160,14 +170,13 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 	tid := ctx.Param("tid")
 	index := ctx.Param("index")
 	filename := ctx.Param("filename")
-	fmt.Println(tid, index, filename)
 	form, err := ctx.MultipartForm()
 	if err != nil {
 		fmt.Println(err)
 		ctx.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
-	if tun := g.ConnStorage.Get(tid); tun != nil {
+	if tun := g.Cache.Get(tid); tun != nil {
 		files := form.File["file"]
 		for _, file := range files {
 			fdReader, err := file.Open()

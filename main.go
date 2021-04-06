@@ -54,7 +54,7 @@ func main() {
 	eng.Use(gin.Logger())
 
 	tunnelService := tunnel.GuacamoleTunnelServer{
-		ConnStorage: &tunnel.GuaTunnelStorage{
+		Cache: &tunnel.GuaTunnelCache{
 			Tunnels: make(map[string]*tunnel.Connection),
 		},
 		JmsService: MustJMService(),
