@@ -71,7 +71,7 @@
 <script>
 import Guacamole from 'guacamole-common-js'
 import {GetSupportedMimetypes} from '../utils/image'
-import {BaseAPIURL, sanitizeFilename} from '../utils/common'
+import {BaseAPIURL, sanitizeFilename, getCurrentConnectParams} from '../utils/common'
 import GuacClipboard from './GuacClipboard'
 import GuacFileSystem from './GuacFileSystem'
 
@@ -159,6 +159,7 @@ export default {
     }
   },
   mounted: function() {
+    console.log(getCurrentConnectParams())
     window.addEventListener('resize', this.onWindowResize)
     window.onfocus = this.onWindowFocus
     let url = BaseAPIURL + '/session'
