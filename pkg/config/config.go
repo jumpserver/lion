@@ -13,6 +13,7 @@ var GlobalConfig *Config
 type Config struct {
 	Root              string
 	DrivePath         string
+	RecordPath        string
 	AccessKeyFilePath string
 
 	Name           string `mapstructure:"NAME"`
@@ -45,6 +46,7 @@ func getDefaultConfig() Config {
 	rootPath := getPwdDirPath()
 	dataFolderPath := filepath.Join(rootPath, "data")
 	driveFolderPath := filepath.Join(dataFolderPath, "drive")
+	recordFolderPath := filepath.Join(dataFolderPath, "record")
 	keyFolderPath := filepath.Join(dataFolderPath, "key")
 	accessKeyFilePath := filepath.Join(keyFolderPath, ".access_key")
 
@@ -57,6 +59,7 @@ func getDefaultConfig() Config {
 	return Config{
 		Name:              defaultName,
 		Root:              rootPath,
+		RecordPath:        recordFolderPath,
 		DrivePath:         driveFolderPath,
 		AccessKeyFilePath: accessKeyFilePath,
 		CoreHost:          "http://127.0.0.1:8080",
