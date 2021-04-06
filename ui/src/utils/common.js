@@ -20,4 +20,9 @@ else
 
 export const OriginSite = streamOrigin
 
-export const BaseAPIURL = streamOrigin + '/guacamole'
+export const BaseAPIURL = streamOrigin + '/guacamole/api'
+
+export function getCurrentConnectParams() {
+  let urlParams = new URLSearchParams(window.location.search.slice(1))
+  return urlParams.entries()
+}

@@ -161,11 +161,21 @@ export default {
   mounted: function() {
     window.addEventListener('resize', this.onWindowResize)
     window.onfocus = this.onWindowFocus
-    this.getConnectString('0000-0000-00').then(connectionParams => {
-      console.log(connectionParams)
-      console.log(this.displayWidth, this.displayHeight)
-      this.connectGuacamole(connectionParams)
+    let url = BaseAPIURL + '/session'
+    let data = {
+      'type': 'rdp',
+      'target_id': '4155f16b-ea59-4824-a468-d47a7a907087',
+      'system_user_id': 'd9341b5a-426c-4d3a-8a10-2c23a7e06997',
+    }
+    this.$post(url, data).then(res => {
+      console.log(res)
+      // this.getConnectString('0000-0000-00').then(connectionParams => {
+      //   console.log(connectionParams)
+      //   console.log(this.displayWidth, this.displayHeight)
+      //   this.connectGuacamole(connectionParams)
+      // })
     })
+
   },
   methods: {
     checkPasswordInput(name) {
@@ -562,13 +572,13 @@ export default {
     clientFileReceived(stream, mimetype, filename) {
       console.log('clientFileReceived, ', this.tunnel.uuid, stream, mimetype, filename)
       // Build download URL
-      var url = BaseAPIURL
-          + '/api/tunnels/' + encodeURIComponent(this.tunnel.uuid)
+      let url = BaseAPIURL
+          + '/tunnels/' + encodeURIComponent(this.tunnel.uuid)
           + '/streams/' + encodeURIComponent(stream.index)
           + '/' + encodeURIComponent(sanitizeFilename(filename))
 
       // Create temporary hidden iframe to facilitate download
-      var iframe = document.createElement('iframe')
+      let iframe = document.createElement('iframe')
       iframe.style.position = 'fixed'
       iframe.style.border = 'none'
       iframe.style.width = '1px'
@@ -651,7 +661,7 @@ export default {
                                                      progressCallback) {
             // Build upload URL
             let url = BaseAPIURL
-                + '/api/tunnels/' + encodeURIComponent(tunnel)
+                + '/tunnels/' + encodeURIComponent(tunnel)
                 + '/streams/' + encodeURIComponent(stream.index)
                 + '/' + encodeURIComponent(sanitizeFilename(file.name))
             let xhr = new XMLHttpRequest()

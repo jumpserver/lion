@@ -20,11 +20,17 @@ type AuthSign interface {
 	Sign(req *http.Request) error
 }
 
+const miniTimeout = time.Second * 30
+
 func NewClient(baseUrl string, timeout time.Duration) (*Client, error) {
 	_, err := url.Parse(baseUrl)
 	if err != nil {
 		return nil, err
 	}
+	if timeout < miniTimeout {
+		timeout = miniTimeout
+	}
+
 	jar := &customCookieJar{
 		data: map[string]string{},
 	}
@@ -33,7 +39,7 @@ func NewClient(baseUrl string, timeout time.Duration) (*Client, error) {
 		Jar:     jar,
 	}
 	return &Client{
-		Timeout: 0,
+		Timeout: timeout,
 		baseUrl: baseUrl,
 		cookies: make(map[string]string),
 		headers: make(map[string]string),
@@ -48,6 +54,24 @@ type Client struct {
 	headers  map[string]string
 	http     *http.Client
 	authSign AuthSign
+}
+
+func (c *Client) Clone() Client {
+	jar := &customCookieJar{
+		data: map[string]string{},
+	}
+	con := http.Client{
+		Timeout: c.Timeout,
+		Jar:     jar,
+	}
+	return Client{
+		Timeout: c.Timeout,
+		baseUrl: c.baseUrl,
+		cookies: make(map[string]string),
+		headers: make(map[string]string),
+		http:    &con,
+	}
+
 }
 
 func (c *Client) SetCookie(key string, value string) {

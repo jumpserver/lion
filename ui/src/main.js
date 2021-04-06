@@ -4,9 +4,11 @@ import Guacamole from 'guacamole-common-js'
 import 'element-ui/lib/theme-chalk/index.css'
 import App from './App.vue'
 import i18n from './i18n'
+import plugins from './plugins'
 
 Vue.use(ElementUI)
 Vue.use(Guacamole)
+Vue.use(plugins)
 Vue.use(i18n)
 Vue.config.productionTip = false
 

@@ -23,8 +23,12 @@ type Config struct {
 	HTTPPort       string `mapstructure:"HTTPD_PORT"`
 	LogLevel       string `mapstructure:"LOG_LEVEL"`
 
-	GuaHost string `mapstructure:"GUA_HOST"`
-	GuaPort string `mapstructure:"GUA_PORT"`
+	GuaHost                   string `mapstructure:"GUA_HOST"`
+	GuaPort                   string `mapstructure:"GUA_PORT"`
+	DisableAllCopyPaste       bool   `mapstructure:"JUMPSERVER_DISABLE_ALL_COPY_PASTE"`
+	DisableAllUpDownload      bool   `mapstructure:"JUMPSERVER_DISABLE_ALL_UPLOAD_DOWNLOAD"`
+	EnableRemoteAppUpDownLoad bool   `mapstructure:"JUMPSERVER_REMOTE_APP_UPLOAD_DOWNLOAD_ENABLE"`
+	EnableRemoteAPPCopyPaste  bool   `mapstructure:"JUMPSERVER_REMOTE_APP_COPY_PASTE_ENABLE"`
 }
 
 func Setup() {
@@ -57,18 +61,22 @@ func getDefaultConfig() Config {
 		}
 	}
 	return Config{
-		Name:              defaultName,
-		Root:              rootPath,
-		RecordPath:        recordFolderPath,
-		DrivePath:         driveFolderPath,
-		AccessKeyFilePath: accessKeyFilePath,
-		CoreHost:          "http://127.0.0.1:8080",
-		BootstrapToken:    "",
-		BindHost:          "0.0.0.0",
-		HTTPPort:          "8081",
-		LogLevel:          "INFO",
-		GuaHost:           "127.0.0.1",
-		GuaPort:           "4822",
+		Name:                      defaultName,
+		Root:                      rootPath,
+		RecordPath:                recordFolderPath,
+		DrivePath:                 driveFolderPath,
+		AccessKeyFilePath:         accessKeyFilePath,
+		CoreHost:                  "http://127.0.0.1:8080",
+		BootstrapToken:            "",
+		BindHost:                  "0.0.0.0",
+		HTTPPort:                  "8081",
+		LogLevel:                  "INFO",
+		GuaHost:                   "127.0.0.1",
+		GuaPort:                   "4822",
+		DisableAllCopyPaste:       false,
+		DisableAllUpDownload:      false,
+		EnableRemoteAppUpDownLoad: false,
+		EnableRemoteAPPCopyPaste:  false,
 	}
 
 }

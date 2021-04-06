@@ -32,6 +32,7 @@ var upGrader = websocket.Upgrader{
 type GuacamoleTunnelServer struct {
 	JmsService     *service.JMService
 	Cache          *GuaTunnelCache
+	SessCache      *SessionCache
 	SessionService *session.Server
 }
 
@@ -84,12 +85,18 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(data.String()))
 		return
 	}
-
+	info := g.getClientInfo(ctx)
+	tunnelSession := g.SessCache.Pop(sessionId)
+	if tunnelSession == nil {
+		data := guacd.NewInstruction(
+			guacd.InstructionServerError, "no found session", "504")
+		_ = ws.WriteMessage(websocket.TextMessage, []byte(data.String()))
+		return
+	}
+	conf := tunnelSession.GuaConfiguration()
 	var tunnel *guacd.Tunnel
 
 	guacdAddr := net.JoinHostPort(config.GlobalConfig.GuaHost, config.GlobalConfig.GuaPort)
-	info := g.getClientInfo(ctx)
-	conf := g.getConnectConfiguration(sessionId)
 	tunnel, err = guacd.NewTunnel(guacdAddr, conf, info)
 	if err != nil {
 		fmt.Printf("%v\n", err)
@@ -100,6 +107,7 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	}
 	defer tunnel.Close()
 	conn := Connection{
+		sess:        tunnelSession,
 		guacdTunnel: tunnel,
 		ws:          ws,
 	}
@@ -119,30 +127,31 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	g.Cache.Delete(&conn)
 }
 
-const ctxKeyJMSUser = "JMSUSER"
+const ginCtxUserKey = "JMS-CtxUserKey"
 
 func (g *GuacamoleTunnelServer) CreateSession(ctx *gin.Context) {
-	targetId, ok := ctx.GetQuery("target_id")
-	if !ok {
+	var json struct {
+		TargetId     string `json:"target_id"`
+		TargetType   string `json:"type"`
+		SystemUserId string `json:"system_user_id"`
+	}
+	if err := ctx.ShouldBindJSON(&json); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	targetType, ok := ctx.GetQuery("type")
+	fmt.Println(json)
+	value, ok := ctx.Get(ginCtxUserKey)
 	if !ok {
-		return
-	}
-	sysUserId, ok := ctx.GetQuery("system_user_id")
-	if !ok {
-		return
-	}
-	value, ok := ctx.Get(ctxKeyJMSUser)
-	if !ok {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, nil)
 		return
 	}
 	user := value.(*model.User)
-	connectSession, err := g.SessionService.Creat(user, targetType, targetId, sysUserId)
+	connectSession, err := g.SessionService.Creat(user, json.TargetType, json.TargetId, json.SystemUserId)
 	if err != nil {
+		ctx.AbortWithStatusJSON(http.StatusBadRequest, nil)
 		return
 	}
+	g.SessCache.Add(&connectSession)
 	ctx.JSON(http.StatusCreated, connectSession)
 }
 

@@ -16,6 +16,7 @@ import (
 	"guacamole-client-go/pkg/jms-sdk-go/model"
 	"guacamole-client-go/pkg/jms-sdk-go/service"
 	"guacamole-client-go/pkg/logger"
+	"guacamole-client-go/pkg/session"
 	"guacamole-client-go/pkg/tunnel"
 )
 
@@ -52,15 +53,20 @@ func main() {
 	eng := gin.New()
 	eng.Use(gin.Recovery())
 	eng.Use(gin.Logger())
-
+	jmsService := MustJMService()
 	tunnelService := tunnel.GuacamoleTunnelServer{
 		Cache: &tunnel.GuaTunnelCache{
 			Tunnels: make(map[string]*tunnel.Connection),
 		},
-		JmsService: MustJMService(),
+		SessCache: &tunnel.SessionCache{
+			Sessions: make(map[string]*session.TunnelSession),
+		},
+		JmsService:     jmsService,
+		SessionService: &session.Server{JmsService: jmsService},
 	}
 
 	guacamoleGroup := eng.Group("/guacamole")
+	guacamoleGroup.Use(tunnelService.SessionAuth())
 	{
 		guacamoleGroup.GET("/ws", tunnelService.Connect)
 	}

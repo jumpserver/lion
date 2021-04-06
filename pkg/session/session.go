@@ -1,27 +1,27 @@
 package session
 
 import (
-	"strconv"
 	"strings"
 
 	"guacamole-client-go/pkg/common"
-	"guacamole-client-go/pkg/config"
 	"guacamole-client-go/pkg/guacd"
 	"guacamole-client-go/pkg/jms-sdk-go/model"
 )
 
-type ConnectSession struct {
-	ID         string            `json:"id"`
-	Created    common.UTCTime    `json:"-"`
-	Asset      *model.Asset      `json:"asset"`
-	SystemUser *model.SystemUser `json:"system_user"`
-	User       *model.User       `json:"user"`
-	Platform   *model.Platform   `json:"platform"`
+type TunnelSession struct {
+	ID             string                `json:"id"`
+	Created        common.UTCTime        `json:"-"`
+	Asset          *model.Asset          `json:"asset"`
+	SystemUser     *model.SystemUser     `json:"system_user"`
+	User           *model.User           `json:"user"`
+	Platform       *model.Platform       `json:"platform"`
+	RemoteApp      *model.RemoteAPP      `json:"remote_app"`
+	Permission     *model.Permission     `json:"permission"`
+	Domain         *model.Domain         `json:"domain"`
+	TerminalConfig *model.TerminalConfig `json:"-"`
 
-	Domain *model.Domain `json:"domain"`
-
-	ConnectedCallback    func() error
-	DisConnectedCallback func() error
+	ConnectedCallback    func() error `json:"-"`
+	DisConnectedCallback func() error `json:"-"`
 }
 
 const (
@@ -29,74 +29,46 @@ const (
 	rdp = "rdp"
 )
 
-const (
-	BoolFalse = "false"
-	BoolTrue  = "true"
-)
-
-func (s ConnectSession) GuaConfiguration() guacd.Configuration {
+func (s TunnelSession) GuaConfiguration() guacd.Configuration {
 	switch strings.ToLower(s.SystemUser.Protocol) {
 	case vnc:
 		return s.configurationVNC()
-	case rdp:
-		return s.configurationRDP()
 	default:
+		return s.configurationRDP()
 	}
-	return guacd.Configuration{}
 }
 
-func (s ConnectSession) configurationVNC() guacd.Configuration {
-	conf := guacd.NewConfiguration()
-	var (
-		username string
-		password string
-		ip       string
-		port     string
-	)
-
-	conf.SetParameter(guacd.VNCUsername, username)
-	conf.SetParameter(guacd.VNCPassword, password)
-	conf.SetParameter(guacd.VNCHostname, ip)
-	conf.SetParameter(guacd.VNCPort, port)
-
-	return conf
-}
-func (s ConnectSession) configurationRDP() guacd.Configuration {
-	var (
-		username string
-		password string
-		ip       string
-		port     string
-	)
-	ip = s.Asset.IP
-	port = strconv.Itoa(s.Asset.ProtocolPort(s.SystemUser.Protocol))
-	username = s.SystemUser.Username
-	password = s.SystemUser.Password
-
-	conf := guacd.NewConfiguration()
-	conf.Protocol = rdp
-	conf.SetParameter(guacd.RDPHostname, ip)
-	conf.SetParameter(guacd.RDPPort, port)
-
-	conf.SetParameter(guacd.RDPUsername, username)
-	conf.SetParameter(guacd.RDPPassword, password)
-
-	if s.SystemUser.AdDomain != "" {
-		conf.SetParameter(guacd.RDPDomain, s.SystemUser.AdDomain)
+func (s TunnelSession) configurationVNC() guacd.Configuration {
+	conf := VNCConfiguration{
+		SessionId:      s.ID,
+		User:           s.User,
+		Asset:          s.Asset,
+		SystemUser:     s.SystemUser,
+		Platform:       s.Platform,
+		Permission:     s.Permission,
+		TerminalConfig: s.TerminalConfig,
 	}
+	return conf.GetGuacdConfiguration()
+}
 
-	conf.SetParameter(guacd.RDPSecurity, SecurityAny)
-	conf.SetParameter(guacd.RDPIgnoreCert, BoolTrue)
-
-	conf.SetParameter(guacd.RDPResizeMethod, "reconnect")
-	conf.SetParameter(guacd.RDPDisableGlyphCaching, BoolTrue)
-
-	conf.SetParameter(guacd.RDPEnableDrive, BoolTrue)
-	conf.SetParameter(guacd.RDPCreateDrivePath, BoolTrue)
-
-	conf.SetParameter(guacd.RDPDrivePath, config.GlobalConfig.DrivePath)
-	conf.SetParameter(guacd.RDPDriveName, "Jumpserver")
-	return conf
+func (s TunnelSession) configurationRDP() guacd.Configuration {
+	rdpConf := RDPConfiguration{
+		SessionId:      s.ID,
+		User:           s.User,
+		Asset:          s.Asset,
+		SystemUser:     s.SystemUser,
+		Platform:       s.Platform,
+		Permission:     s.Permission,
+		TerminalConfig: s.TerminalConfig,
+	}
+	if s.RemoteApp != nil {
+		remoteConf := RemoteAPPConfiguration{
+			RDPConfiguration: rdpConf,
+			RemoteApp:        s.RemoteApp,
+		}
+		return remoteConf.GetGuacdConfiguration()
+	}
+	return rdpConf.GetGuacdConfiguration()
 }
 
 const (
@@ -107,10 +79,3 @@ const (
 	SecurityVmConnect = "vmconnect"
 	SecurityRdp       = "rdp"
 )
-
-func ConvertBoolToString(b bool) string {
-	if b {
-		return BoolTrue
-	}
-	return BoolFalse
-}

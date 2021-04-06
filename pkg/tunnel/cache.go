@@ -2,6 +2,8 @@ package tunnel
 
 import (
 	"sync"
+
+	"guacamole-client-go/pkg/session"
 )
 
 type GuaTunnelCache struct {
@@ -25,4 +27,23 @@ func (g *GuaTunnelCache) Get(tid string) *Connection {
 	g.Lock()
 	defer g.Unlock()
 	return g.Tunnels[tid]
+}
+
+type SessionCache struct {
+	sync.Mutex
+	Sessions map[string]*session.TunnelSession
+}
+
+func (g *SessionCache) Add(s *session.TunnelSession) {
+	g.Lock()
+	defer g.Unlock()
+	g.Sessions[s.ID] = s
+}
+
+func (g *SessionCache) Pop(sid string) *session.TunnelSession {
+	g.Lock()
+	defer g.Unlock()
+	sess := g.Sessions[sid]
+	delete(g.Sessions, sid)
+	return sess
 }

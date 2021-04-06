@@ -2,6 +2,7 @@ package tunnel
 
 import (
 	"fmt"
+	"guacamole-client-go/pkg/session"
 	"log"
 	"sync"
 
@@ -17,6 +18,7 @@ const (
 )
 
 type Connection struct {
+	sess        *session.TunnelSession
 	guacdTunnel *guacd.Tunnel
 
 	ws *websocket.Conn
