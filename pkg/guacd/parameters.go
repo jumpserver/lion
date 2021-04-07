@@ -1,5 +1,10 @@
 package guacd
 
+const (
+	Hostname = "hostname"
+	Port = "port"
+)
+
 // Session Recording
 const (
 	RecordingPath          = "recording-path"
