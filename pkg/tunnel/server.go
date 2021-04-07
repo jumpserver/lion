@@ -123,6 +123,10 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	g.Cache.Delete(&conn)
 }
 
+func (g *GuacamoleTunnelServer) TokenConnect(ctx *gin.Context) {
+	g.Connect(ctx)
+}
+
 func (g *GuacamoleTunnelServer) CreateSession(ctx *gin.Context) {
 	var jsonData struct {
 		TargetId     string `json:"target_id" binding:"required"`

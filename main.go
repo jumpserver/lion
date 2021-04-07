@@ -91,7 +91,7 @@ func registerRouter() *gin.Engine {
 		wsGroup.Group("/connect").Use(
 			middleware.SessionAuth(jmsService)).GET("/", tunnelService.Connect)
 
-		wsGroup.Group("/token").GET("/", tunnelService.Connect)
+		wsGroup.Group("/token").GET("/", tunnelService.TokenConnect)
 	}
 
 	apiGroup := guacamoleGroup.Group("/api")
