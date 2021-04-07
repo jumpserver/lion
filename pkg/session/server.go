@@ -35,13 +35,19 @@ func (s *Server) Creat(user *model.User, targetType, targetId, systemUserId stri
 	default:
 		return TunnelSession{}, fmt.Errorf("%w: %s", ErrUnSupportedProtocol, sysUser.Protocol)
 	}
-
 	switch targetType {
 	case TypeRDP, TypeVNC:
 		asset, err := s.JmsService.GetAssetById(targetId)
 		if err != nil {
 			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
 		}
+		sysUserAuth, err := s.JmsService.GetSystemUserAuthById(systemUserId, asset.ID)
+		if err != nil {
+			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
+		}
+		sysUser.Password = sysUserAuth.Password
+		sysUser.PrivateKey = sysUserAuth.PrivateKey
+		sysUser.Token = sysUserAuth.Token
 		return s.CreateRDPAndVNCSession(user, &asset, &sysUser)
 
 	case TypeRemoteApp:
@@ -65,6 +71,10 @@ func (s *Server) CreateRDPAndVNCSession(user *model.User, asset *model.Asset, sy
 	if err != nil {
 		return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
 	}
+	terminal, err := s.JmsService.GetTerminalConfig()
+	if err != nil {
+		return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
+	}
 	var (
 		assetDomain *model.Domain
 	)
@@ -77,14 +87,15 @@ func (s *Server) CreateRDPAndVNCSession(user *model.User, asset *model.Asset, sy
 	}
 
 	newSession := TunnelSession{
-		ID:         common.UUID(),
-		Created:    common.NewNowUTCTime(),
-		User:       user,
-		Asset:      asset,
-		SystemUser: systemUser,
-		Platform:   &platform,
-		Domain:     assetDomain,
-		Permission: &permission,
+		ID:             common.UUID(),
+		Created:        common.NewNowUTCTime(),
+		User:           user,
+		Asset:          asset,
+		SystemUser:     systemUser,
+		Platform:       &platform,
+		Domain:         assetDomain,
+		Permission:     &permission,
+		TerminalConfig: &terminal,
 	}
 	return newSession, nil
 }
@@ -102,17 +113,4 @@ func (s *Server) CreateRemoteSession(user *model.User, remoteApp *model.RemoteAP
 	sess.RemoteApp = remoteApp
 	sess.Permission = RemoteAppPermission()
 	return sess, nil
-}
-
-func (s *Server) GetSession(sid string) TunnelSession {
-	return TunnelSession{}
-}
-
-func (s *Server) UpdateSession(sid string) {
-
-}
-
-func (s *Server) ValidateConnectionPerms(session *TunnelSession) error {
-
-	return nil
 }

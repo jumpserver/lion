@@ -71,7 +71,8 @@
 <script>
 import Guacamole from 'guacamole-common-js'
 import {GetSupportedMimetypes} from '../utils/image'
-import {BaseAPIURL, sanitizeFilename, getCurrentConnectParams} from '../utils/common'
+import {BaseAPIURL, getCurrentConnectParams, sanitizeFilename} from '../utils/common'
+import {createSession} from '../api/session'
 import GuacClipboard from './GuacClipboard'
 import GuacFileSystem from './GuacFileSystem'
 
@@ -89,6 +90,7 @@ export default {
       clipboardDrawer: false,
       fileDrawer: false,
       loading: true,
+      session: null,
       tunnelState: '',
       loadingText: '连中。。。',
       clientState: '连中。。。',
@@ -159,22 +161,18 @@ export default {
     }
   },
   mounted: function() {
-    console.log(getCurrentConnectParams())
-    window.addEventListener('resize', this.onWindowResize)
-    window.onfocus = this.onWindowFocus
-    let url = BaseAPIURL + '/session'
-    let data = {
-      'type': 'rdp',
-      'target_id': '4155f16b-ea59-4824-a468-d47a7a907087',
-      'system_user_id': 'd9341b5a-426c-4d3a-8a10-2c23a7e06997',
-    }
-    this.$post(url, data).then(res => {
-      console.log(res)
-      // this.getConnectString('0000-0000-00').then(connectionParams => {
-      //   console.log(connectionParams)
-      //   console.log(this.displayWidth, this.displayHeight)
-      //   this.connectGuacamole(connectionParams)
-      // })
+    let data = getCurrentConnectParams()
+    createSession(data).then(res => {
+      this.session = data
+      window.addEventListener('resize', this.onWindowResize)
+      window.onfocus = this.onWindowFocus
+      console.log(res.data)
+      this.getConnectString(res.data.id).then(connectionParams => {
+        console.log(connectionParams)
+        this.connectGuacamole(connectionParams)
+      })
+    }).catch(err => {
+      console.log('err ', err.message)
     })
 
   },
@@ -222,7 +220,6 @@ export default {
         if (this.currentFolder) {
           streamName = this.currentFolder.streamName + '/' + files[i].name
         }
-        console.log(streamName)
         this.loadingText = 'Upload Files'
         this.loading = true
         this.handleFiles(files[i], this.currentFilesystem.object, streamName).then(() => {
@@ -539,9 +536,6 @@ export default {
         }
         this.client.sendSize(width, height)
       }
-      this.displayWidth = width
-      this.displayHeight = height
-      console.log(width, height)
     },
 
     displayResize(width, height) {
@@ -598,7 +592,6 @@ export default {
 
       // Acknowledge (and ignore) any received blobs
       stream.onblob = function acknowledgeData() {
-        console.log('on blob')
         stream.sendAck('OK', Guacamole.Status.Code.SUCCESS)
       }
 
@@ -706,7 +699,7 @@ export default {
           }
           // Begin upload
           uploadToStream(tunnel.uuid, stream, file, function uploadContinuing(event) {
-            console.log('process ', event)
+            console.log('process upload ', event)
           })
 
           // Ignore all further acks
@@ -731,13 +724,12 @@ export default {
     connectGuacamole(connectionParams) {
 
       let dropbox = document.getElementById('display')
-      console.log(dropbox)
       dropbox.addEventListener('dragenter', this.filedragenter, false)
       dropbox.addEventListener('dragover', this.filedragover, false)
       dropbox.addEventListener('drop', this.filedrop, false)
 
       var display = document.getElementById('display')
-      var tunnel = new Guacamole.WebSocketTunnel('/guacamole/ws')
+      var tunnel = new Guacamole.WebSocketTunnel('/guacamole/ws/connect/')
       var client = new Guacamole.Client(tunnel)
       tunnel.onerror = function tunnelError(status) {
         console.log('tunnelError ', status)

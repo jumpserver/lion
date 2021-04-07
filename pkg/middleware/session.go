@@ -1,12 +1,14 @@
-package tunnel
+package middleware
 
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"guacamole-client-go/pkg/config"
 	"guacamole-client-go/pkg/jms-sdk-go/model"
+	"guacamole-client-go/pkg/jms-sdk-go/service"
 )
 
-func (g *GuacamoleTunnelServer) SessionAuth() gin.HandlerFunc {
+func SessionAuth(jmsService *service.JMService) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var (
 			err  error
@@ -17,8 +19,7 @@ func (g *GuacamoleTunnelServer) SessionAuth() gin.HandlerFunc {
 		for _, cookie := range reqCookies {
 			cookies[cookie.Name] = cookie.Value
 		}
-		fmt.Println(cookies)
-		user, err = g.JmsService.GetUserById("68f1648b-5c6c-4f47-97a1-c47c192458e3")
+		user, err = jmsService.GetUserById("68f1648b-5c6c-4f47-97a1-c47c192458e3")
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -32,6 +33,6 @@ func (g *GuacamoleTunnelServer) SessionAuth() gin.HandlerFunc {
 		//	ctx.Abort()
 		//	return
 		//}
-		ctx.Set(ginCtxUserKey, user)
+		ctx.Set(config.GinCtxUserKey, user)
 	}
 }

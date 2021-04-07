@@ -67,11 +67,6 @@ func (g *GuacamoleTunnelServer) getClientInfo(ctx *gin.Context) guacd.ClientInfo
 	return info
 }
 
-func (g *GuacamoleTunnelServer) getConnectConfiguration(sessionId string) guacd.Configuration {
-	tunnelSession := g.SessionService.GetSession(sessionId)
-	return tunnelSession.GuaConfiguration()
-}
-
 func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	ws, err := upGrader.Upgrade(ctx.Writer, ctx.Request, ctx.Writer.Header())
 	if err != nil {
@@ -93,6 +88,7 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(data.String()))
 		return
 	}
+	fmt.Println("session_id: ", tunnelSession.ID)
 	conf := tunnelSession.GuaConfiguration()
 	var tunnel *guacd.Tunnel
 
@@ -127,32 +123,30 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	g.Cache.Delete(&conn)
 }
 
-const ginCtxUserKey = "JMS-CtxUserKey"
-
 func (g *GuacamoleTunnelServer) CreateSession(ctx *gin.Context) {
-	var json struct {
-		TargetId     string `json:"target_id"`
-		TargetType   string `json:"type"`
-		SystemUserId string `json:"system_user_id"`
+	var jsonData struct {
+		TargetId     string `json:"target_id" binding:"required"`
+		TargetType   string `json:"type" binding:"required"`
+		SystemUserId string `json:"system_user_id" binding:"required"`
 	}
-	if err := ctx.ShouldBindJSON(&json); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := ctx.BindJSON(&jsonData); err != nil {
+		ctx.JSON(http.StatusBadRequest, CreateErrorResponse(err))
 		return
 	}
-	fmt.Println(json)
-	value, ok := ctx.Get(ginCtxUserKey)
+	value, ok := ctx.Get(config.GinCtxUserKey)
 	if !ok {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, nil)
+		ctx.JSON(http.StatusBadRequest, CreateErrorResponse(ErrNoAuthUser))
 		return
 	}
 	user := value.(*model.User)
-	connectSession, err := g.SessionService.Creat(user, json.TargetType, json.TargetId, json.SystemUserId)
+	connectSession, err := g.SessionService.Creat(user,
+		jsonData.TargetType, jsonData.TargetId, jsonData.SystemUserId)
 	if err != nil {
-		ctx.AbortWithStatusJSON(http.StatusBadRequest, nil)
+		ctx.JSON(http.StatusBadRequest, CreateErrorResponse(err))
 		return
 	}
 	g.SessCache.Add(&connectSession)
-	ctx.JSON(http.StatusCreated, connectSession)
+	ctx.JSON(http.StatusCreated, CreateSuccessResponse(connectSession))
 }
 
 func (g *GuacamoleTunnelServer) DownloadFile(ctx *gin.Context) {
@@ -181,8 +175,7 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 	filename := ctx.Param("filename")
 	form, err := ctx.MultipartForm()
 	if err != nil {
-		fmt.Println(err)
-		ctx.AbortWithStatus(http.StatusBadRequest)
+		ctx.JSON(http.StatusBadRequest, CreateErrorResponse(err))
 		return
 	}
 	if tun := g.Cache.Get(tid); tun != nil {

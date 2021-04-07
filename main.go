@@ -5,6 +5,8 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net"
+	"net/http"
 	"net/http/pprof"
 	"os"
 	"time"
@@ -16,6 +18,7 @@ import (
 	"guacamole-client-go/pkg/jms-sdk-go/model"
 	"guacamole-client-go/pkg/jms-sdk-go/service"
 	"guacamole-client-go/pkg/logger"
+	"guacamole-client-go/pkg/middleware"
 	"guacamole-client-go/pkg/session"
 	"guacamole-client-go/pkg/tunnel"
 )
@@ -50,6 +53,13 @@ func main() {
 	}
 	config.Setup()
 	logger.Debug(config.GlobalConfig.DrivePath)
+	eng := registerRouter()
+	addr := net.JoinHostPort(config.GlobalConfig.BindHost, config.GlobalConfig.HTTPPort)
+	log.Fatal(http.ListenAndServe(addr, eng))
+}
+
+func registerRouter() *gin.Engine {
+	gin.SetMode(gin.ReleaseMode)
 	eng := gin.New()
 	eng.Use(gin.Recovery())
 	eng.Use(gin.Logger())
@@ -66,15 +76,23 @@ func main() {
 	}
 
 	guacamoleGroup := eng.Group("/guacamole")
-	guacamoleGroup.Use(tunnelService.SessionAuth())
+
+	guacamoleGroup.Use(middleware.SessionAuth(jmsService))
+
+	wsGroup := guacamoleGroup.Group("/ws/")
 	{
-		guacamoleGroup.GET("/ws", tunnelService.Connect)
+		wsGroup.Group("/connect").Use(
+			middleware.SessionAuth(jmsService)).GET("/", tunnelService.Connect)
+
+		wsGroup.Group("/token").GET("/", tunnelService.Connect)
 	}
-	guacamoleAPIGroup := guacamoleGroup.Group("/api")
+
+	apiGroup := guacamoleGroup.Group("/api")
+	apiGroup.Use(middleware.SessionAuth(jmsService))
 	{
-		guacamoleAPIGroup.POST("/session", tunnelService.CreateSession)
-		guacamoleAPIGroup.GET("/tunnels/:tid/streams/:index/:filename", tunnelService.DownloadFile)
-		guacamoleAPIGroup.POST("/tunnels/:tid/streams/:index/:filename", tunnelService.UploadFile)
+		apiGroup.POST("/session", tunnelService.CreateSession)
+		apiGroup.GET("/tunnels/:tid/streams/:index/:filename", tunnelService.DownloadFile)
+		apiGroup.POST("/tunnels/:tid/streams/:index/:filename", tunnelService.UploadFile)
 	}
 
 	pprofRouter := eng.Group("/debug/pprof")
@@ -92,7 +110,7 @@ func main() {
 		pprofRouter.GET("/mutex", gin.WrapF(pprof.Handler("mutex").ServeHTTP))
 		pprofRouter.GET("/threadcreate", gin.WrapF(pprof.Handler("threadcreate").ServeHTTP))
 	}
-	log.Fatal(eng.Run(":8081"))
+	return eng
 }
 
 func MustJMService() *service.JMService {

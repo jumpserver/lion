@@ -3,8 +3,8 @@ package session
 import (
 	"path/filepath"
 	"strconv"
-	"time"
 
+	"guacamole-client-go/pkg/common"
 	"guacamole-client-go/pkg/config"
 	"guacamole-client-go/pkg/guacd"
 	"guacamole-client-go/pkg/jms-sdk-go/model"
@@ -20,7 +20,7 @@ var _ ConnectionConfiguration = RemoteAPPConfiguration{}
 
 type RDPConfiguration struct {
 	SessionId      string
-	Created        time.Time
+	Created        common.UTCTime
 	User           *model.User
 	Asset          *model.Asset          `json:"asset"`
 	SystemUser     *model.SystemUser     `json:"system_user"`
@@ -72,7 +72,8 @@ func (r RDPConfiguration) GetGuacdConfiguration() guacd.Configuration {
 		for key, value := range RDPBuiltIn {
 			conf.SetParameter(key, value)
 		}
-		conf.SetParameter(guacd.RDPResizeMethod, "reconnect")
+		// reconnect 会造成创建多个录像文件
+		conf.SetParameter(guacd.RDPResizeMethod, "display-update")
 	}
 
 	// 设置 挂载目录 上传下载
@@ -109,7 +110,7 @@ func (r RDPConfiguration) GetGuacdConfiguration() guacd.Configuration {
 
 type VNCConfiguration struct {
 	SessionId      string
-	Created        time.Time
+	Created        common.UTCTime
 	User           *model.User
 	Asset          *model.Asset          `json:"asset"`
 	SystemUser     *model.SystemUser     `json:"system_user"`

@@ -12,12 +12,12 @@ type TunnelSession struct {
 	ID             string                `json:"id"`
 	Created        common.UTCTime        `json:"-"`
 	Asset          *model.Asset          `json:"asset"`
-	SystemUser     *model.SystemUser     `json:"system_user"`
+	SystemUser     *model.SystemUser     `json:"-"`
 	User           *model.User           `json:"user"`
 	Platform       *model.Platform       `json:"platform"`
 	RemoteApp      *model.RemoteAPP      `json:"remote_app"`
 	Permission     *model.Permission     `json:"permission"`
-	Domain         *model.Domain         `json:"domain"`
+	Domain         *model.Domain         `json:"-"`
 	TerminalConfig *model.TerminalConfig `json:"-"`
 
 	ConnectedCallback    func() error `json:"-"`
@@ -41,6 +41,7 @@ func (s TunnelSession) GuaConfiguration() guacd.Configuration {
 func (s TunnelSession) configurationVNC() guacd.Configuration {
 	conf := VNCConfiguration{
 		SessionId:      s.ID,
+		Created:        s.Created,
 		User:           s.User,
 		Asset:          s.Asset,
 		SystemUser:     s.SystemUser,
@@ -54,6 +55,7 @@ func (s TunnelSession) configurationVNC() guacd.Configuration {
 func (s TunnelSession) configurationRDP() guacd.Configuration {
 	rdpConf := RDPConfiguration{
 		SessionId:      s.ID,
+		Created:        s.Created,
 		User:           s.User,
 		Asset:          s.Asset,
 		SystemUser:     s.SystemUser,
