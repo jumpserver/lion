@@ -142,6 +142,7 @@ func (r VNCConfiguration) GetGuacdConfiguration() guacd.Configuration {
 		conf.SetParameter(guacd.VNCPassword, password)
 		conf.SetParameter(guacd.VNCAutoretry, "3")
 	}
+	// 设置存储
 	if r.TerminalConfig.ReplayStorage["type"] != "null" {
 		recordDirPath := filepath.Join(config.GlobalConfig.RecordPath, r.Created.Format(recordDirTimeFormat))
 		conf.SetParameter(guacd.RecordingPath, recordDirPath)
