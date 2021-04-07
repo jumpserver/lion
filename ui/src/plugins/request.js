@@ -1,10 +1,10 @@
 import axios from 'axios'
 import {$error} from './message'
-import {BaseAPIURL} from '@/utils/common'
+import {BaseURL} from '@/utils/common'
 
 
 const instance = axios.create({
-  baseURL: BaseAPIURL, // url = base url + request url
+  baseURL: BaseURL, // url = base url + request url
   withCredentials: true,
 })
 

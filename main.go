@@ -77,9 +77,16 @@ func registerRouter() *gin.Engine {
 
 	guacamoleGroup := eng.Group("/guacamole")
 
-	guacamoleGroup.Use(middleware.SessionAuth(jmsService))
+	// vue的设置
+	{
+		guacamoleGroup.Static("/assets", "./ui/guacamole/assets")
+		guacamoleGroup.StaticFile("/", "./ui/guacamole/index.html")
+	}
 
-	wsGroup := guacamoleGroup.Group("/ws/")
+	// token 的设置
+	guacamoleGroup.POST("/token", tunnelService.TokenSession)
+	// ws的设置
+	wsGroup := guacamoleGroup.Group("/ws")
 	{
 		wsGroup.Group("/connect").Use(
 			middleware.SessionAuth(jmsService)).GET("/", tunnelService.Connect)

@@ -161,15 +161,14 @@ export default {
     }
   },
   mounted: function() {
-    let data = getCurrentConnectParams()
-    createSession(data).then(res => {
-      this.session = data
+    let result = getCurrentConnectParams()
+    createSession(result['api'], result['data']).then(res => {
+      this.session = res.data
       window.addEventListener('resize', this.onWindowResize)
       window.onfocus = this.onWindowFocus
       console.log(res.data)
       this.getConnectString(res.data.id).then(connectionParams => {
-        console.log(connectionParams)
-        this.connectGuacamole(connectionParams)
+        this.connectGuacamole(connectionParams, result['ws'])
       })
     }).catch(err => {
       console.log('err ', err.message)
@@ -721,15 +720,14 @@ export default {
       }
     },
 
-    connectGuacamole(connectionParams) {
-
+    connectGuacamole(connectionParams, wsURL) {
       let dropbox = document.getElementById('display')
       dropbox.addEventListener('dragenter', this.filedragenter, false)
       dropbox.addEventListener('dragover', this.filedragover, false)
       dropbox.addEventListener('drop', this.filedrop, false)
 
       var display = document.getElementById('display')
-      var tunnel = new Guacamole.WebSocketTunnel('/guacamole/ws/connect/')
+      var tunnel = new Guacamole.WebSocketTunnel(wsURL)
       var client = new Guacamole.Client(tunnel)
       tunnel.onerror = function tunnelError(status) {
         console.log('tunnelError ', status)

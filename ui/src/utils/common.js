@@ -21,12 +21,28 @@ else
 export const OriginSite = streamOrigin
 
 export const BaseAPIURL = streamOrigin + '/guacamole/api'
+export const BaseURL = streamOrigin + '/guacamole'
+
+const tokenSessionAPI = '/token'
+const sessionAPI = '/api/session'
+const tokenWSURL = '/guacamole/ws/token/'
+const wsURL = '/guacamole/ws/connect/'
+
 
 export function getCurrentConnectParams() {
   let urlParams = new URLSearchParams(window.location.search.slice(1))
-  let result = {}
+  let data = {}
   urlParams.forEach(function(value, key, parent) {
-    result[key] = value
+    data[key] = value
   })
+  let result = {}
+  result['data'] = data
+  result['ws'] = wsURL
+  result['api'] = sessionAPI
+  let token = urlParams.get('token')
+  if (token !== null) {
+    result['ws'] = tokenWSURL
+    result['api'] = tokenSessionAPI
+  }
   return result
 }

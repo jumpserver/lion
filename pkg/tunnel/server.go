@@ -201,3 +201,14 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 	}
 	ctx.AbortWithStatus(http.StatusNotFound)
 }
+
+func (g *GuacamoleTunnelServer) TokenSession(ctx *gin.Context) {
+	var jsonData struct {
+		Token string `json:"token" binding:"required"`
+	}
+	if err := ctx.BindJSON(&jsonData); err != nil {
+		ctx.JSON(http.StatusBadRequest, CreateErrorResponse(err))
+		return
+	}
+	fmt.Println("TokenSession: ", jsonData)
+}

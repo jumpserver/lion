@@ -1,5 +1,5 @@
 import {post} from '../plugins/request'
 
-export function createSession(data) {
-  return post('/session', data, {})
+export function createSession(url, data) {
+  return post(url, data, {})
 }
