@@ -83,8 +83,15 @@ func registerRouter() *gin.Engine {
 		guacamoleGroup.StaticFile("/", "./ui/guacamole/index.html")
 	}
 
-	// token 的设置
-	guacamoleGroup.POST("/token", tunnelService.TokenSession)
+	// token 不需要认证
+	tokenGroup := guacamoleGroup.Group("/token")
+	{
+		// TODO: 解决不认证，可能出现的安全问题
+		tokenGroup.POST("/session", tunnelService.TokenSession)
+		tokenGroup.GET("/tunnels/:tid/streams/:index/:filename", tunnelService.DownloadFile)
+		tokenGroup.POST("/tunnels/:tid/streams/:index/:filename", tunnelService.UploadFile)
+	}
+
 	// ws的设置
 	wsGroup := guacamoleGroup.Group("/ws")
 	{

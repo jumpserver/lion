@@ -23,8 +23,8 @@ export const OriginSite = streamOrigin
 export const BaseAPIURL = streamOrigin + '/guacamole/api'
 export const BaseURL = streamOrigin + '/guacamole'
 
-const tokenSessionAPI = '/token'
-const sessionAPI = '/api/session'
+const tokenBaseAPI = '/token'
+const sessionBaseAPI = '/api'
 const tokenWSURL = '/guacamole/ws/token/'
 const wsURL = '/guacamole/ws/connect/'
 
@@ -38,11 +38,11 @@ export function getCurrentConnectParams() {
   let result = {}
   result['data'] = data
   result['ws'] = wsURL
-  result['api'] = sessionAPI
+  result['api'] = sessionBaseAPI
   let token = urlParams.get('token')
   if (token !== null) {
     result['ws'] = tokenWSURL
-    result['api'] = tokenSessionAPI
+    result['api'] = tokenBaseAPI
   }
   return result
 }

@@ -71,7 +71,7 @@
 <script>
 import Guacamole from 'guacamole-common-js'
 import {GetSupportedMimetypes} from '../utils/image'
-import {BaseAPIURL, getCurrentConnectParams, sanitizeFilename} from '../utils/common'
+import {BaseURL, getCurrentConnectParams, sanitizeFilename} from '../utils/common'
 import {createSession} from '../api/session'
 import GuacClipboard from './GuacClipboard'
 import GuacFileSystem from './GuacFileSystem'
@@ -84,6 +84,7 @@ export default {
   },
   data() {
     return {
+      apiPrefix: '/api',
       dialogFormVisible: false,
       requireParams: [],
       isMenuCollapse: true,
@@ -162,6 +163,7 @@ export default {
   },
   mounted: function() {
     let result = getCurrentConnectParams()
+    this.apiPrefix = result['api']
     createSession(result['api'], result['data']).then(res => {
       this.session = res.data
       window.addEventListener('resize', this.onWindowResize)
@@ -566,7 +568,7 @@ export default {
     clientFileReceived(stream, mimetype, filename) {
       console.log('clientFileReceived, ', this.tunnel.uuid, stream, mimetype, filename)
       // Build download URL
-      let url = BaseAPIURL
+      let url = BaseURL + this.apiPrefix
           + '/tunnels/' + encodeURIComponent(this.tunnel.uuid)
           + '/streams/' + encodeURIComponent(stream.index)
           + '/' + encodeURIComponent(sanitizeFilename(filename))
@@ -640,6 +642,7 @@ export default {
       } else {
         stream = object.createOutputStream(file.type, streamName)
       }
+      let apiPrefix = this.apiPrefix
       return new Promise(function(resolve, reject) {
         // Upload file once stream is acknowledged
         stream.onack = function beginUpload(status) {
@@ -653,7 +656,7 @@ export default {
           let uploadToStream = function uploadStream(tunnel, stream, file,
                                                      progressCallback) {
             // Build upload URL
-            let url = BaseAPIURL
+            let url = BaseURL + apiPrefix
                 + '/tunnels/' + encodeURIComponent(tunnel)
                 + '/streams/' + encodeURIComponent(stream.index)
                 + '/' + encodeURIComponent(sanitizeFilename(file.name))
