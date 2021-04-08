@@ -43,8 +43,8 @@ func (r RDPConfiguration) GetGuacdConfiguration() guacd.Configuration {
 
 	conf := guacd.NewConfiguration()
 	conf.Protocol = rdp
-	conf.SetParameter(guacd.RDPHostname, ip)
-	conf.SetParameter(guacd.RDPPort, port)
+	conf.SetParameter(guacd.Hostname, ip)
+	conf.SetParameter(guacd.Port, port)
 
 	conf.SetParameter(guacd.RDPUsername, username)
 	conf.SetParameter(guacd.RDPPassword, password)
@@ -137,8 +137,8 @@ func (r VNCConfiguration) GetGuacdConfiguration() guacd.Configuration {
 	username = r.SystemUser.Username
 	password = r.SystemUser.Password
 	conf.Protocol = vnc
-	conf.SetParameter(guacd.VNCHostname, ip)
-	conf.SetParameter(guacd.VNCPort, port)
+	conf.SetParameter(guacd.Hostname, ip)
+	conf.SetParameter(guacd.Port, port)
 
 	{
 		conf.SetParameter(guacd.VNCUsername, username)

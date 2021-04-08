@@ -1,5 +1,7 @@
 package guacd
 
+// Network parameters
+
 const (
 	Hostname = "hostname"
 	Port = "port"
