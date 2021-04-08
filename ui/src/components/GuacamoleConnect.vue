@@ -661,6 +661,7 @@ export default {
                 + '/streams/' + encodeURIComponent(stream.index)
                 + '/' + encodeURIComponent(sanitizeFilename(file.name))
             let xhr = new XMLHttpRequest()
+            xhr.withCredentials = true
             // Invoke provided callback if upload tracking is supported
             if (progressCallback && xhr.upload) {
               xhr.upload.addEventListener('progress', function updateProgress(e) {
