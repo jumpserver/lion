@@ -77,8 +77,10 @@ func (r RDPConfiguration) GetGuacdConfiguration() guacd.Configuration {
 
 	// 设置 挂载目录 上传下载
 	{
+
+		disableAllUpDownload := config.GlobalConfig.DisableAllUpDownload
 		drivePath := filepath.Join(config.GlobalConfig.DrivePath, r.User.ID)
-		enableDrive := ConvertBoolToString(r.Permission.EnableDrive())
+		enableDrive := ConvertBoolToString(r.Permission.EnableDrive() && !disableAllUpDownload)
 		disableDownload := ConvertBoolToString(!r.Permission.EnableDownload())
 		disableUpload := ConvertBoolToString(!r.Permission.EnableUpload())
 		conf.SetParameter(guacd.RDPDrivePath, drivePath)
@@ -91,8 +93,10 @@ func (r RDPConfiguration) GetGuacdConfiguration() guacd.Configuration {
 
 	// 粘贴复制
 	{
-		disableCopy := ConvertBoolToString(!r.Permission.EnableCopy())
-		disablePaste := ConvertBoolToString(!r.Permission.EnablePaste())
+		disableAllCopyPaste := config.GlobalConfig.DisableAllCopyPaste
+
+		disableCopy := ConvertBoolToString(!r.Permission.EnableCopy() || disableAllCopyPaste)
+		disablePaste := ConvertBoolToString(!r.Permission.EnablePaste() || disableAllCopyPaste)
 		conf.SetParameter(guacd.DisableCopy, disableCopy)
 		conf.SetParameter(guacd.DisablePaste, disablePaste)
 	}

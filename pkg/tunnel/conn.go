@@ -60,12 +60,10 @@ func (t *Connection) readTunnelMessage() ([]byte, error) {
 		}
 		newInstruction := t.inputFilter.Filter(&instruction)
 		if newInstruction == nil {
-			fmt.Println("inputFilter continue")
 			continue
 		}
 		newInstruction = t.outputFilter.Filter(newInstruction)
 		if newInstruction == nil {
-			fmt.Println("continue")
 			continue
 		}
 		return []byte(newInstruction.String()), nil

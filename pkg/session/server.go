@@ -200,6 +200,7 @@ func (s *Server) RegisterFinishReplayCallback(tunnel TunnelSession) func() error
 		originReplayFilePath := filepath.Join(recordDirPath, tunnel.ID)
 		dstReplayFilePath := originReplayFilePath + ReplayFileNameSuffix
 		// 压缩文件
+		fmt.Println(originReplayFilePath, dstReplayFilePath)
 		err := common.CompressToGzipFile(originReplayFilePath, dstReplayFilePath)
 		if err != nil {
 			return err
@@ -208,10 +209,21 @@ func (s *Server) RegisterFinishReplayCallback(tunnel TunnelSession) func() error
 		defer os.Remove(originReplayFilePath)
 		if replayStorage := storage.NewReplayStorage(replayConfig); replayStorage != nil {
 			err = replayStorage.Upload(dstReplayFilePath, tunnel.Created.Format(recordDirTimeFormat))
+		} else {
+			err = s.JmsService.Upload(tunnel.ID, dstReplayFilePath)
 		}
-
 		// 上传文件
+		if err != nil {
+			return err
+		}
+		// 上传成功，删除压缩文件
+		defer os.Remove(dstReplayFilePath)
 		// 通知core上传完成
-		return nil
+		err = s.JmsService.FinishReply(tunnel.ID)
+		return err
 	}
+}
+
+func (s *Server) AuditFileOperation(fileLog model.FTPLog) error {
+	return s.JmsService.CreateFileOperationLog(fileLog)
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 
+	"guacamole-client-go/pkg/common"
 	"guacamole-client-go/pkg/config"
 	"guacamole-client-go/pkg/guacd"
 	"guacamole-client-go/pkg/jms-sdk-go/model"
@@ -88,11 +89,16 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 		return
 	}
 
-	tunnelSession.ConnectedSuccessCallback()
+	if err = tunnelSession.ConnectedCallback(); err != nil {
+		data := guacd.NewInstruction(
+			guacd.InstructionServerError, err.Error(), "504")
+		_ = ws.WriteMessage(websocket.TextMessage, []byte(data.String()))
+		return
+	}
+
 	info := g.getClientInfo(ctx)
 	conf := tunnelSession.GuaConfiguration()
 	var tunnel *guacd.Tunnel
-
 	guacdAddr := net.JoinHostPort(config.GlobalConfig.GuaHost, config.GlobalConfig.GuaPort)
 	tunnel, err = guacd.NewTunnel(guacdAddr, conf, info)
 	if err != nil {
@@ -100,9 +106,11 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 		data := guacd.NewInstruction(
 			guacd.InstructionServerError, err.Error(), "504")
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(data.String()))
+		_ = tunnelSession.ConnectedFailedCallback(err)
 		return
 	}
 	defer tunnel.Close()
+	_ = tunnelSession.ConnectedSuccessCallback()
 	conn := Connection{
 		sess:        tunnelSession,
 		guacdTunnel: tunnel,
@@ -122,6 +130,8 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	g.Cache.Add(&conn)
 	err = conn.Run(ctx)
 	g.Cache.Delete(&conn)
+	_ = tunnelSession.DisConnectedCallback()
+	_ = tunnelSession.FinishReplayCallback()
 }
 
 func (g *GuacamoleTunnelServer) TokenConnect(ctx *gin.Context) {
@@ -177,8 +187,17 @@ func (g *GuacamoleTunnelServer) DownloadFile(ctx *gin.Context) {
 	index := ctx.Param("index")
 	filename := ctx.Param("filename")
 
-	fmt.Println(tid, index, filename)
 	if tun := g.Cache.Get(tid); tun != nil {
+		fileLog := model.FTPLog{
+			User:       tun.sess.User.String(),
+			Hostname:   tun.sess.Asset.Hostname,
+			OrgID:      tun.sess.Asset.OrgID,
+			SystemUser: tun.sess.SystemUser.Name,
+			RemoteAddr: ctx.ClientIP(),
+			Operate:    model.OperateDownload,
+			Path:       filename,
+			DataStart:  common.NewNowUTCTime(),
+		}
 		ctx.Writer.Header().Set("content-disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
 		out := OutStreamResource{
 			streamIndex: index,
@@ -189,8 +208,11 @@ func (g *GuacamoleTunnelServer) DownloadFile(ctx *gin.Context) {
 		tun.outputFilter.addOutStream(out)
 		if err := out.Wait(); err != nil {
 			ctx.JSON(http.StatusBadRequest, CreateErrorResponse(err))
+			_ = g.SessionService.AuditFileOperation(fileLog)
 			return
 		}
+		fileLog.IsSuccess = true
+		_ = g.SessionService.AuditFileOperation(fileLog)
 	}
 	fmt.Println("DownloadFile ", filename, " ", index, " finished")
 }
@@ -205,6 +227,16 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 		return
 	}
 	if tun := g.Cache.Get(tid); tun != nil {
+		fileLog := model.FTPLog{
+			User:       tun.sess.User.String(),
+			Hostname:   tun.sess.Asset.Hostname,
+			OrgID:      tun.sess.Asset.OrgID,
+			SystemUser: tun.sess.SystemUser.Name,
+			RemoteAddr: ctx.ClientIP(),
+			Operate:    model.OperateUpload,
+			Path:       filename,
+			DataStart:  common.NewNowUTCTime(),
+		}
 		files := form.File["file"]
 		for _, file := range files {
 			fdReader, err := file.Open()
@@ -218,10 +250,14 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 			}
 			tun.inputFilter.addInputStream(&stream)
 			stream.Wait()
+			_ = fdReader.Close()
 			if err := stream.WaitErr(); err != nil {
 				fmt.Println("UploadFile ", filename, " ", index, " WaitErr ", err.Error())
+				_ = g.SessionService.AuditFileOperation(fileLog)
+				continue
 			}
-			_ = fdReader.Close()
+			fileLog.IsSuccess = true
+			_ = g.SessionService.AuditFileOperation(fileLog)
 		}
 		return
 	}
