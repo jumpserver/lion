@@ -77,7 +77,6 @@ func registerRouter() *gin.Engine {
 	}
 
 	guacamoleGroup := eng.Group("/guacamole")
-
 	// vue的设置
 	{
 		guacamoleGroup.Static("/assets", "./ui/guacamole/assets")

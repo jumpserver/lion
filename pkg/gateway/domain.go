@@ -90,8 +90,7 @@ func (d *DomainGateway) getAvailableGateway() bool {
 				}))
 			}
 			if gateway.PrivateKey != "" {
-				if signer, err := gossh.ParsePrivateKey([]byte(gateway.PrivateKey)); err != nil {
-				} else {
+				if signer, err := gossh.ParsePrivateKey([]byte(gateway.PrivateKey)); err == nil {
 					auths = append(auths, gossh.PublicKeys(signer))
 				}
 			}
