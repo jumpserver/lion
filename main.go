@@ -55,6 +55,7 @@ func main() {
 	logger.Debug(config.GlobalConfig.DrivePath)
 	eng := registerRouter()
 	addr := net.JoinHostPort(config.GlobalConfig.BindHost, config.GlobalConfig.HTTPPort)
+	log.Printf("listen on: %s\n", addr)
 	log.Fatal(http.ListenAndServe(addr, eng))
 }
 
