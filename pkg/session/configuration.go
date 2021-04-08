@@ -22,11 +22,11 @@ type RDPConfiguration struct {
 	SessionId      string
 	Created        common.UTCTime
 	User           *model.User
-	Asset          *model.Asset          `json:"asset"`
-	SystemUser     *model.SystemUser     `json:"system_user"`
-	Platform       *model.Platform       `json:"platform"`
-	Permission     *model.Permission     `json:"permission"`
-	TerminalConfig *model.TerminalConfig `json:"terminal_config"`
+	Asset          *model.Asset
+	SystemUser     *model.SystemUser
+	Platform       *model.Platform
+	Permission     *model.Permission
+	TerminalConfig *model.TerminalConfig
 }
 
 func (r RDPConfiguration) GetGuacdConfiguration() guacd.Configuration {
@@ -57,7 +57,6 @@ func (r RDPConfiguration) GetGuacdConfiguration() guacd.Configuration {
 
 	// 设置 录像路径
 	if r.TerminalConfig.ReplayStorage["type"] != "null" {
-		// TODO: 加上录像创建日期
 		recordDirPath := filepath.Join(config.GlobalConfig.RecordPath, r.Created.Format(recordDirTimeFormat))
 		conf.SetParameter(guacd.RecordingPath, recordDirPath)
 		conf.SetParameter(guacd.CreateRecordingPath, BoolTrue)

@@ -80,7 +80,6 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(data.String()))
 		return
 	}
-	info := g.getClientInfo(ctx)
 	tunnelSession := g.SessCache.Pop(sessionId)
 	if tunnelSession == nil {
 		data := guacd.NewInstruction(
@@ -88,14 +87,16 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(data.String()))
 		return
 	}
-	fmt.Println("session_id: ", tunnelSession.ID)
+
+	tunnelSession.ConnectedSuccessCallback()
+	info := g.getClientInfo(ctx)
 	conf := tunnelSession.GuaConfiguration()
 	var tunnel *guacd.Tunnel
 
 	guacdAddr := net.JoinHostPort(config.GlobalConfig.GuaHost, config.GlobalConfig.GuaPort)
 	tunnel, err = guacd.NewTunnel(guacdAddr, conf, info)
 	if err != nil {
-		fmt.Printf("%v\n", err)
+		fmt.Printf("%+v\n", err)
 		data := guacd.NewInstruction(
 			guacd.InstructionServerError, err.Error(), "504")
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(data.String()))
@@ -143,8 +144,26 @@ func (g *GuacamoleTunnelServer) CreateSession(ctx *gin.Context) {
 		return
 	}
 	user := value.(*model.User)
-	connectSession, err := g.SessionService.Creat(user,
+	connectSession, err := g.SessionService.Creat(ctx, user,
 		jsonData.TargetType, jsonData.TargetId, jsonData.SystemUserId)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, CreateErrorResponse(err))
+		return
+	}
+	g.SessCache.Add(&connectSession)
+	ctx.JSON(http.StatusCreated, CreateSuccessResponse(connectSession))
+}
+
+func (g *GuacamoleTunnelServer) TokenSession(ctx *gin.Context) {
+	var jsonData struct {
+		Token string `json:"token" binding:"required"`
+	}
+	if err := ctx.BindJSON(&jsonData); err != nil {
+		ctx.JSON(http.StatusBadRequest, CreateErrorResponse(err))
+		return
+	}
+	fmt.Println("TokenSession: ", jsonData)
+	connectSession, err := g.SessionService.CreatByToken(ctx, jsonData.Token)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, CreateErrorResponse(err))
 		return
@@ -168,7 +187,10 @@ func (g *GuacamoleTunnelServer) DownloadFile(ctx *gin.Context) {
 			done:        make(chan struct{}),
 		}
 		tun.outputFilter.addOutStream(out)
-		out.Wait()
+		if err := out.Wait(); err != nil {
+			ctx.JSON(http.StatusBadRequest, CreateErrorResponse(err))
+			return
+		}
 	}
 	fmt.Println("DownloadFile ", filename, " ", index, " finished")
 }
@@ -204,15 +226,4 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 		return
 	}
 	ctx.AbortWithStatus(http.StatusNotFound)
-}
-
-func (g *GuacamoleTunnelServer) TokenSession(ctx *gin.Context) {
-	var jsonData struct {
-		Token string `json:"token" binding:"required"`
-	}
-	if err := ctx.BindJSON(&jsonData); err != nil {
-		ctx.JSON(http.StatusBadRequest, CreateErrorResponse(err))
-		return
-	}
-	fmt.Println("TokenSession: ", jsonData)
 }

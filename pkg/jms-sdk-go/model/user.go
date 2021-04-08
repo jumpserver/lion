@@ -18,3 +18,13 @@ type User struct {
 func (u *User) String() string {
 	return fmt.Sprintf("%s(%s)", u.Name, u.Username)
 }
+
+
+type TokenUser struct {
+	UserID         string `json:"user"`
+	UserName       string `json:"username"`
+	AssetID        string `json:"asset"`
+	Hostname       string `json:"hostname"`
+	SystemUserID   string `json:"system_user"`
+	SystemUserName string `json:"system_user_name"`
+}

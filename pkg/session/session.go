@@ -20,8 +20,11 @@ type TunnelSession struct {
 	Domain         *model.Domain         `json:"-"`
 	TerminalConfig *model.TerminalConfig `json:"-"`
 
-	ConnectedCallback    func() error `json:"-"`
-	DisConnectedCallback func() error `json:"-"`
+	ConnectedCallback        func() error          `json:"-"`
+	ConnectedSuccessCallback func() error          `json:"-"`
+	ConnectedFailedCallback  func(err error) error `json:"-"`
+	DisConnectedCallback     func() error          `json:"-"`
+	FinishReplayCallback     func() error          `json:"-"`
 }
 
 const (

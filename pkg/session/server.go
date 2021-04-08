@@ -3,6 +3,9 @@ package session
 import (
 	"errors"
 	"fmt"
+	"github.com/gin-gonic/gin"
+	"guacamole-client-go/pkg/config"
+	"path/filepath"
 
 	"guacamole-client-go/pkg/common"
 	"guacamole-client-go/pkg/jms-sdk-go/model"
@@ -15,6 +18,8 @@ const (
 	TypeRemoteApp = "remoteapp"
 )
 
+const loginFrom = "WT"
+
 var (
 	ErrAPIService          = errors.New("connect API core err")
 	ErrUnSupportedType     = errors.New("unsupported type")
@@ -25,7 +30,22 @@ type Server struct {
 	JmsService *service.JMService
 }
 
-func (s *Server) Creat(user *model.User, targetType, targetId, systemUserId string) (TunnelSession, error) {
+func (s *Server) CreatByToken(ctx *gin.Context, token string) (TunnelSession, error) {
+	tokenUser, err := s.JmsService.GetTokenAsset(token)
+	if err != nil {
+		return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
+	}
+	user, err := s.JmsService.GetUserById(tokenUser.UserID)
+	if err != nil {
+		return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
+	}
+	targetType := TypeRDP
+	targetId := tokenUser.AssetID
+	systemUserId := tokenUser.SystemUserID
+	return s.Creat(ctx, user, targetType, targetId, systemUserId)
+}
+
+func (s *Server) Creat(ctx *gin.Context, user *model.User, targetType, targetId, systemUserId string) (sess TunnelSession, err error) {
 	sysUser, err := s.JmsService.GetSystemUserById(systemUserId)
 	if err != nil {
 		return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
@@ -41,25 +61,42 @@ func (s *Server) Creat(user *model.User, targetType, targetId, systemUserId stri
 		if err != nil {
 			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
 		}
-		sysUserAuth, err := s.JmsService.GetSystemUserAuthById(systemUserId, asset.ID)
+		sess, err = s.CreateRDPAndVNCSession(user, &asset, &sysUser)
 		if err != nil {
-			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
+			return TunnelSession{}, err
 		}
-		sysUser.Password = sysUserAuth.Password
-		sysUser.PrivateKey = sysUserAuth.PrivateKey
-		sysUser.Token = sysUserAuth.Token
-		return s.CreateRDPAndVNCSession(user, &asset, &sysUser)
-
 	case TypeRemoteApp:
 		remoteApp, err := s.JmsService.GetRemoteApp(targetId)
 		if err != nil {
 			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
 		}
-		return s.CreateRemoteSession(user, &remoteApp, &sysUser)
+		sess, err = s.CreateRemoteSession(user, &remoteApp, &sysUser)
+		if err != nil {
+			return TunnelSession{}, err
+		}
 	default:
 		return TunnelSession{}, fmt.Errorf("%w: %s", ErrUnSupportedType, targetType)
 	}
-
+	jmsSession := model.Session{
+		ID:           sess.ID,
+		User:         sess.User.String(),
+		Asset:        sess.Asset.Hostname,
+		SystemUser:   sess.SystemUser.String(),
+		LoginFrom:    loginFrom,
+		RemoteAddr:   ctx.ClientIP(),
+		Protocol:     sess.SystemUser.Protocol,
+		DateStart:    sess.Created,
+		OrgID:        sess.Asset.OrgID,
+		UserID:       sess.User.ID,
+		AssetID:      sess.Asset.ID,
+		SystemUserID: sess.SystemUser.ID,
+	}
+	sess.ConnectedCallback = s.RegisterConnectedCallback(jmsSession)
+	sess.ConnectedSuccessCallback = s.RegisterConnectedSuccessCallback(jmsSession)
+	sess.ConnectedFailedCallback = s.RegisterConnectedFailedCallback(jmsSession)
+	sess.DisConnectedCallback = s.RegisterDisConnectedCallback(jmsSession)
+	sess.FinishReplayCallback = s.RegisterFinishReplayCallback(sess)
+	return
 }
 
 func (s *Server) CreateRDPAndVNCSession(user *model.User, asset *model.Asset, systemUser *model.SystemUser) (TunnelSession, error) {
@@ -67,6 +104,13 @@ func (s *Server) CreateRDPAndVNCSession(user *model.User, asset *model.Asset, sy
 	if err != nil {
 		return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
 	}
+	sysUserAuth, err := s.JmsService.GetSystemUserAuthById(systemUser.ID, asset.ID)
+	if err != nil {
+		return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
+	}
+	systemUser.Password = sysUserAuth.Password
+	systemUser.PrivateKey = sysUserAuth.PrivateKey
+	systemUser.Token = sysUserAuth.Token
 	permission, err := s.JmsService.GetPermission(user.ID, asset.ID, systemUser.ID)
 	if err != nil {
 		return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
@@ -113,4 +157,46 @@ func (s *Server) CreateRemoteSession(user *model.User, remoteApp *model.RemoteAP
 	sess.RemoteApp = remoteApp
 	sess.Permission = RemoteAppPermission()
 	return sess, nil
+}
+
+func (s *Server) RegisterConnectedCallback(sess model.Session) func() error {
+	return func() error {
+		return s.JmsService.CreateSession(sess)
+	}
+}
+
+func (s *Server) RegisterConnectedSuccessCallback(sess model.Session) func() error {
+	return func() error {
+		return s.JmsService.SessionSuccess(sess.ID)
+	}
+}
+
+func (s *Server) RegisterConnectedFailedCallback(sess model.Session) func(err error) error {
+	return func(err error) error {
+		return s.JmsService.SessionFailed(sess.ID, err)
+	}
+}
+
+func (s *Server) RegisterDisConnectedCallback(sess model.Session) func() error {
+	return func() error {
+		return s.JmsService.SessionDisconnect(sess.ID)
+	}
+}
+
+func (s *Server) RegisterFinishReplayCallback(tunnel TunnelSession) func() error {
+	return func() error {
+		replayConfig := tunnel.TerminalConfig.ReplayStorage
+		if replayConfig["type"] == "null" {
+			fmt.Println("ReplayStorage 为 null，无存储")
+			return nil
+		}
+		recordDirPath := filepath.Join(config.GlobalConfig.RecordPath,
+			tunnel.Created.Format(recordDirTimeFormat))
+		originReplayFilePath := filepath.Join(recordDirPath, tunnel.ID)
+		// 压缩文件
+		fmt.Println(originReplayFilePath)
+		// 上传文件
+		// 通知core上传完成
+		return nil
+	}
 }

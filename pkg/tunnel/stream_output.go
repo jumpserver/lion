@@ -165,8 +165,10 @@ type OutStreamResource struct {
 	mediaType   string // application/octet-stream
 	writer      http.ResponseWriter
 	done        chan struct{}
+	err         error
 }
 
-func (r *OutStreamResource) Wait() {
+func (r *OutStreamResource) Wait() error {
 	<-r.done
+	return r.err
 }
