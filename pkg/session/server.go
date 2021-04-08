@@ -3,13 +3,16 @@ package session
 import (
 	"errors"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"guacamole-client-go/pkg/config"
+	"os"
 	"path/filepath"
 
+	"github.com/gin-gonic/gin"
+
 	"guacamole-client-go/pkg/common"
+	"guacamole-client-go/pkg/config"
 	"guacamole-client-go/pkg/jms-sdk-go/model"
 	"guacamole-client-go/pkg/jms-sdk-go/service"
+	"guacamole-client-go/pkg/storage"
 )
 
 const (
@@ -183,6 +186,8 @@ func (s *Server) RegisterDisConnectedCallback(sess model.Session) func() error {
 	}
 }
 
+const ReplayFileNameSuffix = ".replay.gz"
+
 func (s *Server) RegisterFinishReplayCallback(tunnel TunnelSession) func() error {
 	return func() error {
 		replayConfig := tunnel.TerminalConfig.ReplayStorage
@@ -193,8 +198,18 @@ func (s *Server) RegisterFinishReplayCallback(tunnel TunnelSession) func() error
 		recordDirPath := filepath.Join(config.GlobalConfig.RecordPath,
 			tunnel.Created.Format(recordDirTimeFormat))
 		originReplayFilePath := filepath.Join(recordDirPath, tunnel.ID)
+		dstReplayFilePath := originReplayFilePath + ReplayFileNameSuffix
 		// 压缩文件
-		fmt.Println(originReplayFilePath)
+		err := common.CompressToGzipFile(originReplayFilePath, dstReplayFilePath)
+		if err != nil {
+			return err
+		}
+		// 压缩完成则删除源文件
+		defer os.Remove(originReplayFilePath)
+		if replayStorage := storage.NewReplayStorage(replayConfig); replayStorage != nil {
+			err = replayStorage.Upload(dstReplayFilePath, tunnel.Created.Format(recordDirTimeFormat))
+		}
+
 		// 上传文件
 		// 通知core上传完成
 		return nil
