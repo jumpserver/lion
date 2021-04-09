@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"strconv"
@@ -10,6 +11,7 @@ import (
 
 	gossh "golang.org/x/crypto/ssh"
 
+	"guacamole-client-go/pkg/common"
 	"guacamole-client-go/pkg/jms-sdk-go/model"
 )
 
@@ -20,9 +22,8 @@ const (
 )
 
 type DomainGateway struct {
-	domain  *model.Domain
-	dstIP   string
-	dstPort int
+	Domain  *model.Domain
+	DstAddr string // 10.0.0.1:3389
 
 	sshClient       *gossh.Client
 	selectedGateway *model.Gateway
@@ -46,40 +47,40 @@ func (d *DomainGateway) run() {
 
 func (d *DomainGateway) handlerConn(srcCon net.Conn) {
 	defer srcCon.Close()
-	dstAddr := net.JoinHostPort(d.dstIP, strconv.Itoa(d.dstPort))
-	dstCon, err := d.sshClient.Dial("tcp", dstAddr)
+	dstCon, err := d.sshClient.Dial("tcp", d.DstAddr)
 	if err != nil {
+		fmt.Println(err)
 		return
 	}
 	defer dstCon.Close()
-	var wg sync.WaitGroup
-	wg.Add(1)
 	go func() {
-		defer wg.Done()
 		_, _ = io.Copy(dstCon, srcCon)
 		_ = dstCon.Close()
 	}()
 	_, _ = io.Copy(srcCon, dstCon)
-	wg.Wait()
-
 }
 
-func (d *DomainGateway) Start() (addr *net.TCPAddr, err error) {
+func (d *DomainGateway) Start() (err error) {
 	if !d.getAvailableGateway() {
-		return nil, ErrNoAvailable
+		return ErrNoAvailable
 	}
-	d.ln, err = net.Listen("tcp", "127.0.0.1:0")
+	localIP := common.CurrentLocalIP()
+	d.ln, err = net.Listen("tcp", net.JoinHostPort(localIP, "0"))
 	if err != nil {
 		_ = d.sshClient.Close()
-		return nil, err
+		return err
 	}
 	go d.run()
-	return d.ln.Addr().(*net.TCPAddr), nil
+	return nil
+}
+
+func (d *DomainGateway) GetListenAddr() *net.TCPAddr {
+	return d.ln.Addr().(*net.TCPAddr)
 }
 
 func (d *DomainGateway) getAvailableGateway() bool {
-	for i := range d.domain.Gateways {
-		gateway := d.domain.Gateways[i]
+	for i := range d.Domain.Gateways {
+		gateway := d.Domain.Gateways[i]
 		if gateway.Protocol == "ssh" {
 			auths := make([]gossh.AuthMethod, 0, 3)
 			if gateway.Password != "" {

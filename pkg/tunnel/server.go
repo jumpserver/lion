@@ -2,6 +2,7 @@ package tunnel
 
 import (
 	"fmt"
+	"guacamole-client-go/pkg/gateway"
 	"net"
 	"net/http"
 	"strconv"
@@ -95,9 +96,25 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(data.String()))
 		return
 	}
-
 	info := g.getClientInfo(ctx)
 	conf := tunnelSession.GuaConfiguration()
+	// 设置网域网关，替换本地
+	if tunnelSession.Domain != nil {
+		dstAddr := net.JoinHostPort(conf.GetParameter(guacd.Hostname),
+			conf.GetParameter(guacd.Port))
+		domainGateway := gateway.DomainGateway{
+			Domain:  tunnelSession.Domain,
+			DstAddr: dstAddr,
+		}
+		if err = domainGateway.Start(); err != nil {
+			return
+		}
+		defer domainGateway.Stop()
+		localAddr := domainGateway.GetListenAddr()
+		conf.SetParameter(guacd.Hostname, localAddr.IP.String())
+		conf.SetParameter(guacd.Port, strconv.Itoa(localAddr.Port))
+	}
+
 	var tunnel *guacd.Tunnel
 	guacdAddr := net.JoinHostPort(config.GlobalConfig.GuaHost, config.GlobalConfig.GuaPort)
 	tunnel, err = guacd.NewTunnel(guacdAddr, conf, info)
