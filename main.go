@@ -70,7 +70,7 @@ func main() {
 		SessionService: &session.Server{JmsService: jmsService},
 	}
 	eng := registerRouter(jmsService, &tunnelService)
-	runHeartTask(jmsService, tunnelService.Cache)
+	go runHeartTask(jmsService, tunnelService.Cache)
 	addr := net.JoinHostPort(config.GlobalConfig.BindHost, config.GlobalConfig.HTTPPort)
 	log.Printf("listen on: %s\n", addr)
 	log.Fatal(http.ListenAndServe(addr, eng))
@@ -82,20 +82,23 @@ func runHeartTask(jmsService *service.JMService, cache *tunnel.GuaTunnelCache) {
 		select {
 		case <-beatTicker.C:
 			sids := cache.Range()
+			fmt.Println(sids)
 			tasks, err := jmsService.TerminalHeartBeat(sids)
 			if err != nil {
 				fmt.Println(err)
 				continue
 			}
+			fmt.Println(tasks)
 			for i := range tasks {
 				task := tasks[i]
 				switch task.Name {
 				case model.TaskKillSession:
-					if connection := cache.Get(task.Args); connection != nil {
-						connection.Terminal()
+					if connection := cache.GetBySessionId(task.Args); connection != nil {
+						connection.Terminate()
 						if err = jmsService.FinishTask(task.ID); err != nil {
 							fmt.Println(err)
 						}
+						fmt.Println(task)
 					}
 				default:
 				}
@@ -176,13 +179,15 @@ func uploadRemainReplay(jmsService *service.JMService, remainFiles map[string]st
 	replayStorage = storage.NewReplayStorage(terminalConf.ReplayStorage)
 	for sid, path := range remainFiles {
 		absGzPath := path
-		replayDateDirName := filepath.Base(path)
+		replayDateDirName := filepath.Base(filepath.Dir(path))
 		if !session.ValidReplayDirname(replayDateDirName) {
+			fmt.Println(replayDateDirName)
 			continue
 		}
 		if !strings.HasSuffix(path, session.ReplayFileNameSuffix) {
 			absGzPath = path + session.ReplayFileNameSuffix
 			if err := common.CompressToGzipFile(path, absGzPath); err != nil {
+				fmt.Println(err)
 				continue
 			}
 			_ = os.Remove(path)
@@ -195,7 +200,10 @@ func uploadRemainReplay(jmsService *service.JMService, remainFiles map[string]st
 		}
 		if err != nil {
 			fmt.Println(err)
+			continue
 		}
+		// 上传成功删除文件
+		_ = os.Remove(absGzPath)
 
 	}
 }

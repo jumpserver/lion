@@ -39,6 +39,17 @@ func (g *GuaTunnelCache) Range() []string {
 	return ret
 }
 
+func (g *GuaTunnelCache) GetBySessionId(sid string) *Connection {
+	g.Lock()
+	defer g.Unlock()
+	for i := range g.Tunnels {
+		if sid == g.Tunnels[i].Sess.ID {
+			return g.Tunnels[i]
+		}
+	}
+	return nil
+}
+
 type SessionCache struct {
 	sync.Mutex
 	Sessions map[string]*session.TunnelSession

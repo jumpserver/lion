@@ -170,7 +170,7 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 		case <-activeChan:
 			latestActive = time.Now()
 		case detectNow := <-activeDetectTicker.C:
-			if latestActive.Add(time.Minute * 30).After(detectNow) {
+			if latestActive.Add(time.Minute * 30).Before(detectNow) {
 				log.Println("Connection are terminated by timeout")
 				return
 			}
@@ -179,7 +179,10 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 
 }
 
-func (t *Connection) Terminal() {
-	// todo 主动断开连接
+func (t *Connection) Terminate() {
+	errInstruction := guacd.NewInstruction(
+		guacd.InstructionServerError, "admin Terminate", "1011")
+	_ = t.SendWsMessage(errInstruction)
+	fmt.Println("admin Terminate ")
 	return
 }
