@@ -62,7 +62,7 @@ type Logger struct {
 }
 
 func (l *Logger) Output(level Level, message string) {
-	if l.level < level {
+	if l.level > level {
 		return
 	}
 	pc, fileName, _, ok := runtime.Caller(2)
