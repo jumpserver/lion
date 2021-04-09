@@ -4,7 +4,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"net/http/pprof"
@@ -56,6 +55,7 @@ func main() {
 		viper.AddConfigPath(configPath)
 	}
 	config.Setup()
+	logger.SetupLogger(config.GlobalConfig)
 	logger.Debug(config.GlobalConfig.DrivePath)
 	jmsService := MustJMService()
 	bootstrap(jmsService)
@@ -72,8 +72,8 @@ func main() {
 	eng := registerRouter(jmsService, &tunnelService)
 	go runHeartTask(jmsService, tunnelService.Cache)
 	addr := net.JoinHostPort(config.GlobalConfig.BindHost, config.GlobalConfig.HTTPPort)
-	log.Printf("listen on: %s\n", addr)
-	log.Fatal(http.ListenAndServe(addr, eng))
+	logger.Infof("listen on: %s", addr)
+	logger.Fatal(http.ListenAndServe(addr, eng))
 }
 func runHeartTask(jmsService *service.JMService, cache *tunnel.GuaTunnelCache) {
 	beatTicker := time.NewTicker(time.Minute)
@@ -82,21 +82,19 @@ func runHeartTask(jmsService *service.JMService, cache *tunnel.GuaTunnelCache) {
 		select {
 		case <-beatTicker.C:
 			sids := cache.Range()
-			fmt.Println(sids)
 			tasks, err := jmsService.TerminalHeartBeat(sids)
 			if err != nil {
-				fmt.Println(err)
+				logger.Error(err)
 				continue
 			}
 			for i := range tasks {
 				task := tasks[i]
 				switch task.Name {
 				case model.TaskKillSession:
-					fmt.Println(task)
 					if connection := cache.GetBySessionId(task.Args); connection != nil {
 						connection.Terminate()
 						if err = jmsService.FinishTask(task.ID); err != nil {
-							fmt.Println(err)
+							logger.Error(err)
 						}
 
 					}
@@ -180,13 +178,13 @@ func uploadRemainReplay(jmsService *service.JMService, remainFiles map[string]st
 		absGzPath := path
 		replayDateDirName := filepath.Base(filepath.Dir(path))
 		if !session.ValidReplayDirname(replayDateDirName) {
-			fmt.Println(replayDateDirName)
+			logger.Error(replayDateDirName)
 			continue
 		}
 		if !strings.HasSuffix(path, session.ReplayFileNameSuffix) {
 			absGzPath = path + session.ReplayFileNameSuffix
 			if err := common.CompressToGzipFile(path, absGzPath); err != nil {
-				fmt.Println(err)
+				logger.Error(err)
 				continue
 			}
 			_ = os.Remove(path)
@@ -198,7 +196,7 @@ func uploadRemainReplay(jmsService *service.JMService, remainFiles map[string]st
 			err = jmsService.Upload(sid, absGzPath)
 		}
 		if err != nil {
-			fmt.Println(err)
+			logger.Error(err)
 			continue
 		}
 		// 上传成功删除文件
@@ -236,7 +234,7 @@ func MustJMService() *service.JMService {
 		service.JMSAccessKey(key.ID, key.Secret),
 	)
 	if err != nil {
-		logger.Debug("创建JMS Service 失败 " + err.Error())
+		logger.Fatal("创建JMS Service 失败 " + err.Error())
 		os.Exit(1)
 	}
 	return jmsService
@@ -258,18 +256,18 @@ func MustRegisterTerminalAccount() (key model.AccessKey) {
 		terminal, err := service.RegisterTerminalAccount(conf.CoreHost,
 			conf.Name, conf.BootstrapToken)
 		if err != nil {
-			logger.Debug(err.Error())
+			logger.Error(err.Error())
 			time.Sleep(5 * time.Second)
 			continue
 		}
 		key.ID = terminal.ServiceAccount.AccessKey.ID
 		key.Secret = terminal.ServiceAccount.AccessKey.Secret
 		if err := key.SaveToFile(conf.AccessKeyFilePath); err != nil {
-			logger.Debug("保存key失败: " + err.Error())
+			logger.Error("保存key失败: " + err.Error())
 		}
 		return key
 	}
-	logger.Debug("注册终端失败退出")
+	logger.Error("注册终端失败退出")
 	os.Exit(1)
 	return
 }
@@ -282,14 +280,14 @@ func MustValidKey(key model.AccessKey) model.AccessKey {
 			case errors.Is(err, service.ErrUnauthorized):
 				return MustRegisterTerminalAccount()
 			default:
-				logger.Debug("校验 access key failed: " + err.Error())
+				logger.Error("校验 access key failed: " + err.Error())
 			}
 			time.Sleep(5 * time.Second)
 			continue
 		}
 		return key
 	}
-	logger.Debug("校验 access key failed退出")
+	logger.Error("校验 access key failed退出")
 	os.Exit(1)
 	return key
 }

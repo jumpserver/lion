@@ -13,6 +13,7 @@ import (
 	"guacamole-client-go/pkg/config"
 	"guacamole-client-go/pkg/jms-sdk-go/model"
 	"guacamole-client-go/pkg/jms-sdk-go/service"
+	"guacamole-client-go/pkg/logger"
 	"guacamole-client-go/pkg/storage"
 )
 
@@ -31,7 +32,7 @@ var (
 )
 
 type Server struct {
-	JmsService       *service.JMService
+	JmsService *service.JMService
 }
 
 func (s *Server) CreatByToken(ctx *gin.Context, token string) (TunnelSession, error) {
@@ -205,7 +206,7 @@ func (s *Server) RegisterFinishReplayCallback(tunnel TunnelSession) func() error
 			return err
 		}
 		if fi.Size() < 1024 {
-			fmt.Println("录像文件小于1024字节，可判断连接失败，未能产生有效的录像文件")
+			logger.Info("录像文件小于1024字节，可判断连接失败，未能产生有效的录像文件")
 			_ = os.Remove(originReplayFilePath)
 			return err
 		}
@@ -213,6 +214,7 @@ func (s *Server) RegisterFinishReplayCallback(tunnel TunnelSession) func() error
 		// 压缩文件
 		err = common.CompressToGzipFile(originReplayFilePath, dstReplayFilePath)
 		if err != nil {
+			logger.Error("压缩文件失败：", err)
 			return err
 		}
 		// 压缩完成则删除源文件

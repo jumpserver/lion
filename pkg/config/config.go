@@ -14,6 +14,7 @@ type Config struct {
 	Root              string
 	DrivePath         string
 	RecordPath        string
+	LogDirPath        string
 	AccessKeyFilePath string
 
 	Name           string `mapstructure:"NAME"`
@@ -51,10 +52,11 @@ func getDefaultConfig() Config {
 	dataFolderPath := filepath.Join(rootPath, "data")
 	driveFolderPath := filepath.Join(dataFolderPath, "drive")
 	recordFolderPath := filepath.Join(dataFolderPath, "record")
+	LogDirPath := filepath.Join(dataFolderPath, "log")
 	keyFolderPath := filepath.Join(dataFolderPath, "key")
 	accessKeyFilePath := filepath.Join(keyFolderPath, ".access_key")
 
-	folders := []string{dataFolderPath, driveFolderPath, keyFolderPath}
+	folders := []string{dataFolderPath, driveFolderPath, keyFolderPath, LogDirPath}
 	for i := range folders {
 		if err := EnsureDirExist(folders[i]); err != nil {
 			log.Fatalf("Create folder failed: %s", err.Error())
@@ -64,6 +66,7 @@ func getDefaultConfig() Config {
 		Name:                      defaultName,
 		Root:                      rootPath,
 		RecordPath:                recordFolderPath,
+		LogDirPath:                LogDirPath,
 		DrivePath:                 driveFolderPath,
 		AccessKeyFilePath:         accessKeyFilePath,
 		CoreHost:                  "http://127.0.0.1:8080",

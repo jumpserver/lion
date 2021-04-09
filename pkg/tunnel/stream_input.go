@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"guacamole-client-go/pkg/guacd"
+	"guacamole-client-go/pkg/logger"
 )
 
 type InputStreamInterceptingFilter struct {
@@ -67,7 +68,7 @@ func (filter *InputStreamInterceptingFilter) sendBlob(index string, p []byte) {
 	err := filter.tunnel.WriteTunnelMessage(guacd.NewInstruction(
 		guacd.InstructionStreamingBlob, index, base64.StdEncoding.EncodeToString(p)))
 	if err != nil {
-		fmt.Println(err)
+		logger.Error(err)
 	}
 }
 
@@ -83,7 +84,7 @@ func (filter *InputStreamInterceptingFilter) sendEnd(index string) {
 	err := filter.tunnel.WriteTunnelMessage(guacd.NewInstruction(
 		guacd.InstructionStreamingEnd, index))
 	if err != nil {
-		fmt.Println(err)
+		logger.Error(err)
 	}
 }
 

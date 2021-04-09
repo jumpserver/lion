@@ -15,6 +15,7 @@ import (
 	"guacamole-client-go/pkg/guacd"
 	"guacamole-client-go/pkg/jms-sdk-go/model"
 	"guacamole-client-go/pkg/jms-sdk-go/service"
+	"guacamole-client-go/pkg/logger"
 	"guacamole-client-go/pkg/session"
 )
 
@@ -235,7 +236,7 @@ func (g *GuacamoleTunnelServer) DownloadFile(ctx *gin.Context) {
 		fileLog.IsSuccess = true
 		_ = g.SessionService.AuditFileOperation(fileLog)
 	}
-	fmt.Println("DownloadFile ", filename, " ", index, " finished")
+	logger.Info("DownloadFile ", filename, " ", index, " finished")
 }
 
 func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
@@ -273,7 +274,7 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 			stream.Wait()
 			_ = fdReader.Close()
 			if err := stream.WaitErr(); err != nil {
-				fmt.Println("UploadFile ", filename, " ", index, " WaitErr ", err.Error())
+				logger.Error("UploadFile ", filename, " ", index, " WaitErr ", err.Error())
 				_ = g.SessionService.AuditFileOperation(fileLog)
 				continue
 			}

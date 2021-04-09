@@ -19,8 +19,8 @@ func SessionAuth(jmsService *service.JMService) gin.HandlerFunc {
 		for _, cookie := range reqCookies {
 			cookies[cookie.Name] = cookie.Value
 		}
-		//user, err = jmsService.GetUserById("68f1648b-5c6c-4f47-97a1-c47c192458e3")
-		user, err = jmsService.GetUserById("90325d75-387a-4b23-9129-66c5ad3e5ec0")
+		user, err = jmsService.GetUserById("68f1648b-5c6c-4f47-97a1-c47c192458e3")
+		//user, err = jmsService.GetUserById("90325d75-387a-4b23-9129-66c5ad3e5ec0")
 		if err != nil {
 			fmt.Println(err)
 			return
