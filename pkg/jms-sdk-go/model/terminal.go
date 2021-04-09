@@ -18,3 +18,15 @@ type Terminal struct {
 		AccessKey AccessKey `json:"access_key"`
 	} `json:"service_account"`
 }
+
+
+type TerminalTask struct {
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	Args       string `json:"args"`
+	IsFinished bool
+}
+
+const (
+	TaskKillSession = "kill_session"
+)

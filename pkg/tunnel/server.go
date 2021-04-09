@@ -129,7 +129,7 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	defer tunnel.Close()
 	_ = tunnelSession.ConnectedSuccessCallback()
 	conn := Connection{
-		sess:        tunnelSession,
+		Sess:        tunnelSession,
 		guacdTunnel: tunnel,
 		ws:          ws,
 	}
@@ -210,10 +210,10 @@ func (g *GuacamoleTunnelServer) DownloadFile(ctx *gin.Context) {
 
 	if tun := g.Cache.Get(tid); tun != nil {
 		fileLog := model.FTPLog{
-			User:       tun.sess.User.String(),
-			Hostname:   tun.sess.Asset.Hostname,
-			OrgID:      tun.sess.Asset.OrgID,
-			SystemUser: tun.sess.SystemUser.Name,
+			User:       tun.Sess.User.String(),
+			Hostname:   tun.Sess.Asset.Hostname,
+			OrgID:      tun.Sess.Asset.OrgID,
+			SystemUser: tun.Sess.SystemUser.Name,
 			RemoteAddr: ctx.ClientIP(),
 			Operate:    model.OperateDownload,
 			Path:       filename,
@@ -249,10 +249,10 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 	}
 	if tun := g.Cache.Get(tid); tun != nil {
 		fileLog := model.FTPLog{
-			User:       tun.sess.User.String(),
-			Hostname:   tun.sess.Asset.Hostname,
-			OrgID:      tun.sess.Asset.OrgID,
-			SystemUser: tun.sess.SystemUser.Name,
+			User:       tun.Sess.User.String(),
+			Hostname:   tun.Sess.Asset.Hostname,
+			OrgID:      tun.Sess.Asset.OrgID,
+			SystemUser: tun.Sess.SystemUser.Name,
 			RemoteAddr: ctx.ClientIP(),
 			Operate:    model.OperateUpload,
 			Path:       filename,

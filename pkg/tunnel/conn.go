@@ -3,6 +3,7 @@ package tunnel
 import (
 	"fmt"
 	"log"
+	"sort"
 	"sync"
 	"time"
 
@@ -18,8 +19,25 @@ const (
 	PINGOPCODE         = "ping"
 )
 
+var _ sort.Interface = Connections{}
+
+type Connections []*Connection
+
+func (c Connections) Len() int {
+	return len(c)
+}
+func (c Connections) Less(i, j int) bool {
+	iCreated := c[i].Sess.Created.UTC()
+	jCreated := c[j].Sess.Created.UTC()
+	return iCreated.Before(jCreated)
+}
+
+func (c Connections) Swap(i, j int) {
+	c[j], c[i] = c[i], c[j]
+}
+
 type Connection struct {
-	sess        *session.TunnelSession
+	Sess        *session.TunnelSession
 	guacdTunnel *guacd.Tunnel
 
 	ws *websocket.Conn
@@ -159,4 +177,9 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 		}
 	}
 
+}
+
+func (t *Connection) Terminal() {
+	// todo 主动断开连接
+	return
 }

@@ -70,9 +70,39 @@ func main() {
 		SessionService: &session.Server{JmsService: jmsService},
 	}
 	eng := registerRouter(jmsService, &tunnelService)
+	runHeartTask(jmsService, tunnelService.Cache)
 	addr := net.JoinHostPort(config.GlobalConfig.BindHost, config.GlobalConfig.HTTPPort)
 	log.Printf("listen on: %s\n", addr)
 	log.Fatal(http.ListenAndServe(addr, eng))
+}
+func runHeartTask(jmsService *service.JMService, cache *tunnel.GuaTunnelCache) {
+	beatTicker := time.NewTicker(time.Minute)
+	defer beatTicker.Stop()
+	for {
+		select {
+		case <-beatTicker.C:
+			sids := cache.Range()
+			tasks, err := jmsService.TerminalHeartBeat(sids)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			for i := range tasks {
+				task := tasks[i]
+				switch task.Name {
+				case model.TaskKillSession:
+					if connection := cache.Get(task.Args); connection != nil {
+						connection.Terminal()
+						if err = jmsService.FinishTask(task.ID); err != nil {
+							fmt.Println(err)
+						}
+					}
+				default:
+				}
+			}
+		}
+	}
+
 }
 
 func registerRouter(jmsService *service.JMService, tunnelService *tunnel.GuacamoleTunnelServer) *gin.Engine {
