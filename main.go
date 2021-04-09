@@ -9,17 +9,21 @@ import (
 	"net/http"
 	"net/http/pprof"
 	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
 
+	"guacamole-client-go/pkg/common"
 	"guacamole-client-go/pkg/config"
 	"guacamole-client-go/pkg/jms-sdk-go/model"
 	"guacamole-client-go/pkg/jms-sdk-go/service"
 	"guacamole-client-go/pkg/logger"
 	"guacamole-client-go/pkg/middleware"
 	"guacamole-client-go/pkg/session"
+	"guacamole-client-go/pkg/storage"
 	"guacamole-client-go/pkg/tunnel"
 )
 
@@ -53,18 +57,8 @@ func main() {
 	}
 	config.Setup()
 	logger.Debug(config.GlobalConfig.DrivePath)
-	eng := registerRouter()
-	addr := net.JoinHostPort(config.GlobalConfig.BindHost, config.GlobalConfig.HTTPPort)
-	log.Printf("listen on: %s\n", addr)
-	log.Fatal(http.ListenAndServe(addr, eng))
-}
-
-func registerRouter() *gin.Engine {
-	gin.SetMode(gin.ReleaseMode)
-	eng := gin.New()
-	eng.Use(gin.Recovery())
-	eng.Use(gin.Logger())
 	jmsService := MustJMService()
+	bootstrap(jmsService)
 	tunnelService := tunnel.GuacamoleTunnelServer{
 		Cache: &tunnel.GuaTunnelCache{
 			Tunnels: make(map[string]*tunnel.Connection),
@@ -75,6 +69,19 @@ func registerRouter() *gin.Engine {
 		JmsService:     jmsService,
 		SessionService: &session.Server{JmsService: jmsService},
 	}
+	eng := registerRouter(jmsService, &tunnelService)
+	addr := net.JoinHostPort(config.GlobalConfig.BindHost, config.GlobalConfig.HTTPPort)
+	log.Printf("listen on: %s\n", addr)
+	log.Fatal(http.ListenAndServe(addr, eng))
+}
+
+func registerRouter(jmsService *service.JMService, tunnelService *tunnel.GuacamoleTunnelServer) *gin.Engine {
+	if config.GlobalConfig.LogLevel != "DEBUG" {
+		gin.SetMode(gin.ReleaseMode)
+	}
+	eng := gin.New()
+	eng.Use(gin.Recovery())
+	eng.Use(gin.Logger())
 
 	guacamoleGroup := eng.Group("/guacamole")
 	// vue的设置
@@ -125,6 +132,64 @@ func registerRouter() *gin.Engine {
 		pprofRouter.GET("/threadcreate", gin.WrapF(pprof.Handler("threadcreate").ServeHTTP))
 	}
 	return eng
+}
+
+func bootstrap(jmsService *service.JMService) {
+	replayDir := config.GlobalConfig.RecordPath
+	allRemainFiles := scanRemainReplay(replayDir)
+	go uploadRemainReplay(jmsService, allRemainFiles)
+}
+
+func uploadRemainReplay(jmsService *service.JMService, remainFiles map[string]string) {
+	var replayStorage storage.ReplayStorage
+	terminalConf, _ := jmsService.GetTerminalConfig()
+	replayStorage = storage.NewReplayStorage(terminalConf.ReplayStorage)
+	for sid, path := range remainFiles {
+		absGzPath := path
+		replayDateDirName := filepath.Base(path)
+		if !session.ValidReplayDirname(replayDateDirName) {
+			continue
+		}
+		if !strings.HasSuffix(path, session.ReplayFileNameSuffix) {
+			absGzPath = path + session.ReplayFileNameSuffix
+			if err := common.CompressToGzipFile(path, absGzPath); err != nil {
+				continue
+			}
+			_ = os.Remove(path)
+		}
+		var err error
+		if replayStorage != nil {
+			err = replayStorage.Upload(absGzPath, replayDateDirName)
+		} else {
+			err = jmsService.Upload(sid, absGzPath)
+		}
+		if err != nil {
+			fmt.Println(err)
+		}
+
+	}
+}
+
+func scanRemainReplay(replayDir string) map[string]string {
+	allRemainFiles := make(map[string]string)
+	_ = filepath.Walk(replayDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return nil
+		}
+		sidFilename := info.Name()
+		var sid string
+		if strings.HasSuffix(sidFilename, session.ReplayFileNameSuffix) {
+			sidFilename = strings.TrimSuffix(sidFilename, session.ReplayFileNameSuffix)
+		}
+		if common.ValidUUIDString(sidFilename) {
+			sid = sidFilename
+		}
+		if sid != "" {
+			allRemainFiles[sid] = path
+		}
+		return nil
+	})
+	return allRemainFiles
 }
 
 func MustJMService() *service.JMService {

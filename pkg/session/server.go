@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -30,7 +31,7 @@ var (
 )
 
 type Server struct {
-	JmsService *service.JMService
+	JmsService       *service.JMService
 }
 
 func (s *Server) CreatByToken(ctx *gin.Context, token string) (TunnelSession, error) {
@@ -235,4 +236,9 @@ func (s *Server) RegisterFinishReplayCallback(tunnel TunnelSession) func() error
 
 func (s *Server) AuditFileOperation(fileLog model.FTPLog) error {
 	return s.JmsService.CreateFileOperationLog(fileLog)
+}
+
+func ValidReplayDirname(dirname string) bool {
+	_, err := time.Parse(recordDirTimeFormat, dirname)
+	return err == nil
 }

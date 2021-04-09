@@ -123,7 +123,6 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 					}
 					continue
 				}
-				fmt.Printf("ws Read %+v\n", ret.Opcode)
 				if ret.Opcode == guacd.InstructionClientDisconnect {
 					fmt.Println(ret.String())
 				}
