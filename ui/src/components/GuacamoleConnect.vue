@@ -332,7 +332,6 @@ export default {
         case Guacamole.Tunnel.State.CLOSED:
           this.tunnelState = 'CLOSED'
           console.log('tunnelStateChanged Tunnel.State.CLOSED ')
-          this.closeDisplay('tunnelStateChanged CLOSED')
           break
         default:
           this.tunnelState = 'unknown'
@@ -397,7 +396,7 @@ export default {
         case 5: // Disconnected
           this.clientState = 'Disconnecting'
           console.log('clientState, Disconnected ')
-          this.closeDisplay('clientState Disconnecting')
+          // this.closeDisplay('clientState Disconnecting')
           break
 
       }
@@ -409,7 +408,7 @@ export default {
 
     closeDisplay(stats) {
       console.log(stats)
-      this.$alert('关闭窗口===', stats, {
+      this.$alert('关闭窗口=== ' + stats.message, stats, {
         confirmButtonText: '确定',
         callback: action => {
           let display = document.getElementById('display')

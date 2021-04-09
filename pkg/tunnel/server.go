@@ -2,7 +2,6 @@ package tunnel
 
 import (
 	"fmt"
-	"guacamole-client-go/pkg/gateway"
 	"net"
 	"net/http"
 	"strconv"
@@ -12,6 +11,7 @@ import (
 
 	"guacamole-client-go/pkg/common"
 	"guacamole-client-go/pkg/config"
+	"guacamole-client-go/pkg/gateway"
 	"guacamole-client-go/pkg/guacd"
 	"guacamole-client-go/pkg/jms-sdk-go/model"
 	"guacamole-client-go/pkg/jms-sdk-go/service"
@@ -147,8 +147,12 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	g.Cache.Add(&conn)
 	err = conn.Run(ctx)
 	g.Cache.Delete(&conn)
-	_ = tunnelSession.DisConnectedCallback()
-	_ = tunnelSession.FinishReplayCallback()
+	if err = tunnelSession.DisConnectedCallback(); err != nil {
+		fmt.Println(err)
+	}
+	if err = tunnelSession.FinishReplayCallback(); err != nil {
+		fmt.Println(err)
+	}
 }
 
 func (g *GuacamoleTunnelServer) TokenConnect(ctx *gin.Context) {

@@ -2,14 +2,15 @@ package tunnel
 
 import (
 	"fmt"
-	"guacamole-client-go/pkg/session"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 
 	"guacamole-client-go/pkg/guacd"
+	"guacamole-client-go/pkg/session"
 )
 
 const (
@@ -52,7 +53,7 @@ func (t *Connection) writeTunnelMessage(p []byte) (int, error) {
 	return t.guacdTunnel.WriteAndFlush(p)
 }
 
-func (t *Connection) readTunnelMessage() ([]byte, error) {
+func (t *Connection) readTunnelInstruction() (*guacd.Instruction, error) {
 	for {
 		instruction, err := t.guacdTunnel.ReadInstruction()
 		if err != nil {
@@ -66,7 +67,7 @@ func (t *Connection) readTunnelMessage() ([]byte, error) {
 		if newInstruction == nil {
 			continue
 		}
-		return []byte(newInstruction.String()), nil
+		return newInstruction, nil
 	}
 
 }
@@ -80,16 +81,24 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 		return err
 	}
 	exit := make(chan error, 2)
+	activeChan := make(chan struct{})
 	go func(t *Connection) {
 		for {
-			instructionBytes, err := t.readTunnelMessage()
+			instruction, err := t.readTunnelInstruction()
 			if err != nil {
 				fmt.Printf("tunnel Read %v\n", err)
 				exit <- err
 				break
 			}
 
-			if err = t.writeWsMessage(instructionBytes); err != nil {
+			switch instruction.Opcode {
+			case guacd.InstructionServerDisconnect,
+				guacd.InstructionServerError,
+				guacd.InstructionServerLog:
+				fmt.Println(instruction.String())
+			}
+
+			if err = t.writeWsMessage([]byte(instruction.String())); err != nil {
 				fmt.Printf(" ws WriteMessage %v\n", err)
 				exit <- err
 				break
@@ -98,39 +107,57 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 		_ = t.ws.Close()
 	}(t)
 
-	for {
-		_, message, err := t.ws.ReadMessage()
-		if err != nil {
-			fmt.Printf("ws ReadMessage %v\n", err)
-			exit <- err
-			break
-		}
-
-		if ret, err := guacd.ParseInstructionString(string(message)); err == nil {
-			if ret.Opcode == INTERNALDATAOPCODE && len(ret.Args) >= 2 && ret.Args[0] == PINGOPCODE {
-				if err := t.SendWsMessage(guacd.NewInstruction(INTERNALDATAOPCODE, PINGOPCODE)); err != nil {
-					fmt.Printf("Unable to send 'ping' response for WebSocket tunnel. %s\n", err)
-				}
-				continue
+	go func(t *Connection) {
+		for {
+			_, message, err := t.ws.ReadMessage()
+			if err != nil {
+				fmt.Printf("ws ReadMessage %v\n", err)
+				exit <- err
+				break
 			}
 
+			if ret, err := guacd.ParseInstructionString(string(message)); err == nil {
+				if ret.Opcode == INTERNALDATAOPCODE && len(ret.Args) >= 2 && ret.Args[0] == PINGOPCODE {
+					if err := t.SendWsMessage(guacd.NewInstruction(INTERNALDATAOPCODE, PINGOPCODE)); err != nil {
+						fmt.Printf("Unable to send 'ping' response for WebSocket tunnel. %s\n", err)
+					}
+					continue
+				}
+				fmt.Printf("ws Read %+v\n", ret.Opcode)
+				if ret.Opcode == guacd.InstructionClientDisconnect {
+					fmt.Println(ret.String())
+				}
+			}
+
+			_, err = t.writeTunnelMessage(message)
+			if err != nil {
+				fmt.Printf("tunnel WriteAndFlush %v\n", err)
+				exit <- err
+				break
+			}
+			activeChan <- struct{}{}
 		}
-		_, err = t.writeTunnelMessage(message)
-		if err != nil {
-			fmt.Printf("tunnel WriteAndFlush %v\n", err)
-			exit <- err
-			break
+	}(t)
+	activeDetectTicker := time.NewTicker(time.Minute)
+	defer activeDetectTicker.Stop()
+	latestActive := time.Now()
+	for {
+		select {
+		case err = <-exit:
+			log.Println("run exit: ", err.Error())
+			return
+		case <-ctx.Request.Context().Done():
+			fmt.Println("Done")
+			_ = t.ws.Close()
+			_ = t.guacdTunnel.Close()
+		case <-activeChan:
+			latestActive = time.Now()
+		case detectNow := <-activeDetectTicker.C:
+			if latestActive.Add(time.Minute * 30).After(detectNow) {
+				log.Println("Connection are terminated by timeout")
+				return
+			}
 		}
 	}
 
-	select {
-	case err = <-exit:
-		log.Println("run exit: ", err.Error())
-	case <-ctx.Request.Context().Done():
-		_ = t.ws.Close()
-		_ = t.guacdTunnel.Close()
-	default:
-	}
-	log.Println("Connection goroutines are terminated.")
-	return
 }

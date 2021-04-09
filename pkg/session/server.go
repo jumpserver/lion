@@ -199,9 +199,18 @@ func (s *Server) RegisterFinishReplayCallback(tunnel TunnelSession) func() error
 			tunnel.Created.Format(recordDirTimeFormat))
 		originReplayFilePath := filepath.Join(recordDirPath, tunnel.ID)
 		dstReplayFilePath := originReplayFilePath + ReplayFileNameSuffix
+		fi, err := os.Stat(originReplayFilePath)
+		if err != nil {
+			return err
+		}
+		if fi.Size() < 1024 {
+			fmt.Println("录像文件小于1024字节，可判断连接失败，未能产生有效的录像文件")
+			_ = os.Remove(originReplayFilePath)
+			return err
+		}
+
 		// 压缩文件
-		fmt.Println(originReplayFilePath, dstReplayFilePath)
-		err := common.CompressToGzipFile(originReplayFilePath, dstReplayFilePath)
+		err = common.CompressToGzipFile(originReplayFilePath, dstReplayFilePath)
 		if err != nil {
 			return err
 		}

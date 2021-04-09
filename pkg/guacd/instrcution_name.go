@@ -51,6 +51,8 @@ const (
 const (
 	InstructionServerDisconnect = "disconnect"
 	InstructionServerError      = "error"
+	InstructionServerLog        = "log"
+	InstructionServerMouse      = "mouse"
 )
 
 // Client events
