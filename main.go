@@ -88,24 +88,23 @@ func runHeartTask(jmsService *service.JMService, cache *tunnel.GuaTunnelCache) {
 				fmt.Println(err)
 				continue
 			}
-			fmt.Println(tasks)
 			for i := range tasks {
 				task := tasks[i]
 				switch task.Name {
 				case model.TaskKillSession:
+					fmt.Println(task)
 					if connection := cache.GetBySessionId(task.Args); connection != nil {
 						connection.Terminate()
 						if err = jmsService.FinishTask(task.ID); err != nil {
 							fmt.Println(err)
 						}
-						fmt.Println(task)
+
 					}
 				default:
 				}
 			}
 		}
 	}
-
 }
 
 func registerRouter(jmsService *service.JMService, tunnelService *tunnel.GuacamoleTunnelServer) *gin.Engine {
@@ -204,7 +203,7 @@ func uploadRemainReplay(jmsService *service.JMService, remainFiles map[string]st
 		}
 		// 上传成功删除文件
 		_ = os.Remove(absGzPath)
-
+		err = jmsService.FinishReply(sid)
 	}
 }
 
