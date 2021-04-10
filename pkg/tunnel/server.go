@@ -73,6 +73,7 @@ func (g *GuacamoleTunnelServer) getClientInfo(ctx *gin.Context) guacd.ClientInfo
 func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	ws, err := upGrader.Upgrade(ctx.Writer, ctx.Request, ctx.Writer.Header())
 	if err != nil {
+		logger.Errorf("Websocket Upgrade err: %+v", err)
 		ctx.AbortWithStatus(http.StatusBadRequest)
 		return
 	}
@@ -108,6 +109,7 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 			DstAddr: dstAddr,
 		}
 		if err = domainGateway.Start(); err != nil {
+			logger.Errorf("Start domain gateway err: %+v", err)
 			return
 		}
 		defer domainGateway.Stop()
@@ -120,7 +122,7 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	guacdAddr := net.JoinHostPort(config.GlobalConfig.GuaHost, config.GlobalConfig.GuaPort)
 	tunnel, err = guacd.NewTunnel(guacdAddr, conf, info)
 	if err != nil {
-		fmt.Printf("%+v\n", err)
+		logger.Errorf("Connect tunnel err: %+v", err)
 		data := guacd.NewInstruction(
 			guacd.InstructionServerError, err.Error(), "504")
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(data.String()))
@@ -149,10 +151,10 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	err = conn.Run(ctx)
 	g.Cache.Delete(&conn)
 	if err = tunnelSession.DisConnectedCallback(); err != nil {
-		fmt.Println(err)
+		logger.Errorf("Session DisConnectedCallback err: %+v", err)
 	}
 	if err = tunnelSession.FinishReplayCallback(); err != nil {
-		fmt.Println(err)
+		logger.Errorf("Session Replay upload err: %+v", err)
 	}
 }
 
@@ -191,10 +193,10 @@ func (g *GuacamoleTunnelServer) TokenSession(ctx *gin.Context) {
 		Token string `json:"token" binding:"required"`
 	}
 	if err := ctx.BindJSON(&jsonData); err != nil {
+		logger.Errorf("Token session json invalid: %+v", err)
 		ctx.JSON(http.StatusBadRequest, CreateErrorResponse(err))
 		return
 	}
-	fmt.Println("TokenSession: ", jsonData)
 	connectSession, err := g.SessionService.CreatByToken(ctx, jsonData.Token)
 	if err != nil {
 		ctx.JSON(http.StatusBadRequest, CreateErrorResponse(err))

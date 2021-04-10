@@ -42,7 +42,6 @@ func NewTunnel(address string, config Configuration, info ClientInformation) (tu
 
 	// Send requested protocol or connection ID
 	if err = tunnel.WriteInstructionAndFlush(NewInstruction("select", selectArg)); err != nil {
-		fmt.Println(err)
 		return nil, err
 	}
 	var connectArgs Instruction
