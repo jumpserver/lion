@@ -11,7 +11,7 @@ import (
 	"guacamole-client-go/pkg/config"
 )
 
-var globalLogger *Logger
+var globalLogger = &Logger{newLogger: log.New(os.Stdout, "", log.Lmsgprefix)}
 
 const logTimeFormat = "2006-01-02 15:04:05"
 

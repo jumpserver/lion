@@ -2,7 +2,6 @@ package gateway
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"net"
 	"strconv"
@@ -13,6 +12,7 @@ import (
 
 	"guacamole-client-go/pkg/common"
 	"guacamole-client-go/pkg/jms-sdk-go/model"
+	"guacamole-client-go/pkg/logger"
 )
 
 var ErrNoAvailable = errors.New("no available domain")
@@ -41,15 +41,18 @@ func (d *DomainGateway) run() {
 		if err != nil {
 			break
 		}
+		logger.Info("Accept new conn by domain ", d.Domain.Name)
 		go d.handlerConn(con)
 	}
+	logger.Infof("Stop proxy by domain %s", d.Domain.Name)
 }
 
 func (d *DomainGateway) handlerConn(srcCon net.Conn) {
 	defer srcCon.Close()
 	dstCon, err := d.sshClient.Dial("tcp", d.DstAddr)
 	if err != nil {
-		fmt.Println(err)
+		logger.Errorf("Failed gateway dial %s: %s ",
+			d.DstAddr, err.Error())
 		return
 	}
 	defer dstCon.Close()
@@ -58,6 +61,7 @@ func (d *DomainGateway) handlerConn(srcCon net.Conn) {
 		_ = dstCon.Close()
 	}()
 	_, _ = io.Copy(srcCon, dstCon)
+	logger.Infof("Gateway end proxy %s", d.DstAddr)
 }
 
 func (d *DomainGateway) Start() (err error) {
@@ -82,6 +86,7 @@ func (d *DomainGateway) getAvailableGateway() bool {
 	for i := range d.Domain.Gateways {
 		gateway := d.Domain.Gateways[i]
 		if gateway.Protocol == "ssh" {
+			logger.Info("Try ssh dial gateway ", gateway.Name)
 			auths := make([]gossh.AuthMethod, 0, 3)
 			if gateway.Password != "" {
 				auths = append(auths, gossh.Password(gateway.Password))
@@ -104,6 +109,7 @@ func (d *DomainGateway) getAvailableGateway() bool {
 			addr := net.JoinHostPort(gateway.IP, strconv.Itoa(gateway.Port))
 			sshClient, err := gossh.Dial("tcp", addr, &sshConfig)
 			if err != nil {
+				logger.Errorf("Failed ssh dial %s: %s", gateway.Name, err.Error())
 				continue
 			}
 			d.sshClient = sshClient
