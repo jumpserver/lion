@@ -2,10 +2,15 @@ package middleware
 
 import (
 	"fmt"
+	"net/http"
+	"net/url"
+
 	"github.com/gin-gonic/gin"
+
 	"guacamole-client-go/pkg/config"
 	"guacamole-client-go/pkg/jms-sdk-go/model"
 	"guacamole-client-go/pkg/jms-sdk-go/service"
+	"guacamole-client-go/pkg/logger"
 )
 
 func SessionAuth(jmsService *service.JMService) gin.HandlerFunc {
@@ -19,22 +24,14 @@ func SessionAuth(jmsService *service.JMService) gin.HandlerFunc {
 		for _, cookie := range reqCookies {
 			cookies[cookie.Name] = cookie.Value
 		}
-		user, err = jmsService.GetUserById("68f1648b-5c6c-4f47-97a1-c47c192458e3")
-		//user, err = jmsService.GetUserById("90325d75-387a-4b23-9129-66c5ad3e5ec0")
+		user, err = jmsService.CheckUserCookie(cookies)
 		if err != nil {
-			fmt.Println(err)
+			logger.Errorf("Check user cookie failed: %+v %s", cookies, err.Error())
+			loginUrl := fmt.Sprintf("/core/auth/login/?next=%s", url.QueryEscape(ctx.Request.URL.RequestURI()))
+			ctx.Redirect(http.StatusFound, loginUrl)
+			ctx.Abort()
 			return
 		}
-		fmt.Println(cookies)
-		// TODO: 校验API
-		//user, err = g.JmsService.CheckUserCookie(cookies)
-		//if err != nil {
-		//	logger.Debug(err.Error())
-		//	loginUrl := fmt.Sprintf("/core/auth/login/?next=%s", url.QueryEscape(ctx.Request.URL.RequestURI()))
-		//	ctx.Redirect(http.StatusFound, loginUrl)
-		//	ctx.Abort()
-		//	return
-		//}
 		ctx.Set(config.GinCtxUserKey, user)
 	}
 }
