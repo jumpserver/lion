@@ -11,6 +11,7 @@ import (
 	"github.com/gorilla/websocket"
 
 	"guacamole-client-go/pkg/guacd"
+	"guacamole-client-go/pkg/logger"
 	"guacamole-client-go/pkg/session"
 )
 
@@ -104,7 +105,7 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 		for {
 			instruction, err := t.readTunnelInstruction()
 			if err != nil {
-				fmt.Printf("tunnel Read %v\n", err)
+				logger.Errorf("Tunnel read err: %+v", err)
 				exit <- err
 				break
 			}
@@ -117,7 +118,7 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 			}
 
 			if err = t.writeWsMessage([]byte(instruction.String())); err != nil {
-				fmt.Printf(" ws WriteMessage %v\n", err)
+				logger.Errorf("Ws Write Message err: %+v", err)
 				exit <- err
 				break
 			}
@@ -129,7 +130,7 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 		for {
 			_, message, err := t.ws.ReadMessage()
 			if err != nil {
-				fmt.Printf("ws ReadMessage %v\n", err)
+				logger.Errorf("Ws read message err: %+v", err)
 				exit <- err
 				break
 			}
@@ -137,7 +138,7 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 			if ret, err := guacd.ParseInstructionString(string(message)); err == nil {
 				if ret.Opcode == INTERNALDATAOPCODE && len(ret.Args) >= 2 && ret.Args[0] == PINGOPCODE {
 					if err := t.SendWsMessage(guacd.NewInstruction(INTERNALDATAOPCODE, PINGOPCODE)); err != nil {
-						fmt.Printf("Unable to send 'ping' response for WebSocket tunnel. %s\n", err)
+						logger.Errorf("Unable to send 'ping' response for WebSocket tunnel: %+v", err)
 					}
 					continue
 				}
@@ -148,7 +149,7 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 
 			_, err = t.writeTunnelMessage(message)
 			if err != nil {
-				fmt.Printf("tunnel WriteAndFlush %v\n", err)
+				logger.Errorf("Tunnel write message err: %+v", err)
 				exit <- err
 				break
 			}
@@ -161,17 +162,17 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 	for {
 		select {
 		case err = <-exit:
-			log.Println("run exit: ", err.Error())
+			logger.Infof("Connection exit %+v", err)
 			return
 		case <-ctx.Request.Context().Done():
-			fmt.Println("Done")
+			logger.Error("http request ctx done")
 			_ = t.ws.Close()
 			_ = t.guacdTunnel.Close()
 		case <-activeChan:
 			latestActive = time.Now()
-		case detectNow := <-activeDetectTicker.C:
-			if latestActive.Add(time.Minute * 30).Before(detectNow) {
-				log.Println("Connection are terminated by timeout")
+		case detectTime := <-activeDetectTicker.C:
+			if detectTime.After(latestActive.Add(time.Minute * 30)) {
+				logger.Error("Connection are terminated by 30 min timeout ")
 				return
 			}
 		}

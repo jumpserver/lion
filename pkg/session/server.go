@@ -194,7 +194,7 @@ func (s *Server) RegisterFinishReplayCallback(tunnel TunnelSession) func() error
 	return func() error {
 		replayConfig := tunnel.TerminalConfig.ReplayStorage
 		if replayConfig["type"] == "null" {
-			fmt.Println("ReplayStorage 为 null，无存储")
+			logger.Error("录像存储设置为 null，无存储")
 			return nil
 		}
 		recordDirPath := filepath.Join(config.GlobalConfig.RecordPath,
@@ -206,7 +206,7 @@ func (s *Server) RegisterFinishReplayCallback(tunnel TunnelSession) func() error
 			return err
 		}
 		if fi.Size() < 1024 {
-			logger.Info("录像文件小于1024字节，可判断连接失败，未能产生有效的录像文件")
+			logger.Error("录像文件小于1024字节，可判断连接失败，未能产生有效的录像文件")
 			_ = os.Remove(originReplayFilePath)
 			return err
 		}
@@ -226,6 +226,7 @@ func (s *Server) RegisterFinishReplayCallback(tunnel TunnelSession) func() error
 		}
 		// 上传文件
 		if err != nil {
+			logger.Error("Upload replay failed: ", err.Error())
 			return err
 		}
 		// 上传成功，删除压缩文件

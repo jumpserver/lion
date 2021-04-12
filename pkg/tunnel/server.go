@@ -110,12 +110,17 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 		}
 		if err = domainGateway.Start(); err != nil {
 			logger.Errorf("Start domain gateway err: %+v", err)
+			data := guacd.NewInstruction(
+				guacd.InstructionServerError, err.Error(), "504")
+			_ = ws.WriteMessage(websocket.TextMessage, []byte(data.String()))
 			return
 		}
 		defer domainGateway.Stop()
 		localAddr := domainGateway.GetListenAddr()
 		conf.SetParameter(guacd.Hostname, localAddr.IP.String())
 		conf.SetParameter(guacd.Port, strconv.Itoa(localAddr.Port))
+		logger.Infof("Start domain gateway %s listen on %s:%d", tunnelSession.Domain.Name,
+			localAddr.IP.String(), localAddr.Port)
 	}
 
 	var tunnel *guacd.Tunnel
@@ -181,6 +186,7 @@ func (g *GuacamoleTunnelServer) CreateSession(ctx *gin.Context) {
 	connectSession, err := g.SessionService.Creat(ctx, user,
 		jsonData.TargetType, jsonData.TargetId, jsonData.SystemUserId)
 	if err != nil {
+		logger.Errorf("Create session err: %+v", err)
 		ctx.JSON(http.StatusBadRequest, CreateErrorResponse(err))
 		return
 	}
@@ -199,6 +205,7 @@ func (g *GuacamoleTunnelServer) TokenSession(ctx *gin.Context) {
 	}
 	connectSession, err := g.SessionService.CreatByToken(ctx, jsonData.Token)
 	if err != nil {
+		logger.Errorf("Create token session err: %+v", err)
 		ctx.JSON(http.StatusBadRequest, CreateErrorResponse(err))
 		return
 	}
