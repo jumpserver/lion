@@ -131,11 +131,15 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 		data := guacd.NewInstruction(
 			guacd.InstructionServerError, err.Error(), "504")
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(data.String()))
-		_ = tunnelSession.ConnectedFailedCallback(err)
+		if err = tunnelSession.ConnectedFailedCallback(err); err != nil {
+			logger.Errorf("Update session connect status failed %+v", err)
+		}
 		return
 	}
 	defer tunnel.Close()
-	_ = tunnelSession.ConnectedSuccessCallback()
+	if err := tunnelSession.ConnectedSuccessCallback(); err != nil {
+		logger.Errorf("Update session connect status failed %+v", err)
+	}
 	conn := Connection{
 		Sess:        tunnelSession,
 		guacdTunnel: tunnel,

@@ -59,5 +59,5 @@ var VNCDisplay = DisPlay{data: map[string]DisplayParameter{
 }}
 
 var RDPBuiltIn = map[string]string{
-	guacd.RDPDisableGlyphCaching: "true",
+	guacd.RDPDisableGlyphCaching: BoolTrue,
 }
