@@ -14,7 +14,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
-
 	"guacamole-client-go/pkg/common"
 	"guacamole-client-go/pkg/config"
 	"guacamole-client-go/pkg/jms-sdk-go/model"

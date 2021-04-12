@@ -244,8 +244,10 @@ func (g *GuacamoleTunnelServer) DownloadFile(ctx *gin.Context) {
 		}
 		fileLog.IsSuccess = true
 		_ = g.SessionService.AuditFileOperation(fileLog)
+		logger.Info("DownloadFile ", filename, " ", index, " finished")
+		return
 	}
-	logger.Info("DownloadFile ", filename, " ", index, " finished")
+	ctx.AbortWithStatus(http.StatusNotFound)
 }
 
 func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
