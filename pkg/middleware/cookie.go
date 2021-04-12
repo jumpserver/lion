@@ -25,6 +25,7 @@ func SessionAuth(jmsService *service.JMService) gin.HandlerFunc {
 			fmt.Println(err)
 			return
 		}
+		fmt.Println(cookies)
 		// TODO: 校验API
 		//user, err = g.JmsService.CheckUserCookie(cookies)
 		//if err != nil {

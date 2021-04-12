@@ -144,7 +144,8 @@ func (filter *OutputStreamInterceptingFilter) addOutStream(out OutStreamResource
 	filter.streams[out.streamIndex] = out
 }
 
-//下载文件的对象
+// 下载文件的对象
+
 type OutStreamResource struct {
 	streamIndex string
 	mediaType   string // application/octet-stream

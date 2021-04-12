@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"log"
+	"guacamole-client-go/pkg/logger"
 	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -22,7 +22,7 @@ func (s S3ReplayStorage) Upload(gZipFilePath, target string) (err error) {
 
 	file, err := os.Open(gZipFilePath)
 	if err != nil {
-		log.Printf("Open %s file failed: %s", gZipFilePath, err)
+		logger.Errorf("Open %s file failed: %s", gZipFilePath, err)
 		return err
 	}
 	defer file.Close()
@@ -35,7 +35,7 @@ func (s S3ReplayStorage) Upload(gZipFilePath, target string) (err error) {
 
 	sess, err := session.NewSession(s3Config)
 	if err != nil {
-		log.Printf("S3 new session failed: %s", err)
+		logger.Errorf("S3 new session failed: %s", err)
 		return err
 	}
 
@@ -48,7 +48,7 @@ func (s S3ReplayStorage) Upload(gZipFilePath, target string) (err error) {
 		Body:   file,
 	})
 	if err != nil {
-		log.Printf("S3 upload file %s failed: %s", gZipFilePath, err)
+		logger.Errorf("S3 upload file %s failed: %s", gZipFilePath, err)
 		return err
 	}
 	return

@@ -3,11 +3,12 @@ package storage
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/url"
 	"os"
 
 	"github.com/Azure/azure-storage-blob-go/azblob"
+
+	"guacamole-client-go/pkg/logger"
 )
 
 type AzureReplayStorage struct {
@@ -20,12 +21,13 @@ type AzureReplayStorage struct {
 func (a AzureReplayStorage) Upload(gZipFilePath, target string) (err error) {
 	file, err := os.Open(gZipFilePath)
 	if err != nil {
+		logger.Errorf("Azure storage open file err: %s", err)
 		return
 	}
 	defer file.Close()
 	credential, err := azblob.NewSharedKeyCredential(a.AccountName, a.AccountKey)
 	if err != nil {
-		log.Println("Invalid credentials with error: " + err.Error())
+		logger.Errorf("Invalid credentials with error: %s", err.Error())
 		return err
 	}
 	p := azblob.NewPipeline(credential, azblob.PipelineOptions{})
@@ -38,7 +40,7 @@ func (a AzureReplayStorage) Upload(gZipFilePath, target string) (err error) {
 		BlockSize:   4 * 1024 * 1024,
 		Parallelism: 16})
 	if err != nil {
-		log.Printf("Azure upload file %s failed: %s", gZipFilePath, err)
+		logger.Errorf("Azure upload file %s failed: %s", gZipFilePath, err)
 		return err
 	}
 	if httpResp := commonResp.Response(); httpResp != nil {
