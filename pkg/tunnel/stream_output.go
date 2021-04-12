@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"guacamole-client-go/pkg/guacd"
+	"guacamole-client-go/pkg/logger"
 )
 
 type OutputStreamInterceptingFilter struct {
@@ -70,7 +71,6 @@ func (filter *OutputStreamInterceptingFilter) handleBlob(unfilteredInstruction *
 	// Verify all required arguments are present
 	args := unfilteredInstruction.Args
 	if len(args) < 2 {
-		fmt.Println("less two args ", args)
 		return unfilteredInstruction
 	}
 	index := args[0]
@@ -79,7 +79,7 @@ func (filter *OutputStreamInterceptingFilter) handleBlob(unfilteredInstruction *
 		data := args[1]
 		blob, err := base64.StdEncoding.DecodeString(data)
 		if err != nil {
-			fmt.Println(err)
+			logger.Errorf("Base64 decode blob err: %+v", err)
 			return nil
 		}
 		if _, err = stream.writer.Write(blob); err != nil {
@@ -96,7 +96,7 @@ func (filter *OutputStreamInterceptingFilter) handleBlob(unfilteredInstruction *
 
 		err = filter.sendAck(index, "Ok", guacd.StatusSuccess)
 		if err != nil {
-			fmt.Println(err)
+			logger.Errorf("OutputStream filter sendAck err: %+v", err)
 		}
 		return nil
 	}
@@ -143,7 +143,7 @@ func (filter *OutputStreamInterceptingFilter) closeInterceptedStream(index strin
 	filter.Lock()
 	defer filter.Unlock()
 	if outStream, ok := filter.streams[index]; ok {
-		fmt.Println("closeInterceptedStream index ", index)
+		logger.Infof("OutputStream filter close stream index %s", index)
 		close(outStream.done)
 	}
 	delete(filter.streams, index)
@@ -152,11 +152,14 @@ func (filter *OutputStreamInterceptingFilter) closeInterceptedStream(index strin
 func (filter *OutputStreamInterceptingFilter) addOutStream(out OutStreamResource) {
 	filter.Lock()
 	defer filter.Unlock()
-	filter.streams[out.streamIndex] = out
 	err := filter.sendAck(out.streamIndex, "OK", guacd.StatusSuccess)
 	if err != nil {
-		fmt.Println(err)
+		logger.Errorf("OutputStream filter sendAck index %s err: %+v", out.streamIndex, err)
+		out.err = err
+		close(out.done)
+		return
 	}
+	filter.streams[out.streamIndex] = out
 }
 
 //下载文件的对象
