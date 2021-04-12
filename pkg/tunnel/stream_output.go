@@ -2,7 +2,6 @@ package tunnel
 
 import (
 	"encoding/base64"
-	"fmt"
 	"net/http"
 	"strconv"
 	"sync"
@@ -21,18 +20,6 @@ type OutputStreamInterceptingFilter struct {
 func (filter *OutputStreamInterceptingFilter) Filter(unfilteredInstruction *guacd.Instruction) *guacd.Instruction {
 
 	switch unfilteredInstruction.Opcode {
-	case guacd.InstructionStreamingAck:
-		fmt.Println(unfilteredInstruction.String())
-		return unfilteredInstruction
-	case guacd.InstructionStreamingArgv:
-		fmt.Println(unfilteredInstruction.String())
-		return unfilteredInstruction
-	case guacd.InstructionStreamingFile:
-		fmt.Println(unfilteredInstruction.String())
-		return unfilteredInstruction
-	case guacd.InstructionStreamingPipe:
-		fmt.Println(unfilteredInstruction.String())
-		return unfilteredInstruction
 	case guacd.InstructionStreamingBlob:
 		// Intercept "blob" instructions for in-progress streams
 		//if (instruction.getOpcode().equals("blob"))
@@ -55,14 +42,9 @@ func (filter *OutputStreamInterceptingFilter) Filter(unfilteredInstruction *guac
 		//}
 		filter.handleSync(unfilteredInstruction)
 		return unfilteredInstruction
-	case guacd.InstructionObjectPut, guacd.InstructionObjectBody,
-		guacd.InstructionObjectGet, guacd.InstructionObjectFilesystem,
-		guacd.InstructionObjectUndefine:
-		fmt.Println(unfilteredInstruction.String())
-		return unfilteredInstruction
 	}
 
-	//// Pass instruction through untouched
+	// Pass instruction through untouched
 	//return instruction
 	return unfilteredInstruction
 }
