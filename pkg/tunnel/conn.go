@@ -153,7 +153,10 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 				exit <- err
 				break
 			}
-			activeChan <- struct{}{}
+			select {
+			case activeChan <- struct{}{}:
+			default:
+			}
 		}
 	}(t)
 	maxIdleMinutes := time.Duration(t.Sess.TerminalConfig.MaxIdleTime) * time.Minute
