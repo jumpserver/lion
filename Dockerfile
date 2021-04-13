@@ -31,7 +31,6 @@ ENV GUACD_LOG_LEVEL=debug
 RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list \
 	&& sed -i 's/security.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list
 RUN apt-get update && apt-get install -y supervisor
-RUN mkdir -p /var/log/supervisor
 COPY --from=ui-build /opt/guacamole/ui/guacamole ui/guacamole/
 COPY --from=go-build /opt/guacamole/guacamole-client-go .
 COPY --from=go-build /opt/guacamole/config_example.yml .
