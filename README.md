@@ -19,7 +19,7 @@ docker build -t jumpserver/guacamole-client-go .
 
 ```shell
 docker run -d --name jms_guacamole -p 8081:8081 \
--v ./data:/opt/guacamole/data \
--v ./config.yml:/opt/guacamole/config.yml \
+-v $(pwd)/data:/opt/guacamole/data \
+-v $(pwd)/config.yml:/opt/guacamole/config.yml \
 jumpserver/guacamole-client-go
 ```
