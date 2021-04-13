@@ -43,6 +43,7 @@ func Setup() {
 		log.Fatal(err)
 	}
 	GlobalConfig = &conf
+	log.Printf("%+v\n", GlobalConfig)
 
 }
 

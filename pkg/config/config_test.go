@@ -38,5 +38,5 @@ func TestSetupByEnv(t *testing.T) {
 	if err := viper.Unmarshal(&conf); err != nil {
 		t.Fatalf("%s \n", err.Error())
 	}
-	t.Log(conf)
+	t.Logf("%+v\n",conf)
 }
