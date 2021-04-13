@@ -156,6 +156,7 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 			activeChan <- struct{}{}
 		}
 	}(t)
+	maxIdleMinutes := time.Duration(t.Sess.TerminalConfig.MaxIdleTime) * time.Minute
 	activeDetectTicker := time.NewTicker(time.Minute)
 	defer activeDetectTicker.Stop()
 	latestActive := time.Now()
@@ -171,7 +172,7 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 		case <-activeChan:
 			latestActive = time.Now()
 		case detectTime := <-activeDetectTicker.C:
-			if detectTime.After(latestActive.Add(time.Minute * 30)) {
+			if detectTime.After(latestActive.Add(maxIdleMinutes)) {
 				logger.Error("Connection are terminated by 30 min timeout ")
 				return
 			}
@@ -182,8 +183,9 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 
 func (t *Connection) Terminate() {
 	errInstruction := guacd.NewInstruction(
+		// Todo 定义 code 表明 JMS 终断
 		guacd.InstructionServerError, "admin Terminate", "1011")
 	_ = t.SendWsMessage(errInstruction)
-	fmt.Println("admin Terminate ")
+	logger.Error("Admin terminate connection")
 	return
 }
