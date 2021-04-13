@@ -11,7 +11,7 @@ BOOTSTRAP_TOKEN: <PleasgeChangeSameWithJumpserver>
 # 启动时绑定的ip, 默认 0.0.0.0
 # BIND_HOST: 0.0.0.0
 
-# 监听的HTTP/WS端口号，默认5000
+# 监听的HTTP/WS端口号，默认8081
 # HTTPD_PORT: 8081
 
 # 设置日志级别 [DEBUG, INFO, WARN, ERROR, FATAL, CRITICAL]
