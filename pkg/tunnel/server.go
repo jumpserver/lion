@@ -178,12 +178,12 @@ func (g *GuacamoleTunnelServer) CreateSession(ctx *gin.Context) {
 		SystemUserId string `json:"system_user_id" binding:"required"`
 	}
 	if err := ctx.BindJSON(&jsonData); err != nil {
-		ctx.JSON(http.StatusBadRequest, CreateErrorResponse(err))
+		ctx.JSON(http.StatusBadRequest, ErrorResponse(err))
 		return
 	}
 	value, ok := ctx.Get(config.GinCtxUserKey)
 	if !ok {
-		ctx.JSON(http.StatusBadRequest, CreateErrorResponse(ErrNoAuthUser))
+		ctx.JSON(http.StatusBadRequest, ErrorResponse(ErrNoAuthUser))
 		return
 	}
 	user := value.(*model.User)
@@ -191,11 +191,11 @@ func (g *GuacamoleTunnelServer) CreateSession(ctx *gin.Context) {
 		jsonData.TargetType, jsonData.TargetId, jsonData.SystemUserId)
 	if err != nil {
 		logger.Errorf("Create session err: %+v", err)
-		ctx.JSON(http.StatusBadRequest, CreateErrorResponse(err))
+		ctx.JSON(http.StatusBadRequest, ErrorResponse(err))
 		return
 	}
 	g.SessCache.Add(&connectSession)
-	ctx.JSON(http.StatusCreated, CreateSuccessResponse(connectSession))
+	ctx.JSON(http.StatusCreated, SuccessResponse(connectSession))
 }
 
 func (g *GuacamoleTunnelServer) TokenSession(ctx *gin.Context) {
@@ -204,17 +204,17 @@ func (g *GuacamoleTunnelServer) TokenSession(ctx *gin.Context) {
 	}
 	if err := ctx.BindJSON(&jsonData); err != nil {
 		logger.Errorf("Token session json invalid: %+v", err)
-		ctx.JSON(http.StatusBadRequest, CreateErrorResponse(err))
+		ctx.JSON(http.StatusBadRequest, ErrorResponse(err))
 		return
 	}
 	connectSession, err := g.SessionService.CreatByToken(ctx, jsonData.Token)
 	if err != nil {
 		logger.Errorf("Create token session err: %+v", err)
-		ctx.JSON(http.StatusBadRequest, CreateErrorResponse(err))
+		ctx.JSON(http.StatusBadRequest, ErrorResponse(err))
 		return
 	}
 	g.SessCache.Add(&connectSession)
-	ctx.JSON(http.StatusCreated, CreateSuccessResponse(connectSession))
+	ctx.JSON(http.StatusCreated, SuccessResponse(connectSession))
 }
 
 func (g *GuacamoleTunnelServer) DownloadFile(ctx *gin.Context) {
@@ -242,7 +242,7 @@ func (g *GuacamoleTunnelServer) DownloadFile(ctx *gin.Context) {
 		}
 		tun.outputFilter.addOutStream(out)
 		if err := out.Wait(); err != nil {
-			ctx.JSON(http.StatusBadRequest, CreateErrorResponse(err))
+			ctx.JSON(http.StatusBadRequest, ErrorResponse(err))
 			_ = g.SessionService.AuditFileOperation(fileLog)
 			return
 		}
@@ -260,7 +260,7 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 	filename := ctx.Param("filename")
 	form, err := ctx.MultipartForm()
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, CreateErrorResponse(err))
+		ctx.JSON(http.StatusBadRequest, ErrorResponse(err))
 		return
 	}
 	if tun := g.Cache.Get(tid); tun != nil {

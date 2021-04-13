@@ -39,9 +39,9 @@ func (s *SystemUser) String() string {
 type SystemUserAuthInfo struct {
 	ID         string `json:"id"`
 	Name       string `json:"name"`
-	UserName   string `json:"username"`
+	Username   string `json:"username"`
 	Protocol   string `json:"protocol"`
-	LoginMode  string `json:"login_mode"`
+	LoginMode  string `json:"logsin_mode"`
 	Password   string `json:"password"`
 	PrivateKey string `json:"private_key"`
 	AdDomain   string `json:"ad_domain"`
@@ -51,4 +51,8 @@ type SystemUserAuthInfo struct {
 	PublicKey  string `json:"public_key"`
 
 	UsernameSameWithUser bool `json:"username_same_with_user"`
+}
+
+func (s *SystemUserAuthInfo) String() string {
+	return fmt.Sprintf("%s(%s)", s.Name, s.Username)
 }

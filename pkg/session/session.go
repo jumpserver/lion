@@ -9,16 +9,16 @@ import (
 )
 
 type TunnelSession struct {
-	ID             string                `json:"id"`
-	Created        common.UTCTime        `json:"-"`
-	Asset          *model.Asset          `json:"asset"`
-	SystemUser     *model.SystemUser     `json:"-"`
-	User           *model.User           `json:"user"`
-	Platform       *model.Platform       `json:"platform"`
-	RemoteApp      *model.RemoteAPP      `json:"remote_app"`
-	Permission     *model.Permission     `json:"permission"`
-	Domain         *model.Domain         `json:"-"`
-	TerminalConfig *model.TerminalConfig `json:"-"`
+	ID             string                    `json:"id"`
+	Created        common.UTCTime            `json:"-"`
+	Asset          *model.Asset              `json:"asset"`
+	SystemUser     *model.SystemUserAuthInfo `json:"-"`
+	User           *model.User               `json:"user"`
+	Platform       *model.Platform           `json:"platform"`
+	RemoteApp      *model.RemoteAPP          `json:"remote_app"`
+	Permission     *model.Permission         `json:"permission"`
+	Domain         *model.Domain             `json:"-"`
+	TerminalConfig *model.TerminalConfig     `json:"-"`
 
 	ConnectedCallback        func() error          `json:"-"`
 	ConnectedSuccessCallback func() error          `json:"-"`

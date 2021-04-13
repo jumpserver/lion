@@ -43,7 +43,7 @@ func TestJMService_GetSystemUserById(t *testing.T) {
 func TestJMService_GetSystemUserAuthById(t *testing.T) {
 	jms := setup()
 	systemId := "33511e29-3058-49c5-85da-56a296494714"
-	sysUser, err := jms.GetSystemUserAuthById(systemId, "")
+	sysUser, err := jms.GetSystemUserAuthById(systemId, "", "","")
 	if err != nil {
 		t.Fatal(err)
 	}

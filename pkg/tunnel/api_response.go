@@ -12,14 +12,14 @@ type APIResponse struct {
 	Data    interface{} `json:"data"`
 }
 
-func CreateSuccessResponse(data interface{}) APIResponse {
+func SuccessResponse(data interface{}) APIResponse {
 	return APIResponse{
 		Success: true,
 		Data:    data,
 	}
 }
 
-func CreateErrorResponse(err error) APIResponse {
+func ErrorResponse(err error) APIResponse {
 	return APIResponse{
 		Success: false,
 		Message: err.Error(),

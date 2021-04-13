@@ -127,13 +127,10 @@ func (s *Server) CreateRDPAndVNCSession(user *model.User, asset *model.Asset, sy
 	if err != nil {
 		return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
 	}
-	sysUserAuth, err := s.JmsService.GetSystemUserAuthById(systemUser.ID, asset.ID)
+	sysUserAuth, err := s.JmsService.GetSystemUserAuthById(systemUser.ID, asset.ID, user.ID, user.Username)
 	if err != nil {
 		return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
 	}
-	systemUser.Password = sysUserAuth.Password
-	systemUser.PrivateKey = sysUserAuth.PrivateKey
-	systemUser.Token = sysUserAuth.Token
 	terminal, err := s.JmsService.GetTerminalConfig()
 	if err != nil {
 		return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
@@ -154,7 +151,7 @@ func (s *Server) CreateRDPAndVNCSession(user *model.User, asset *model.Asset, sy
 		Created:        common.NewNowUTCTime(),
 		User:           user,
 		Asset:          asset,
-		SystemUser:     systemUser,
+		SystemUser:     &sysUserAuth,
 		Platform:       &platform,
 		Domain:         assetDomain,
 		TerminalConfig: &terminal,

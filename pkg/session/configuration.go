@@ -23,7 +23,7 @@ type RDPConfiguration struct {
 	Created        common.UTCTime
 	User           *model.User
 	Asset          *model.Asset
-	SystemUser     *model.SystemUser
+	SystemUser     *model.SystemUserAuthInfo
 	Platform       *model.Platform
 	Permission     *model.Permission
 	TerminalConfig *model.TerminalConfig
@@ -115,11 +115,11 @@ type VNCConfiguration struct {
 	SessionId      string
 	Created        common.UTCTime
 	User           *model.User
-	Asset          *model.Asset          `json:"asset"`
-	SystemUser     *model.SystemUser     `json:"system_user"`
-	Platform       *model.Platform       `json:"platform"`
-	Permission     *model.Permission     `json:"permission"`
-	TerminalConfig *model.TerminalConfig `json:"terminal_config"`
+	Asset          *model.Asset              `json:"asset"`
+	SystemUser     *model.SystemUserAuthInfo `json:"system_user"`
+	Platform       *model.Platform           `json:"platform"`
+	Permission     *model.Permission         `json:"permission"`
+	TerminalConfig *model.TerminalConfig     `json:"terminal_config"`
 }
 
 const recordDirTimeFormat = "2006-01-02"
