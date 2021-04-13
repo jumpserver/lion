@@ -12,7 +12,7 @@
 ## 构建镜像
 
 ```shell
-docker build -t jumpserver/guacamole-client-go .
+docker build -t jumpserver/guacamole .
 ```
 
 ## docker启动
@@ -21,5 +21,5 @@ docker build -t jumpserver/guacamole-client-go .
 docker run -d --name jms_guacamole -p 8081:8081 \
 -v $(pwd)/data:/opt/guacamole/data \
 -v $(pwd)/config.yml:/opt/guacamole/config.yml \
-jumpserver/guacamole-client-go
+jumpserver/guacamole
 ```
