@@ -29,6 +29,7 @@ var (
 	ErrAPIService          = errors.New("connect API core err")
 	ErrUnSupportedType     = errors.New("unsupported type")
 	ErrUnSupportedProtocol = errors.New("unsupported protocol")
+	ErrPermissionDeny      = errors.New("permission deny")
 )
 
 type Server struct {
@@ -66,14 +67,31 @@ func (s *Server) Creat(ctx *gin.Context, user *model.User, targetType, targetId,
 		if err != nil {
 			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
 		}
+		// 获取权限校验
+		permission, err := s.JmsService.GetPermission(user.ID, asset.ID, sysUser.ID)
+		if err != nil {
+			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
+		}
+		if !permission.EnableConnect() {
+			return TunnelSession{}, fmt.Errorf("%w: connect deny", ErrPermissionDeny)
+		}
 		sess, err = s.CreateRDPAndVNCSession(user, &asset, &sysUser)
 		if err != nil {
 			return TunnelSession{}, err
 		}
+		sess.Permission = &permission
 	case TypeRemoteApp:
 		remoteApp, err := s.JmsService.GetRemoteApp(targetId)
 		if err != nil {
 			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
+		}
+		// 校验权限
+		enableConnect, err := s.JmsService.ValidateRemoteApp(user.ID, remoteApp.ID, sysUser.ID)
+		if err != nil {
+			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
+		}
+		if !enableConnect {
+			return TunnelSession{}, fmt.Errorf("%w: connect deny", ErrPermissionDeny)
 		}
 		sess, err = s.CreateRemoteSession(user, &remoteApp, &sysUser)
 		if err != nil {
@@ -116,10 +134,6 @@ func (s *Server) CreateRDPAndVNCSession(user *model.User, asset *model.Asset, sy
 	systemUser.Password = sysUserAuth.Password
 	systemUser.PrivateKey = sysUserAuth.PrivateKey
 	systemUser.Token = sysUserAuth.Token
-	permission, err := s.JmsService.GetPermission(user.ID, asset.ID, systemUser.ID)
-	if err != nil {
-		return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
-	}
 	terminal, err := s.JmsService.GetTerminalConfig()
 	if err != nil {
 		return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
@@ -143,7 +157,6 @@ func (s *Server) CreateRDPAndVNCSession(user *model.User, asset *model.Asset, sy
 		SystemUser:     systemUser,
 		Platform:       &platform,
 		Domain:         assetDomain,
-		Permission:     &permission,
 		TerminalConfig: &terminal,
 	}
 	return newSession, nil

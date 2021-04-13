@@ -4,6 +4,10 @@ type Permission struct {
 	Actions []string `json:"actions"`
 }
 
+func (p *Permission) EnableConnect() bool {
+	return p.haveAction(ActionConnect)
+}
+
 func (p *Permission) EnableDrive() bool {
 	return p.EnableDownload() || p.EnableUpload()
 }
