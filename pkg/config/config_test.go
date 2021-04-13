@@ -34,9 +34,10 @@ func TestSetupByYml(t *testing.T) {
 
 func TestSetupByEnv(t *testing.T) {
 	viper.AutomaticEnv()
+	loadEnvToViper()
 	var conf = getDefaultConfig()
 	if err := viper.Unmarshal(&conf); err != nil {
 		t.Fatalf("%s \n", err.Error())
 	}
-	t.Log(conf)
+	t.Logf("%+v", conf)
 }
