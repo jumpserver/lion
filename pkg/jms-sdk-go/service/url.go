@@ -68,7 +68,7 @@ const (
 )
 
 const (
-	PermissionURL = "/api/v1/perms/asset-permissions/user/actions/?user_id=%s&asset_id=%s&system_user_id=%s"
+	PermissionURL = "/api/v1/perms/asset-permissions/user/actions/"
 
 	RemoteAPPURL = "/api/v1/applications/remote-apps/%s/connection-info/"
 )

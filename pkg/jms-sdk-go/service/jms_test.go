@@ -80,3 +80,22 @@ func TestJMService_GetDomainGateways(t *testing.T) {
 		t.Logf("%+v\n", asset)
 	}
 }
+
+func TestJMService_GetPermission(t *testing.T) {
+	jms := setup()
+	assetId := "bd87e0b9-9a94-48df-9fa1-4aab4c9f49a5"
+	sysId := "33511e29-3058-49c5-85da-56a296494714"
+	userId := "68f1648b-5c6c-4f47-97a1-c47c192458e3"
+	perms, err := jms.GetPermission(userId, assetId, sysId)
+	t.Logf("%+v,%+v", perms, err)
+}
+
+func TestJMService_ValidateRemoteApp(t *testing.T) {
+	jms := setup()
+	remoteId := "9f2313df-bd54-4428-9708-b9e54eba735a"
+	sysId := "d9341b5a-426c-4d3a-8a10-2c23a7e06997"
+	userId := "68f1648b-5c6c-4f47-97a1-c47c192458e3"
+	ok, err := jms.ValidateRemoteApp(userId, remoteId, sysId)
+	t.Logf("%+v,%+v", ok, err)
+
+}
