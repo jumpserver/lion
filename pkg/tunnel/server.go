@@ -187,7 +187,7 @@ func (g *GuacamoleTunnelServer) CreateSession(ctx *gin.Context) {
 		return
 	}
 	user := value.(*model.User)
-	connectSession, err := g.SessionService.Creat(ctx, user,
+	connectSession, err := g.SessionService.Create(ctx, user,
 		jsonData.TargetType, jsonData.TargetId, jsonData.SystemUserId)
 	if err != nil {
 		logger.Errorf("Create session err: %+v", err)

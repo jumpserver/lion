@@ -25,11 +25,11 @@ var (
 	disableOffscreenCaching  = DisplayParameter{Key: guacd.RDPDisableOffscreenCaching, DefaultValue: ""}
 )
 
-type DisPlay struct {
+type Display struct {
 	data map[string]DisplayParameter
 }
 
-func (d DisPlay) GetDisplayParams() map[string]string {
+func (d Display) GetDisplayParams() map[string]string {
 	res := make(map[string]string)
 	for envKey, displayParam := range d.data {
 		res[displayParam.Key] = displayParam.DefaultValue
@@ -40,7 +40,7 @@ func (d DisPlay) GetDisplayParams() map[string]string {
 	return res
 }
 
-var RDPDisplay = DisPlay{data: map[string]DisplayParameter{
+var RDPDisplay = Display{data: map[string]DisplayParameter{
 	"JUMPSERVER_COLOR_DEPTH":                colorDepth,
 	"JUMPSERVER_DPI":                        dpi,
 	"JUMPSERVER_DISABLE_AUDIO":              disableAudio,
@@ -54,7 +54,7 @@ var RDPDisplay = DisPlay{data: map[string]DisplayParameter{
 	"JUMPSERVER_DISABLE_OFFSCREEN_CACHING":  disableOffscreenCaching,
 }}
 
-var VNCDisplay = DisPlay{data: map[string]DisplayParameter{
+var VNCDisplay = Display{data: map[string]DisplayParameter{
 	"JUMPSERVER_COLOR_DEPTH": colorDepth,
 }}
 

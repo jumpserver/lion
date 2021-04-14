@@ -48,10 +48,10 @@ func (s *Server) CreatByToken(ctx *gin.Context, token string) (TunnelSession, er
 	targetType := TypeRDP
 	targetId := tokenUser.AssetID
 	systemUserId := tokenUser.SystemUserID
-	return s.Creat(ctx, user, targetType, targetId, systemUserId)
+	return s.Create(ctx, user, targetType, targetId, systemUserId)
 }
 
-func (s *Server) Creat(ctx *gin.Context, user *model.User, targetType, targetId, systemUserId string) (sess TunnelSession, err error) {
+func (s *Server) Create(ctx *gin.Context, user *model.User, targetType, targetId, systemUserId string) (sess TunnelSession, err error) {
 	sysUser, err := s.JmsService.GetSystemUserById(systemUserId)
 	if err != nil {
 		return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
