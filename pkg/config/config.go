@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/viper"
 )
@@ -37,7 +38,11 @@ func Setup() {
 	viper.SetConfigType("yml")
 	viper.AddConfigPath(".")
 	viper.AutomaticEnv()
-	_ = viper.ReadInConfig()
+	loadEnvToViper()
+	log.Println("Load config from env")
+	if err := viper.ReadInConfig(); err == nil {
+		log.Println("Load config from config.yml again")
+	}
 	var conf = getDefaultConfig()
 	if err := viper.Unmarshal(&conf); err != nil {
 		log.Fatal(err)
@@ -124,4 +129,13 @@ func getDefaultName() string {
 	start := len(hostRune) - 16
 	copy(name[16:], hostRune[start:])
 	return string(name)
+}
+
+func loadEnvToViper() {
+	for _, item := range os.Environ() {
+		envItem := strings.Split(item, "=")
+		if len(envItem) == 2 {
+			viper.Set(envItem[0], envItem[1])
+		}
+	}
 }
