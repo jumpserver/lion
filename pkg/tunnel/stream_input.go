@@ -6,8 +6,8 @@ import (
 	"io"
 	"sync"
 
-	"guacamole-client-go/pkg/guacd"
-	"guacamole-client-go/pkg/logger"
+	"lion/pkg/guacd"
+	"lion/pkg/logger"
 )
 
 type InputStreamInterceptingFilter struct {

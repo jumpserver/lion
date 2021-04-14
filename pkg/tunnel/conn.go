@@ -10,9 +10,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 
-	"guacamole-client-go/pkg/guacd"
-	"guacamole-client-go/pkg/logger"
-	"guacamole-client-go/pkg/session"
+	"lion/pkg/guacd"
+	"lion/pkg/logger"
+	"lion/pkg/session"
 )
 
 const (

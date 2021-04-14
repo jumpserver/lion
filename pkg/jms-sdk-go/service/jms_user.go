@@ -1,7 +1,7 @@
 package service
 
 import (
-	"guacamole-client-go/pkg/jms-sdk-go/model"
+	"lion/pkg/jms-sdk-go/model"
 )
 
 func (s *JMService) CheckUserCookie(cookies map[string]string) (user *model.User, err error) {

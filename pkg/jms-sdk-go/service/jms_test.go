@@ -3,7 +3,7 @@ package service
 import (
 	"testing"
 
-	"guacamole-client-go/pkg/jms-sdk-go/httplib"
+	"lion/pkg/jms-sdk-go/httplib"
 )
 
 func setup() *JMService {

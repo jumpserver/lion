@@ -3,7 +3,7 @@ package service
 import (
 	"fmt"
 
-	"guacamole-client-go/pkg/jms-sdk-go/model"
+	"lion/pkg/jms-sdk-go/model"
 )
 
 func (s *JMService) GetAssetById(assetId string) (asset model.Asset, err error) {

@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	"guacamole-client-go/pkg/jms-sdk-go/httplib"
-	"guacamole-client-go/pkg/jms-sdk-go/model"
+	"lion/pkg/jms-sdk-go/httplib"
+	"lion/pkg/jms-sdk-go/model"
 )
 
 const ComponentName = "guacamole"

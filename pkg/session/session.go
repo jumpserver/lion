@@ -3,9 +3,9 @@ package session
 import (
 	"strings"
 
-	"guacamole-client-go/pkg/common"
-	"guacamole-client-go/pkg/guacd"
-	"guacamole-client-go/pkg/jms-sdk-go/model"
+	"lion/pkg/common"
+	"lion/pkg/guacd"
+	"lion/pkg/jms-sdk-go/model"
 )
 
 type TunnelSession struct {

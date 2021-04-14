@@ -1,4 +1,4 @@
-module guacamole-client-go
+module lion
 
 go 1.15
 

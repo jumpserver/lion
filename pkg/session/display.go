@@ -3,7 +3,7 @@ package session
 import (
 	"github.com/spf13/viper"
 
-	"guacamole-client-go/pkg/guacd"
+	"lion/pkg/guacd"
 )
 
 type DisplayParameter struct {

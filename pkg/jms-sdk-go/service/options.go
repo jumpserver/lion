@@ -3,7 +3,7 @@ package service
 import (
 	"time"
 
-	"guacamole-client-go/pkg/jms-sdk-go/httplib"
+	"lion/pkg/jms-sdk-go/httplib"
 )
 
 type option struct {

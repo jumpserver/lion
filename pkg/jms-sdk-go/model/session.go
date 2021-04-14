@@ -1,7 +1,7 @@
 package model
 
 import (
-	"guacamole-client-go/pkg/common"
+	"lion/pkg/common"
 )
 
 type Session struct {

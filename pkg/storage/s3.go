@@ -1,13 +1,14 @@
 package storage
 
 import (
-	"guacamole-client-go/pkg/logger"
 	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+
+	"lion/pkg/logger"
 )
 
 type S3ReplayStorage struct {

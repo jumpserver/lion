@@ -8,7 +8,8 @@ import (
 	"path/filepath"
 
 	"gopkg.in/natefinch/lumberjack.v2"
-	"guacamole-client-go/pkg/config"
+
+	"lion/pkg/config"
 )
 
 var globalLogger = &Logger{newLogger: log.New(os.Stdout, "", log.Lmsgprefix)}

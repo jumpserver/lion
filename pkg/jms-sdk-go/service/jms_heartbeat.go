@@ -1,8 +1,8 @@
 package service
 
 import (
-	"guacamole-client-go/pkg/common"
-	"guacamole-client-go/pkg/jms-sdk-go/model"
+	"lion/pkg/common"
+	"lion/pkg/jms-sdk-go/model"
 )
 
 func (s *JMService) TerminalHeartBeat(sIds []string) (res []model.TerminalTask, err error) {

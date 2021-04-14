@@ -8,7 +8,7 @@ import (
 
 	"github.com/Azure/azure-storage-blob-go/azblob"
 
-	"guacamole-client-go/pkg/logger"
+	"lion/pkg/logger"
 )
 
 type AzureReplayStorage struct {

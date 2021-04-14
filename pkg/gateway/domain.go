@@ -10,9 +10,9 @@ import (
 
 	gossh "golang.org/x/crypto/ssh"
 
-	"guacamole-client-go/pkg/common"
-	"guacamole-client-go/pkg/jms-sdk-go/model"
-	"guacamole-client-go/pkg/logger"
+	"lion/pkg/common"
+	"lion/pkg/jms-sdk-go/model"
+	"lion/pkg/logger"
 )
 
 var ErrNoAvailable = errors.New("no available domain")

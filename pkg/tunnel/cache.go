@@ -3,7 +3,7 @@ package tunnel
 import (
 	"sync"
 
-	"guacamole-client-go/pkg/session"
+	"lion/pkg/session"
 )
 
 type GuaTunnelCache struct {

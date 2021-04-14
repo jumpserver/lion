@@ -2,7 +2,8 @@ package storage
 
 import (
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
-	"guacamole-client-go/pkg/logger"
+
+	"lion/pkg/logger"
 )
 
 type OSSReplayStorage struct {

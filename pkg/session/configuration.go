@@ -4,10 +4,10 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"guacamole-client-go/pkg/common"
-	"guacamole-client-go/pkg/config"
-	"guacamole-client-go/pkg/guacd"
-	"guacamole-client-go/pkg/jms-sdk-go/model"
+	"lion/pkg/common"
+	"lion/pkg/config"
+	"lion/pkg/guacd"
+	"lion/pkg/jms-sdk-go/model"
 )
 
 type ConnectionConfiguration interface {

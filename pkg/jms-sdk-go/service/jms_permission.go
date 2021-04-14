@@ -1,7 +1,7 @@
 package service
 
 import (
-	"guacamole-client-go/pkg/jms-sdk-go/model"
+	"lion/pkg/jms-sdk-go/model"
 )
 
 func (s *JMService) GetPermission(userId, assetId, systemUserId string) (perms model.Permission, err error) {

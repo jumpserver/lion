@@ -9,12 +9,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"guacamole-client-go/pkg/common"
-	"guacamole-client-go/pkg/config"
-	"guacamole-client-go/pkg/jms-sdk-go/model"
-	"guacamole-client-go/pkg/jms-sdk-go/service"
-	"guacamole-client-go/pkg/logger"
-	"guacamole-client-go/pkg/storage"
+	"lion/pkg/common"
+	"lion/pkg/config"
+	"lion/pkg/jms-sdk-go/model"
+	"lion/pkg/jms-sdk-go/service"
+	"lion/pkg/logger"
+	"lion/pkg/storage"
 )
 
 const (

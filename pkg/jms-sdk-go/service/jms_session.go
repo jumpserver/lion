@@ -3,8 +3,8 @@ package service
 import (
 	"fmt"
 
-	"guacamole-client-go/pkg/common"
-	"guacamole-client-go/pkg/jms-sdk-go/model"
+	"lion/pkg/common"
+	"lion/pkg/jms-sdk-go/model"
 )
 
 func (s *JMService) Upload(sessionID, gZipFile string) error {

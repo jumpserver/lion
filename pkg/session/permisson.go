@@ -1,8 +1,8 @@
 package session
 
 import (
-	"guacamole-client-go/pkg/config"
-	"guacamole-client-go/pkg/jms-sdk-go/model"
+	"lion/pkg/config"
+	"lion/pkg/jms-sdk-go/model"
 )
 
 func RemoteAppPermission() *model.Permission {

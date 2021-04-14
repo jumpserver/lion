@@ -14,15 +14,16 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
-	"guacamole-client-go/pkg/common"
-	"guacamole-client-go/pkg/config"
-	"guacamole-client-go/pkg/jms-sdk-go/model"
-	"guacamole-client-go/pkg/jms-sdk-go/service"
-	"guacamole-client-go/pkg/logger"
-	"guacamole-client-go/pkg/middleware"
-	"guacamole-client-go/pkg/session"
-	"guacamole-client-go/pkg/storage"
-	"guacamole-client-go/pkg/tunnel"
+
+	"lion/pkg/common"
+	"lion/pkg/config"
+	"lion/pkg/jms-sdk-go/model"
+	"lion/pkg/jms-sdk-go/service"
+	"lion/pkg/logger"
+	"lion/pkg/middleware"
+	"lion/pkg/session"
+	"lion/pkg/storage"
+	"lion/pkg/tunnel"
 )
 
 var (
