@@ -36,6 +36,7 @@ var (
 )
 
 func init() {
+	// default config.yml
 	flag.StringVar(&configPath, "f", "config.yml", "config.yml path")
 	flag.BoolVar(&infoFlag, "V", false, "version info")
 }
@@ -49,13 +50,8 @@ func main() {
 		fmt.Printf("Go Version:          %s\n", Goversion)
 		return
 	}
-	if configPath == "" {
-		// 设置默认的配置路径
-		configPath = "config.yml"
-	}
 	config.Setup(configPath)
 	logger.SetupLogger(config.GlobalConfig)
-	logger.Debug(config.GlobalConfig.DrivePath)
 	jmsService := MustJMService()
 	bootstrap(jmsService)
 	tunnelService := tunnel.GuacamoleTunnelServer{
@@ -75,7 +71,8 @@ func main() {
 	logger.Fatal(http.ListenAndServe(addr, eng))
 }
 func runHeartTask(jmsService *service.JMService, cache *tunnel.GuaTunnelCache) {
-	beatTicker := time.NewTicker(time.Minute)
+	// default 30s
+	beatTicker := time.NewTicker(time.Second * 30)
 	defer beatTicker.Stop()
 	for {
 		select {
@@ -116,6 +113,7 @@ func registerRouter(jmsService *service.JMService, tunnelService *tunnel.Guacamo
 	// vue的设置
 	{
 		guacamoleGroup.Static("/assets", "./ui/lion/assets")
+		guacamoleGroup.StaticFile("/favicon.ico", "./ui/lion/favicon.ico")
 		guacamoleGroup.StaticFile("/", "./ui/lion/index.html")
 	}
 
