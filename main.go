@@ -13,8 +13,6 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/spf13/viper"
-
 	"lion/pkg/common"
 	"lion/pkg/config"
 	"lion/pkg/jms-sdk-go/model"
@@ -51,10 +49,11 @@ func main() {
 		fmt.Printf("Go Version:          %s\n", Goversion)
 		return
 	}
-	if configPath != "" {
-		viper.AddConfigPath(configPath)
+	if configPath == "" {
+		// 设置默认的配置路径
+		configPath = "config.yml"
 	}
-	config.Setup()
+	config.Setup(configPath)
 	logger.SetupLogger(config.GlobalConfig)
 	logger.Debug(config.GlobalConfig.DrivePath)
 	jmsService := MustJMService()
@@ -113,11 +112,11 @@ func registerRouter(jmsService *service.JMService, tunnelService *tunnel.Guacamo
 	eng.Use(gin.Recovery())
 	eng.Use(gin.Logger())
 
-	guacamoleGroup := eng.Group("/guacamole")
+	guacamoleGroup := eng.Group("/lion")
 	// vue的设置
 	{
-		guacamoleGroup.Static("/assets", "./ui/guacamole/assets")
-		guacamoleGroup.StaticFile("/", "./ui/guacamole/index.html")
+		guacamoleGroup.Static("/assets", "./ui/lion/assets")
+		guacamoleGroup.StaticFile("/", "./ui/lion/index.html")
 	}
 
 	// token 不需要认证

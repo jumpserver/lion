@@ -1,11 +1,11 @@
 module.exports = {
-    publicPath: '/guacamole/',
-    outputDir: 'guacamole',
+    publicPath: '/lion/',
+    outputDir: 'lion',
     assetsDir: 'assets',
     devServer: {
         port: 9528,
         proxy: {
-            '^/guacamole': {
+            '^/lion': {
                 target: 'http://localhost:8081',
                 ws: true,
                 changeOrigin: true

@@ -1,4 +1,4 @@
-# Guacamole-client-go
+# Lion 
 
 ## 介绍
 
@@ -12,14 +12,14 @@
 ## 构建镜像
 
 ```shell
-docker build -t jumpserver/guacamole .
+docker build -t jumpserver/lion .
 ```
 
 ## docker启动
 
 ```shell
-docker run -d --name jms_guacamole -p 8081:8081 \
--v $(pwd)/data:/opt/guacamole/data \
--v $(pwd)/config.yml:/opt/guacamole/config.yml \
-jumpserver/guacamole
+docker run -d --name jms_lion -p 8081:8081 \
+-v $(pwd)/data:/opt/lion/data \
+-v $(pwd)/config.yml:/opt/lion/config.yml \
+jumpserver/lion
 ```

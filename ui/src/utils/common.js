@@ -20,13 +20,13 @@ else
 
 export const OriginSite = streamOrigin
 
-export const BaseAPIURL = streamOrigin + '/guacamole/api'
-export const BaseURL = streamOrigin + '/guacamole'
+export const BaseAPIURL = streamOrigin + '/lion/api'
+export const BaseURL = streamOrigin + '/lion'
 
 const tokenBaseAPI = '/token'
 const sessionBaseAPI = '/api'
-const tokenWSURL = '/guacamole/ws/token/'
-const wsURL = '/guacamole/ws/connect/'
+const tokenWSURL = '/lion/ws/token/'
+const wsURL = '/lion/ws/connect/'
 
 
 export function getCurrentConnectParams() {

@@ -17,7 +17,7 @@ var globalLogger = &Logger{newLogger: log.New(os.Stdout, "", log.Lmsgprefix)}
 const logTimeFormat = "2006-01-02 15:04:05"
 
 func SetupLogger(conf *config.Config) {
-	fileName := filepath.Join(conf.LogDirPath, "guacamole.log")
+	fileName := filepath.Join(conf.LogDirPath, "lion.log")
 	loggerWriter := &lumberjack.Logger{
 		Filename:  fileName,
 		MaxSize:   5,

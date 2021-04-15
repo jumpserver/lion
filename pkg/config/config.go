@@ -33,15 +33,13 @@ type Config struct {
 	EnableRemoteAPPCopyPaste  bool   `mapstructure:"JUMPSERVER_REMOTE_APP_COPY_PASTE_ENABLE"`
 }
 
-func Setup() {
-	viper.SetConfigName("config")
-	viper.SetConfigType("yml")
-	viper.AddConfigPath(".")
+func Setup(configPath string) {
+	viper.SetConfigFile(configPath)
 	viper.AutomaticEnv()
 	loadEnvToViper()
 	log.Println("Load config from env")
 	if err := viper.ReadInConfig(); err == nil {
-		log.Println("Load config from config.yml again")
+		log.Printf("Load config from %s success\n", configPath)
 	}
 	var conf = getDefaultConfig()
 	if err := viper.Unmarshal(&conf); err != nil {

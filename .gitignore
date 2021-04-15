@@ -22,6 +22,7 @@ docker-compose.yaml
 ui/node_modules/
 ui/dist/
 ui/guacamole/
+ui/lion/
 
 
 # local env files
