@@ -12,7 +12,9 @@ import (
 	"strings"
 	"time"
 
+	ginCookie "github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
+
 	"lion/pkg/common"
 	"lion/pkg/config"
 	"lion/pkg/jms-sdk-go/model"
@@ -117,8 +119,10 @@ func registerRouter(jmsService *service.JMService, tunnelService *tunnel.Guacamo
 		guacamoleGroup.StaticFile("/", "./ui/lion/index.html")
 	}
 
-	// token 不需要认证
+	// token 使用 lion 自带认证
 	tokenGroup := guacamoleGroup.Group("/token")
+	cookieStore := ginCookie.NewStore([]byte(common.RandomStr(32)))
+	tokenGroup.Use(middleware.GinSessionAuth(cookieStore))
 	{
 		// TODO: 解决不认证，可能出现的安全问题
 		tokenGroup.POST("/session", tunnelService.TokenSession)
@@ -130,13 +134,14 @@ func registerRouter(jmsService *service.JMService, tunnelService *tunnel.Guacamo
 	wsGroup := guacamoleGroup.Group("/ws")
 	{
 		wsGroup.Group("/connect").Use(
-			middleware.SessionAuth(jmsService)).GET("/", tunnelService.Connect)
+			middleware.JmsCookieAuth(jmsService)).GET("/", tunnelService.Connect)
 
-		wsGroup.Group("/token").GET("/", tunnelService.TokenConnect)
+		wsGroup.Group("/token").Use(
+			middleware.GinSessionAuth(cookieStore)).GET("/", tunnelService.TokenConnect)
 	}
 
 	apiGroup := guacamoleGroup.Group("/api")
-	apiGroup.Use(middleware.SessionAuth(jmsService))
+	apiGroup.Use(middleware.JmsCookieAuth(jmsService))
 	{
 		apiGroup.POST("/session", tunnelService.CreateSession)
 		apiGroup.GET("/tunnels/:tid/streams/:index/:filename", tunnelService.DownloadFile)

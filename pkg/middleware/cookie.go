@@ -13,7 +13,7 @@ import (
 	"lion/pkg/logger"
 )
 
-func SessionAuth(jmsService *service.JMService) gin.HandlerFunc {
+func JmsCookieAuth(jmsService *service.JMService) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		var (
 			err  error
