@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
+	ginSessions "github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 
@@ -210,6 +211,12 @@ func (g *GuacamoleTunnelServer) TokenSession(ctx *gin.Context) {
 	connectSession, err := g.SessionService.CreatByToken(ctx, jsonData.Token)
 	if err != nil {
 		logger.Errorf("Create token session err: %+v", err)
+		ctx.JSON(http.StatusBadRequest, ErrorResponse(err))
+		return
+	}
+	ginAuthSession := ginSessions.Default(ctx)
+	ginAuthSession.Set("Session", connectSession)
+	if err = ginAuthSession.Save(); err != nil {
 		ctx.JSON(http.StatusBadRequest, ErrorResponse(err))
 		return
 	}

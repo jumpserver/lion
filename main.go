@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	ginSessions "github.com/gin-contrib/sessions"
 	ginCookie "github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 
@@ -124,10 +125,30 @@ func registerRouter(jmsService *service.JMService, tunnelService *tunnel.Guacamo
 	cookieStore := ginCookie.NewStore([]byte(common.RandomStr(32)))
 	tokenGroup.Use(middleware.GinSessionAuth(cookieStore))
 	{
-		// TODO: 解决不认证，可能出现的安全问题
 		tokenGroup.POST("/session", tunnelService.TokenSession)
-		tokenGroup.GET("/tunnels/:tid/streams/:index/:filename", tunnelService.DownloadFile)
-		tokenGroup.POST("/tunnels/:tid/streams/:index/:filename", tunnelService.UploadFile)
+		tokenGroup.GET("/tunnels/:tid/streams/:index/:filename", func(ctx *gin.Context) {
+			ginSession := ginSessions.Default(ctx)
+			if result := ginSession.Get("Session"); result != nil {
+				if tokenSession, ok := result.(*session.TunnelSession); ok {
+					ctx.Set(config.GinCtxUserKey, tokenSession.User)
+					tunnelService.DownloadFile(ctx)
+					return
+				}
+
+			}
+			ctx.AbortWithStatus(http.StatusNotFound)
+		})
+		tokenGroup.POST("/tunnels/:tid/streams/:index/:filename", func(ctx *gin.Context) {
+			ginSession := ginSessions.Default(ctx)
+			if result := ginSession.Get("Session"); result != nil {
+				if tokenSession, ok := result.(*session.TunnelSession); ok {
+					ctx.Set(config.GinCtxUserKey, tokenSession.User)
+					tunnelService.UploadFile(ctx)
+					return
+				}
+			}
+			ctx.AbortWithStatus(http.StatusNotFound)
+		})
 	}
 
 	// ws的设置
@@ -137,7 +158,18 @@ func registerRouter(jmsService *service.JMService, tunnelService *tunnel.Guacamo
 			middleware.JmsCookieAuth(jmsService)).GET("/", tunnelService.Connect)
 
 		wsGroup.Group("/token").Use(
-			middleware.GinSessionAuth(cookieStore)).GET("/", tunnelService.TokenConnect)
+			middleware.GinSessionAuth(cookieStore)).GET("/", func(ctx *gin.Context) {
+			ginSession := ginSessions.Default(ctx)
+			if result := ginSession.Get("Session"); result != nil {
+				if tokenSession, ok := result.(*session.TunnelSession); ok {
+					ctx.Set(config.GinCtxUserKey, tokenSession.User)
+					tunnelService.Connect(ctx)
+					ginSession.Delete(tokenSession.ID)
+					_ = ginSession.Save()
+					return
+				}
+			}
+		})
 	}
 
 	apiGroup := guacamoleGroup.Group("/api")
