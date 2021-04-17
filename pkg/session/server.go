@@ -218,7 +218,7 @@ func (s *Server) RegisterFinishReplayCallback(tunnel TunnelSession) func() error
 		if fi.Size() < 1024 {
 			logger.Error("录像文件小于1024字节，可判断连接失败，未能产生有效的录像文件")
 			_ = os.Remove(originReplayFilePath)
-			return err
+			return s.JmsService.SessionFailed(tunnel.ID, err)
 		}
 
 		// 压缩文件
