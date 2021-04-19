@@ -92,6 +92,19 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(data.String()))
 		return
 	}
+	userItem, ok := ctx.Get(config.GinCtxUserKey)
+	if !ok {
+		data := guacd.NewInstruction(
+			guacd.InstructionServerError, "no auth user", "504")
+		_ = ws.WriteMessage(websocket.TextMessage, []byte(data.String()))
+		return
+	}
+	if user, ok := userItem.(*model.User); !ok || user.ID != tunnelSession.User.ID {
+		data := guacd.NewInstruction(
+			guacd.InstructionServerError, "no auth user", "504")
+		_ = ws.WriteMessage(websocket.TextMessage, []byte(data.String()))
+		return
+	}
 
 	if err = tunnelSession.ConnectedCallback(); err != nil {
 		data := guacd.NewInstruction(
@@ -215,7 +228,7 @@ func (g *GuacamoleTunnelServer) TokenSession(ctx *gin.Context) {
 		return
 	}
 	ginAuthSession := ginSessions.Default(ctx)
-	ginAuthSession.Set("Session", connectSession)
+	ginAuthSession.Set(config.GinSessionKey, connectSession)
 	if err = ginAuthSession.Save(); err != nil {
 		ctx.JSON(http.StatusBadRequest, ErrorResponse(err))
 		return
@@ -297,7 +310,7 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 			_ = fdReader.Close()
 			if err := stream.WaitErr(); err != nil {
 				logger.Error("UploadFile ", filename, " ", index, " WaitErr ", err.Error())
-				_ = g.SessionService.AuditFileOperation(fileLog)
+				err = g.SessionService.AuditFileOperation(fileLog)
 				continue
 			}
 			fileLog.IsSuccess = true

@@ -7,6 +7,7 @@ type TerminalConfig struct {
 	TelnetRegex         string                 `json:"TERMINAL_TELNET_REGEX"`
 	MaxIdleTime         int                    `json:"SECURITY_MAX_IDLE_TIME"`
 	HeartbeatDuration   int                    `json:"TERMINAL_HEARTBEAT_INTERVAL"`
+	HostKey             string                 `json:"TERMINAL_HOST_KEY"`
 }
 
 type Terminal struct {
@@ -18,7 +19,6 @@ type Terminal struct {
 		AccessKey AccessKey `json:"access_key"`
 	} `json:"service_account"`
 }
-
 
 type TerminalTask struct {
 	ID         string `json:"id"`

@@ -12,7 +12,6 @@ import (
 	"strings"
 	"time"
 
-	ginSessions "github.com/gin-contrib/sessions"
 	ginCookie "github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
 
@@ -54,7 +53,6 @@ func main() {
 		return
 	}
 	config.Setup(configPath)
-	logger.SetupLogger(config.GlobalConfig)
 	jmsService := MustJMService()
 	bootstrap(jmsService)
 	tunnelService := tunnel.GuacamoleTunnelServer{
@@ -112,67 +110,37 @@ func registerRouter(jmsService *service.JMService, tunnelService *tunnel.Guacamo
 	eng.Use(gin.Recovery())
 	eng.Use(gin.Logger())
 
-	guacamoleGroup := eng.Group("/lion")
+	lionGroup := eng.Group("/lion")
+	cookieStore := ginCookie.NewStore([]byte(common.RandomStr(32)))
+	lionGroup.Use(middleware.GinSessionAuth(cookieStore))
 	// vue的设置
 	{
-		guacamoleGroup.Static("/assets", "./ui/lion/assets")
-		guacamoleGroup.StaticFile("/favicon.ico", "./ui/lion/favicon.ico")
-		guacamoleGroup.StaticFile("/", "./ui/lion/index.html")
+		lionGroup.Static("/assets", "./ui/lion/assets")
+		lionGroup.StaticFile("/favicon.ico", "./ui/lion/favicon.ico")
+		lionGroup.StaticFile("/", "./ui/lion/index.html")
 	}
 
 	// token 使用 lion 自带认证
-	tokenGroup := guacamoleGroup.Group("/token")
-	cookieStore := ginCookie.NewStore([]byte(common.RandomStr(32)))
-	tokenGroup.Use(middleware.GinSessionAuth(cookieStore))
+	tokenGroup := lionGroup.Group("/token")
 	{
 		tokenGroup.POST("/session", tunnelService.TokenSession)
-		tokenGroup.GET("/tunnels/:tid/streams/:index/:filename", func(ctx *gin.Context) {
-			ginSession := ginSessions.Default(ctx)
-			if result := ginSession.Get("Session"); result != nil {
-				if tokenSession, ok := result.(*session.TunnelSession); ok {
-					ctx.Set(config.GinCtxUserKey, tokenSession.User)
-					tunnelService.DownloadFile(ctx)
-					return
-				}
-
-			}
-			ctx.AbortWithStatus(http.StatusNotFound)
-		})
-		tokenGroup.POST("/tunnels/:tid/streams/:index/:filename", func(ctx *gin.Context) {
-			ginSession := ginSessions.Default(ctx)
-			if result := ginSession.Get("Session"); result != nil {
-				if tokenSession, ok := result.(*session.TunnelSession); ok {
-					ctx.Set(config.GinCtxUserKey, tokenSession.User)
-					tunnelService.UploadFile(ctx)
-					return
-				}
-			}
-			ctx.AbortWithStatus(http.StatusNotFound)
-		})
+		tokenTunnels := tokenGroup.Group("/tunnels")
+		tokenTunnels.Use(middleware.SessionAuth())
+		tokenTunnels.GET("/:tid/streams/:index/:filename", tunnelService.DownloadFile)
+		tokenTunnels.POST("/:tid/streams/:index/:filename", tunnelService.UploadFile)
 	}
 
 	// ws的设置
-	wsGroup := guacamoleGroup.Group("/ws")
+	wsGroup := lionGroup.Group("/ws")
 	{
 		wsGroup.Group("/connect").Use(
 			middleware.JmsCookieAuth(jmsService)).GET("/", tunnelService.Connect)
 
 		wsGroup.Group("/token").Use(
-			middleware.GinSessionAuth(cookieStore)).GET("/", func(ctx *gin.Context) {
-			ginSession := ginSessions.Default(ctx)
-			if result := ginSession.Get("Session"); result != nil {
-				if tokenSession, ok := result.(*session.TunnelSession); ok {
-					ctx.Set(config.GinCtxUserKey, tokenSession.User)
-					tunnelService.Connect(ctx)
-					ginSession.Delete(tokenSession.ID)
-					_ = ginSession.Save()
-					return
-				}
-			}
-		})
+			middleware.SessionAuth()).GET("/", tunnelService.Connect)
 	}
 
-	apiGroup := guacamoleGroup.Group("/api")
+	apiGroup := lionGroup.Group("/api")
 	apiGroup.Use(middleware.JmsCookieAuth(jmsService))
 	{
 		apiGroup.POST("/session", tunnelService.CreateSession)

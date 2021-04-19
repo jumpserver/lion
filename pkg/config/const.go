@@ -5,5 +5,6 @@ const (
 )
 
 const (
-	GinSessionName = "JumpServer-Lion"
+	GinSessionName = "session-Lion"
+	GinSessionKey  = "SESSION"
 )
