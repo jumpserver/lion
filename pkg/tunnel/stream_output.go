@@ -65,9 +65,12 @@ func (filter *OutputStreamInterceptingFilter) handleBlob(unfilteredInstruction *
 			return nil
 		}
 		if _, err = stream.writer.Write(blob); err != nil {
-			filter.sendAck(index, "FAIL", guacd.StatusServerError)
+			err =filter.sendAck(index, "FAIL", guacd.StatusServerError)
 		} else {
-			filter.sendAck(index, "OK", guacd.StatusSuccess)
+			err = filter.sendAck(index, "OK", guacd.StatusSuccess)
+		}
+		if err != nil{
+			logger.Errorf("OutputStream filter sendAck err: %+v", err)
 		}
 
 		if !filter.acknowledgeBlobs {

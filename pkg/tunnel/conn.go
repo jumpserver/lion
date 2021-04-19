@@ -135,7 +135,8 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 			if ret, err := guacd.ParseInstructionString(string(message)); err == nil {
 				if ret.Opcode == INTERNALDATAOPCODE && len(ret.Args) >= 2 && ret.Args[0] == PINGOPCODE {
 					if err := t.SendWsMessage(guacd.NewInstruction(INTERNALDATAOPCODE, PINGOPCODE)); err != nil {
-						logger.Errorf("Session[%s] unable to send 'ping' response for WebSocket tunnel: %+v", err)
+						logger.Errorf("Session[%s] unable to send 'ping' response for WebSocket tunnel: %+v",
+							t, err)
 					}
 					continue
 				}
@@ -151,7 +152,7 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 					}
 				}
 			} else {
-				logger.Errorf("Session[%s] parse instruction err %s", err)
+				logger.Errorf("Session[%s] parse instruction err %s", t, err)
 			}
 			_, err = t.writeTunnelMessage(message)
 			if err != nil {
@@ -170,11 +171,12 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 		select {
 		case err = <-exit:
 			logger.Infof("Session[%s] Connection exit %+v", t, err)
-			return
+			return err
 		case <-ctx.Request.Context().Done():
 			_ = t.ws.Close()
 			_ = t.guacdTunnel.Close()
 			logger.Errorf("Session[%s] request ctx done", t)
+			return nil
 		case <-activeChan:
 			latestActive = time.Now()
 		case detectTime := <-activeDetectTicker.C:
@@ -182,9 +184,9 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 				errInstruction := guacd.NewInstruction(
 					guacd.InstructionServerError, "Terminated by timeout ", "1011")
 				_ = t.SendWsMessage(errInstruction)
-				logger.Errorf("Session[%s] terminated by %s min timeout",
+				logger.Errorf("Session[%s] terminated by %d min timeout",
 					t, maxIndexTime)
-				return
+				return nil
 			}
 		}
 	}
@@ -197,7 +199,6 @@ func (t *Connection) Terminate() {
 		guacd.InstructionServerError, "admin Terminate", "1011")
 	_ = t.SendWsMessage(errInstruction)
 	logger.Errorf("Session[%s] terminated by Admin", t)
-	return
 }
 
 func (t *Connection) String() string {

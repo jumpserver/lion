@@ -99,7 +99,7 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(data.String()))
 		return
 	}
-	if user, ok := userItem.(*model.User); !ok || user.ID != tunnelSession.User.ID {
+	if user := userItem.(*model.User); user.ID != tunnelSession.User.ID {
 		data := guacd.NewInstruction(
 			guacd.InstructionServerError, "no auth user", "504")
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(data.String()))
@@ -171,7 +171,7 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	conn.outputFilter = &outFilter
 	conn.inputFilter = &inputFilter
 	g.Cache.Add(&conn)
-	err = conn.Run(ctx)
+	_ = conn.Run(ctx)
 	g.Cache.Delete(&conn)
 	if err = tunnelSession.DisConnectedCallback(); err != nil {
 		logger.Errorf("Session DisConnectedCallback err: %+v", err)
@@ -179,10 +179,6 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	if err = tunnelSession.FinishReplayCallback(); err != nil {
 		logger.Errorf("Session Replay upload err: %+v", err)
 	}
-}
-
-func (g *GuacamoleTunnelServer) TokenConnect(ctx *gin.Context) {
-	g.Connect(ctx)
 }
 
 func (g *GuacamoleTunnelServer) CreateSession(ctx *gin.Context) {
@@ -242,8 +238,12 @@ func (g *GuacamoleTunnelServer) DownloadFile(ctx *gin.Context) {
 	tid := ctx.Param("tid")
 	index := ctx.Param("index")
 	filename := ctx.Param("filename")
-
-	if tun := g.Cache.Get(tid); tun != nil {
+	userItem, ok := ctx.Get(config.GinCtxUserKey)
+	if !ok {
+		return
+	}
+	user := userItem.(*model.User)
+	if tun := g.Cache.Get(tid); tun != nil && tun.Sess.User.ID == user.ID {
 		fileLog := model.FTPLog{
 			User:       tun.Sess.User.String(),
 			Hostname:   tun.Sess.Asset.Hostname,
@@ -284,7 +284,13 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, ErrorResponse(err))
 		return
 	}
-	if tun := g.Cache.Get(tid); tun != nil {
+	userItem, ok := ctx.Get(config.GinCtxUserKey)
+	if !ok {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+	user := userItem.(*model.User)
+	if tun := g.Cache.Get(tid); tun != nil && tun.Sess.User.ID == user.ID {
 		fileLog := model.FTPLog{
 			User:       tun.Sess.User.String(),
 			Hostname:   tun.Sess.Asset.Hostname,

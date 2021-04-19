@@ -44,7 +44,6 @@ func (filter *InputStreamInterceptingFilter) handleAck(unfilteredInstruction *gu
 
 		//stream.reader.Read()
 	}
-	return
 }
 
 func (filter *InputStreamInterceptingFilter) readNextBlob(stream *InputStreamResource) {
@@ -76,14 +75,6 @@ func (filter *InputStreamInterceptingFilter) closeInterceptedStream(index string
 		close(outStream.done)
 	}
 	delete(filter.streams, index)
-}
-
-func (filter *InputStreamInterceptingFilter) sendEnd(index string) {
-	err := filter.tunnel.WriteTunnelMessage(guacd.NewInstruction(
-		guacd.InstructionStreamingEnd, index))
-	if err != nil {
-		logger.Error(err)
-	}
 }
 
 func (filter *InputStreamInterceptingFilter) addInputStream(stream *InputStreamResource) {
