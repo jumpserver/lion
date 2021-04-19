@@ -226,7 +226,7 @@ func (g *GuacamoleTunnelServer) TokenSession(ctx *gin.Context) {
 	ginAuthSession := ginSessions.Default(ctx)
 	ginAuthSession.Set(config.GinSessionKey, connectSession.User.ID)
 	if err = ginAuthSession.Save(); err != nil {
-		logger.Errorf("Save Gin session err: %s", err.Error())
+		logger.Errorf("Save gin session err: %s", err.Error())
 		ctx.JSON(http.StatusBadRequest, ErrorResponse(err))
 		return
 	}
@@ -240,6 +240,8 @@ func (g *GuacamoleTunnelServer) DownloadFile(ctx *gin.Context) {
 	filename := ctx.Param("filename")
 	userItem, ok := ctx.Get(config.GinCtxUserKey)
 	if !ok {
+		logger.Error("Download file but not user authorized")
+		ctx.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
 	user := userItem.(*model.User)
@@ -263,13 +265,14 @@ func (g *GuacamoleTunnelServer) DownloadFile(ctx *gin.Context) {
 		}
 		tun.outputFilter.addOutStream(out)
 		if err := out.Wait(); err != nil {
+			logger.Errorf("Session[%s] download file %s err: %s", tun, filename, err)
 			ctx.JSON(http.StatusBadRequest, ErrorResponse(err))
-			_ = g.SessionService.AuditFileOperation(fileLog)
+			g.SessionService.AuditFileOperation(fileLog)
 			return
 		}
 		fileLog.IsSuccess = true
-		_ = g.SessionService.AuditFileOperation(fileLog)
-		logger.Info("DownloadFile ", filename, " ", index, " finished")
+		g.SessionService.AuditFileOperation(fileLog)
+		logger.Infof("Session[%s] download file %s success", tun, filename)
 		return
 	}
 	ctx.AbortWithStatus(http.StatusNotFound)
@@ -286,6 +289,7 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 	}
 	userItem, ok := ctx.Get(config.GinCtxUserKey)
 	if !ok {
+		logger.Error("Upload file but not user authorized")
 		ctx.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
@@ -316,12 +320,13 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 			stream.Wait()
 			_ = fdReader.Close()
 			if err := stream.WaitErr(); err != nil {
-				logger.Error("UploadFile ", filename, " ", index, " WaitErr ", err.Error())
-				err = g.SessionService.AuditFileOperation(fileLog)
+				logger.Errorf("Session[%s] upload file %s err: %s", tun, filename, err)
+				 g.SessionService.AuditFileOperation(fileLog)
 				continue
 			}
+			logger.Infof("Session[%s] upload file %s success", tun, filename)
 			fileLog.IsSuccess = true
-			_ = g.SessionService.AuditFileOperation(fileLog)
+			g.SessionService.AuditFileOperation(fileLog)
 		}
 		return
 	}

@@ -13,7 +13,6 @@ type InputStreamInterceptingFilter struct {
 	tunnel  *Connection
 	streams map[string]*InputStreamResource
 	sync.Mutex
-	acknowledgeBlobs bool
 }
 
 func (filter *InputStreamInterceptingFilter) Filter(unfilteredInstruction *guacd.Instruction) *guacd.Instruction {

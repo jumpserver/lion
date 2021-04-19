@@ -247,8 +247,10 @@ func (s *Server) RegisterFinishReplayCallback(tunnel TunnelSession) func() error
 	}
 }
 
-func (s *Server) AuditFileOperation(fileLog model.FTPLog) error {
-	return s.JmsService.CreateFileOperationLog(fileLog)
+func (s *Server) AuditFileOperation(fileLog model.FTPLog) {
+	if err := s.JmsService.CreateFileOperationLog(fileLog); err != nil {
+		logger.Errorf("Audit file operation err: %s", err)
+	}
 }
 
 func ValidReplayDirname(dirname string) bool {
