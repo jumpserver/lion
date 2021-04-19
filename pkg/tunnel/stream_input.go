@@ -2,7 +2,6 @@ package tunnel
 
 import (
 	"encoding/base64"
-	"fmt"
 	"io"
 	"sync"
 
@@ -74,7 +73,6 @@ func (filter *InputStreamInterceptingFilter) sendBlob(index string, p []byte) {
 
 func (filter *InputStreamInterceptingFilter) closeInterceptedStream(index string) {
 	if outStream, ok := filter.streams[index]; ok {
-		fmt.Println("closeInterceptedStream index ", index)
 		close(outStream.done)
 	}
 	delete(filter.streams, index)

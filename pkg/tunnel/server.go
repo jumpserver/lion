@@ -228,8 +228,9 @@ func (g *GuacamoleTunnelServer) TokenSession(ctx *gin.Context) {
 		return
 	}
 	ginAuthSession := ginSessions.Default(ctx)
-	ginAuthSession.Set(config.GinSessionKey, connectSession)
+	ginAuthSession.Set(config.GinSessionKey, connectSession.User.ID)
 	if err = ginAuthSession.Save(); err != nil {
+		logger.Errorf("Save Gin session err: %s", err.Error())
 		ctx.JSON(http.StatusBadRequest, ErrorResponse(err))
 		return
 	}

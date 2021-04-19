@@ -1,7 +1,6 @@
 package session
 
 import (
-	"encoding/gob"
 	"strings"
 
 	"lion/pkg/common"
@@ -33,9 +32,6 @@ const (
 	rdp = "rdp"
 )
 
-func init()  {
-	gob.Register(&TunnelSession{})
-}
 
 func (s TunnelSession) GuaConfiguration() guacd.Configuration {
 	switch strings.ToLower(s.SystemUser.Protocol) {

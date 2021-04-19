@@ -125,7 +125,6 @@ func (filter *OutputStreamInterceptingFilter) closeInterceptedStream(index strin
 	filter.Lock()
 	defer filter.Unlock()
 	if outStream, ok := filter.streams[index]; ok {
-		logger.Infof("OutputStream filter close stream index %s", index)
 		close(outStream.done)
 	}
 	delete(filter.streams, index)

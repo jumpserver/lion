@@ -69,6 +69,7 @@ func main() {
 	eng := registerRouter(jmsService, &tunnelService)
 	go runHeartTask(jmsService, tunnelService.Cache)
 	addr := net.JoinHostPort(config.GlobalConfig.BindHost, config.GlobalConfig.HTTPPort)
+	fmt.Printf("Lion Version %s, more see https://www.jumpserver.org\n", Version)
 	logger.Infof("listen on: %s", addr)
 	logger.Fatal(http.ListenAndServe(addr, eng))
 }
@@ -126,7 +127,7 @@ func registerRouter(jmsService *service.JMService, tunnelService *tunnel.Guacamo
 	{
 		tokenGroup.POST("/session", tunnelService.TokenSession)
 		tokenTunnels := tokenGroup.Group("/tunnels")
-		tokenTunnels.Use(middleware.SessionAuth())
+		tokenTunnels.Use(middleware.SessionAuth(jmsService))
 		tokenTunnels.GET("/:tid/streams/:index/:filename", tunnelService.DownloadFile)
 		tokenTunnels.POST("/:tid/streams/:index/:filename", tunnelService.UploadFile)
 	}
@@ -138,7 +139,7 @@ func registerRouter(jmsService *service.JMService, tunnelService *tunnel.Guacamo
 			middleware.JmsCookieAuth(jmsService)).GET("/", tunnelService.Connect)
 
 		wsGroup.Group("/token").Use(
-			middleware.SessionAuth()).GET("/", tunnelService.Connect)
+			middleware.SessionAuth(jmsService)).GET("/", tunnelService.Connect)
 	}
 
 	apiGroup := lionGroup.Group("/api")
@@ -181,13 +182,13 @@ func uploadRemainReplay(jmsService *service.JMService, remainFiles map[string]st
 		absGzPath := path
 		replayDateDirName := filepath.Base(filepath.Dir(path))
 		if !session.ValidReplayDirname(replayDateDirName) {
-			logger.Error(replayDateDirName)
+			logger.Error("Invalid replay folder ", replayDateDirName)
 			continue
 		}
 		if !strings.HasSuffix(path, session.ReplayFileNameSuffix) {
 			absGzPath = path + session.ReplayFileNameSuffix
 			if err := common.CompressToGzipFile(path, absGzPath); err != nil {
-				logger.Error(err)
+				logger.Errorf("Compress to gzip file %s err: %s", path, err)
 				continue
 			}
 			_ = os.Remove(path)
@@ -199,7 +200,7 @@ func uploadRemainReplay(jmsService *service.JMService, remainFiles map[string]st
 			err = jmsService.Upload(sid, absGzPath)
 		}
 		if err != nil {
-			logger.Error(err)
+			logger.Errorf("Upload replay failed: %s", err)
 			continue
 		}
 		// 上传成功删除文件
