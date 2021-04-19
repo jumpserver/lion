@@ -2,7 +2,6 @@ package service
 
 import (
 	"fmt"
-
 	"lion/pkg/common"
 	"lion/pkg/jms-sdk-go/model"
 )
@@ -40,6 +39,14 @@ func (s *JMService) SessionDisconnect(sid string) error {
 	data := map[string]interface{}{
 		"is_finished": true,
 		"date_end":    common.NewNowUTCTime(),
+	}
+	return s.sessionPatch(sid, data)
+}
+
+func (s *JMService) SessionFinished(sid string, time common.UTCTime) error {
+	data := map[string]interface{}{
+		"is_finished": true,
+		"date_end":    time,
 	}
 	return s.sessionPatch(sid, data)
 }

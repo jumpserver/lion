@@ -170,7 +170,7 @@ func registerRouter(jmsService *service.JMService, tunnelService *tunnel.Guacamo
 
 func bootstrap(jmsService *service.JMService) {
 	replayDir := config.GlobalConfig.RecordPath
-	allRemainFiles := scanRemainReplay(replayDir)
+	allRemainFiles := scanRemainReplay(jmsService, replayDir)
 	go uploadRemainReplay(jmsService, allRemainFiles)
 }
 
@@ -205,11 +205,13 @@ func uploadRemainReplay(jmsService *service.JMService, remainFiles map[string]st
 		}
 		// 上传成功删除文件
 		_ = os.Remove(absGzPath)
-		err = jmsService.FinishReply(sid)
+		if err = jmsService.FinishReply(sid); err != nil {
+			logger.Errorf("Finish reply to core api failed: %s", err)
+		}
 	}
 }
 
-func scanRemainReplay(replayDir string) map[string]string {
+func scanRemainReplay(jmsService *service.JMService, replayDir string) map[string]string {
 	allRemainFiles := make(map[string]string)
 	_ = filepath.Walk(replayDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() {
@@ -217,14 +219,15 @@ func scanRemainReplay(replayDir string) map[string]string {
 		}
 		sidFilename := info.Name()
 		var sid string
-		if strings.HasSuffix(sidFilename, session.ReplayFileNameSuffix) {
-			sidFilename = strings.TrimSuffix(sidFilename, session.ReplayFileNameSuffix)
-		}
+		sidFilename = strings.TrimSuffix(sidFilename, session.ReplayFileNameSuffix)
 		if common.ValidUUIDString(sidFilename) {
 			sid = sidFilename
 		}
 		if sid != "" {
 			allRemainFiles[sid] = path
+			if err = jmsService.SessionFinished(sid, common.NewUTCTime(info.ModTime())); err != nil {
+				logger.Errorf("Session[%s] finished err: %s", sid, err)
+			}
 		}
 		return nil
 	})
