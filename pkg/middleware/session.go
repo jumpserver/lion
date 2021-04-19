@@ -1,13 +1,14 @@
 package middleware
 
 import (
-	ginSessions "github.com/gin-contrib/sessions"
-	"github.com/gin-gonic/gin"
-	"lion/pkg/logger"
-	"lion/pkg/session"
 	"net/http"
 
+	ginSessions "github.com/gin-contrib/sessions"
+	"github.com/gin-gonic/gin"
+
 	"lion/pkg/config"
+	"lion/pkg/logger"
+	"lion/pkg/session"
 )
 
 func GinSessionAuth(store ginSessions.Store) gin.HandlerFunc {
