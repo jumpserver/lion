@@ -53,6 +53,7 @@ func main() {
 		return
 	}
 	config.Setup(configPath)
+	logger.SetupLogger(config.GlobalConfig)
 	jmsService := MustJMService()
 	bootstrap(jmsService)
 	tunnelService := tunnel.GuacamoleTunnelServer{
