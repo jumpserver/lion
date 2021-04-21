@@ -1,14 +1,14 @@
 <template>
   <el-row>
-    <i v-if="fileItem.type==='NORMAL'" class="el-icon-document"></i>
-    <i v-else class="el-icon-folder"></i>
+    <i v-if="fileItem.type==='NORMAL'" class="el-icon-document" />
+    <i v-else class="el-icon-folder" />
     <span @click="clickFile"> {{ fileItem.name }}</span>
   </el-row>
 
 </template>
 
 <script>
-import {FileType} from '../utils/common'
+import { FileType } from '../utils/common'
 /*
 {
   mimetype:   String,
@@ -24,7 +24,7 @@ export default {
   props: {
     fileItem: {
       type: Object,
-      default: null,
+      default: null
     }
   },
   methods: {

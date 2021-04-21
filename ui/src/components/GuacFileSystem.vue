@@ -4,24 +4,28 @@
       <el-col :span="6"><span @click="ChangeParentFolder">{{ currentFolder.streamName }} </span></el-col>
       <el-col :span="6" :offset="10">
         <el-button size="small" type="primary" @click="clickFile">点击上传</el-button>
-        <input type="file" hidden @change="uploadFile" ref="fileinput">
+        <input ref="fileinput" type="file" hidden @change="uploadFile">
       </el-col>
     </el-row>
-    <GuacFile v-for="(item ,index) in sortedFiles" :key="index" v-bind:fileItem="item"
-              v-on:DownLoadFile="downLoadFile"
-              v-on:ChangeFolder="changeFolder"/>
+    <GuacFile
+      v-for="(item ,index) in sortedFiles"
+      :key="index"
+      :file-item="item"
+      @DownLoadFile="downLoadFile"
+      @ChangeFolder="changeFolder"
+    />
   </div>
 </template>
 
 <script>
 import Guacamole from 'guacamole-common-js'
-import {FileType, isDirectory} from '../utils/common'
+import { FileType, isDirectory } from '../utils/common'
 import GuacFile from './GuacFile'
 
 export default {
   name: 'GuacFileSystem',
   components: {
-    GuacFile,
+    GuacFile
   },
   props: {
     guacObject: {
@@ -31,31 +35,26 @@ export default {
     currentFolder: {
       type: Object,
       default: null
-    },
+    }
   },
   data() {
     return {
-      files: {},
+      files: {}
     }
   },
   computed: {
     sortedFiles: function() {
-      let unsortedFiles = []
-      for (let name in this.files)
-        unsortedFiles.push(this.files[name])
-      let ret = unsortedFiles.sort(function fileComparator(a, b) {
-
+      const unsortedFiles = []
+      for (const name in this.files) { unsortedFiles.push(this.files[name]) }
+      const ret = unsortedFiles.sort(function fileComparator(a, b) {
         // Directories come before non-directories
-        if (isDirectory(a) && !isDirectory(b))
-          return -1
+        if (isDirectory(a) && !isDirectory(b)) { return -1 }
 
         // Non-directories come after directories
-        if (!isDirectory(a) && isDirectory(b))
-          return 1
+        if (!isDirectory(a) && isDirectory(b)) { return 1 }
 
         // All other combinations are sorted by name
         return a.name.localeCompare(b.name)
-
       })
       console.log(ret)
       return ret
@@ -68,7 +67,6 @@ export default {
       console.log(files)
       this.files = files
     })
-
   },
 
   destroyed: function() {
@@ -83,8 +81,8 @@ export default {
       this.$emit('UploadFile', event.target.files)
     },
     downLoadFile(fileItem) {
-      let path = fileItem.streamName
-      let downloadStreamReceived = function downloadStreamReceived(stream, mimetype) {
+      const path = fileItem.streamName
+      const downloadStreamReceived = function downloadStreamReceived(stream, mimetype) {
         // Parse filename from string
         var filename = path.match(/(.*[\\/])?(.*)/)[2]
         // Start download
@@ -100,7 +98,6 @@ export default {
         this.files = files
         this.$emit('ChangeFolder', fileItem)
       })
-
     },
     ChangeParentFolder() {
       if (this.currentFolder.parent === null) {
@@ -117,11 +114,9 @@ export default {
       const guacObject = this.guacObject
       return new Promise(function(resolve, reject) {
         // Do not attempt to refresh the contents of directories
-        if (file.mimetype !== Guacamole.Object.STREAM_INDEX_MIMETYPE)
-          return
+        if (file.mimetype !== Guacamole.Object.STREAM_INDEX_MIMETYPE) { return }
         // Request contents of given file
         guacObject.requestInputStream(file.streamName, function handleStream(stream, mimetype) {
-
           // Ignore stream if mimetype is wrong
           if (mimetype !== Guacamole.Object.STREAM_INDEX_MIMETYPE) {
             stream.sendAck('Unexpected mimetype', Guacamole.Status.Code.UNSUPPORTED)
@@ -146,24 +141,20 @@ export default {
 
             // Determine the expected filename prefix of each stream
             var expectedPrefix = file.streamName
-            if (expectedPrefix.charAt(expectedPrefix.length - 1) !== '/')
-              expectedPrefix += '/'
+            if (expectedPrefix.charAt(expectedPrefix.length - 1) !== '/') { expectedPrefix += '/' }
 
             // For each received stream name
             var mimetypes = reader.getJSON()
             for (var name in mimetypes) {
-
               // Assert prefix is correct
-              if (name.substring(0, expectedPrefix.length) !== expectedPrefix)
-                continue
+              if (name.substring(0, expectedPrefix.length) !== expectedPrefix) { continue }
 
               // Extract filename from stream name
               var filename = name.substring(expectedPrefix.length)
 
               // Deduce type from mimetype
               var type = FileType.NORMAL
-              if (mimetypes[name] === Guacamole.Object.STREAM_INDEX_MIMETYPE)
-                type = FileType.DIRECTORY
+              if (mimetypes[name] === Guacamole.Object.STREAM_INDEX_MIMETYPE) { type = FileType.DIRECTORY }
 
               // Add file entry
               file.files[filename] = {

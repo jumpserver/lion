@@ -1,6 +1,6 @@
 <template>
   <el-row>
-    <textarea class="clipboard" @input="debounceInput" v-bind:value="value"/>
+    <textarea class="clipboard" :value="value" @input="debounceInput" />
   </el-row>
 </template>
 

@@ -1,6 +1,6 @@
 <template>
   <div id="app">
-    <GuacamoleConnect/>
+    <GuacamoleConnect />
   </div>
 </template>
 
@@ -10,7 +10,7 @@ import GuacamoleConnect from './components/GuacamoleConnect'
 export default {
   name: 'App',
   components: {
-    GuacamoleConnect,
+    GuacamoleConnect
   }
 }
 </script>
