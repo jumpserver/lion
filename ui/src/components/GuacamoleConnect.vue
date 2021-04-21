@@ -2,48 +2,49 @@
   <el-container>
     <el-main>
       <el-row v-loading="loading" :element-loading-text="loadingText" element-loading-background="rgba(0, 0, 0, 0.8">
-        <div v-bind:style="divStyle">
-          <div id="display"></div>
+        <div :style="divStyle">
+          <div id="display" />
         </div>
       </el-row>
     </el-main>
 
-    <el-menu :collapse="isMenuCollapse"
-             @mouseover.native="isMenuCollapse = false"
+    <el-menu
+      :collapse="isMenuCollapse"
+      @mouseover.native="isMenuCollapse = false"
     >
       <el-submenu :disabled="menuDisable" index="1">
         <template slot="title">
-          <i class="el-icon-position"></i>
+          <i class="el-icon-position" />
           <span>快捷键</span>
         </template>
-        <el-menu-item v-for="(item, i) in combinationKeys" :key="i" v-bind:index="menuIndex('1-',i)" @click="handleKeys(item.keys)">
+        <el-menu-item v-for="(item, i) in combinationKeys" :key="i" :index="menuIndex('1-',i)" @click="handleKeys(item.keys)">
           {{ item.name }}
         </el-menu-item>
       </el-submenu>
-
-      <el-menu-item :disabled="menuDisable" index="2"><i class="el-icon-document-copy"></i>
+      <el-menu-item :disabled="menuDisable" index="2"><i class="el-icon-document-copy" />
         <span @click="toggleClipboard">剪切板</span>
         <el-drawer direction="ltr" :visible.sync="clipboardDrawer" @close="onCloseDrawer">
           <el-row>
             <el-col :span="12" :offset="8">
               <div class="grid-content bg-purple">
-                <GuacClipboard v-bind:value="clipboardText" v-on:ClipboardChange="onClipboardChange"/>
+                <GuacClipboard :value="clipboardText" @ClipboardChange="onClipboardChange" />
               </div>
             </el-col>
           </el-row>
         </el-drawer>
       </el-menu-item>
-      <el-menu-item v-if="currentFilesystem.object" :disabled="menuDisable" index="3"><i class="el-icon-folder"></i>
+      <el-menu-item v-if="currentFilesystem.object" :disabled="menuDisable" index="3"><i class="el-icon-folder" />
         <span @click="toggleFile">文件管理</span>
         <el-drawer direction="ltr" :visible.sync="fileDrawer" @close="onCloseDrawer">
           <el-row>
             <div>{{ currentFilesystem.name }}</div>
-            <GuacFileSystem ref="filesystem"
-                            v-bind:guac-object="currentFilesystem.object"
-                            v-bind:currentFolder="currentFolder"
-                            v-on:ChangeFolder="onChangeFolder"
-                            v-on:DownLoadReceived="onDownloadFile"
-                            v-on:UploadFile="onUploadFiles"
+            <GuacFileSystem
+              ref="filesystem"
+              :guac-object="currentFilesystem.object"
+              :current-folder="currentFolder"
+              @ChangeFolder="onChangeFolder"
+              @DownLoadReceived="onDownloadFile"
+              @UploadFile="onUploadFiles"
             />
           </el-row>
         </el-drawer>
@@ -53,10 +54,10 @@
       <el-form label-position="left" label-width="80px" @submit.native.prevent="submitParams">
         <el-form-item v-for="(item, index) in requireParams" :key="index" :label="item.name">
           <template v-if="checkPasswordInput(item.name)">
-            <el-input v-model="item.value" show-password></el-input>
+            <el-input v-model="item.value" show-password />
           </template>
           <template v-else>
-            <el-input v-model="item.value"></el-input>
+            <el-input v-model="item.value" />
           </template>
         </el-form-item>
       </el-form>
@@ -70,9 +71,9 @@
 
 <script>
 import Guacamole from 'guacamole-common-js'
-import {GetSupportedMimetypes} from '../utils/image'
-import {BaseURL, getCurrentConnectParams, sanitizeFilename} from '../utils/common'
-import {createSession} from '../api/session'
+import { GetSupportedMimetypes } from '../utils/image'
+import { BaseURL, getCurrentConnectParams, sanitizeFilename } from '../utils/common'
+import { createSession } from '../api/session'
 import GuacClipboard from './GuacClipboard'
 import GuacFileSystem from './GuacFileSystem'
 
@@ -80,7 +81,7 @@ export default {
   name: 'GuacamoleConnect',
   components: {
     GuacClipboard,
-    GuacFileSystem,
+    GuacFileSystem
   },
   data() {
     return {
@@ -103,50 +104,50 @@ export default {
       clipboardText: '',
       clipboardData: {
         type: 'text/plain',
-        data: '',
+        data: ''
       },
       sink: null,
       keyboard: null,
       currentFilesystem: {
         object: null,
-        name: '',
+        name: ''
       },
       currentFolder: {
         mimetype: Guacamole.Object.STREAM_INDEX_MIMETYPE,
         streamName: Guacamole.Object.ROOT_STREAM,
         type: 'DIRECTORY',
         files: {},
-        parent: null,
+        parent: null
       },
       combinationKeys: [
         {
           keys: ['65507', '65513', '65535'],
-          name: 'Ctrl+Alt+Delete',
+          name: 'Ctrl+Alt+Delete'
         },
         {
           keys: ['65507', '65513', '65288'],
-          name: 'Ctrl+Alt+Backspace',
+          name: 'Ctrl+Alt+Backspace'
         },
         {
           keys: ['65515', '100'],
-          name: 'Windows+D',
+          name: 'Windows+D'
         },
         {
           keys: ['65515', '101'],
-          name: 'Windows+E',
+          name: 'Windows+E'
         },
         {
           keys: ['65515', '114'],
-          name: 'Windows+R',
+          name: 'Windows+R'
         },
         {
           keys: ['65515', '120'],
-          name: 'Windows+X',
+          name: 'Windows+X'
         },
         {
           keys: ['65515'],
-          name: 'Windows',
-        },
+          name: 'Windows'
+        }
       ]
     }
   },
@@ -162,7 +163,7 @@ export default {
     }
   },
   mounted: function() {
-    let result = getCurrentConnectParams()
+    const result = getCurrentConnectParams()
     this.apiPrefix = result['api']
     createSession(result['api'], result['data']).then(res => {
       this.session = res.data
@@ -175,7 +176,6 @@ export default {
     }).catch(err => {
       console.log('err ', err.message)
     })
-
   },
   methods: {
     checkPasswordInput(name) {
@@ -205,7 +205,7 @@ export default {
       for (let i = 0; i < params.length; i++) {
         this.requireParams.push({
           name: params[i],
-          value: '',
+          value: ''
         })
       }
       this.dialogFormVisible = true
@@ -273,10 +273,10 @@ export default {
 
     getConnectString(sessionId) {
       // Calculate optimal width/height for display
-      let pixel_density = window.devicePixelRatio || 1
-      let optimal_dpi = pixel_density * 96
-      let optimal_width = window.innerWidth * pixel_density - 64
-      let optimal_height = window.innerHeight * pixel_density
+      const pixel_density = window.devicePixelRatio || 1
+      const optimal_dpi = pixel_density * 96
+      const optimal_width = window.innerWidth * pixel_density - 64
+      const optimal_height = window.innerHeight * pixel_density
       return new Promise((resolve, reject) => {
         Promise.all([
           GetSupportedMimetypes(),
@@ -284,16 +284,16 @@ export default {
           this.getSupportedGuacVideos()
         ]).then(values => {
           // ["image/jpeg", "image/png", "image/webp"]
-          let supportImages = values[0]
-          let supportAudios = values[1]
-          let supportVideos = values[2]
+          const supportImages = values[0]
+          const supportAudios = values[1]
+          const supportVideos = values[2]
           this.displayWidth = optimal_width
           this.displayHeight = optimal_height
           var connectString =
-              'SESSION_ID=' + encodeURIComponent(sessionId)
-              + '&GUAC_WIDTH=' + Math.floor(optimal_width)
-              + '&GUAC_HEIGHT=' + Math.floor(optimal_height)
-              + '&GUAC_DPI=' + Math.floor(optimal_dpi)
+              'SESSION_ID=' + encodeURIComponent(sessionId) +
+              '&GUAC_WIDTH=' + Math.floor(optimal_width) +
+              '&GUAC_HEIGHT=' + Math.floor(optimal_height) +
+              '&GUAC_DPI=' + Math.floor(optimal_dpi)
           supportImages.forEach(function(mimetype) {
             connectString += '&GUAC_IMAGE=' + encodeURIComponent(mimetype)
           })
@@ -310,7 +310,7 @@ export default {
 
     onTunnelStateChanged(state) {
       switch (state) {
-          // Connection is being established
+        // Connection is being established
         case Guacamole.Tunnel.State.CONNECTING:
           this.tunnelState = 'CONNECTING'
           console.log('tunnelStateChanged Tunnel.State.CONNECTING ')
@@ -341,9 +341,8 @@ export default {
     },
 
     clientStateChanged(clientState) {
-
       switch (clientState) {
-          // Idle
+        // Idle
         case 0:
           this.clientState = 'IDLE'
           console.log('clientState, IDLE')
@@ -374,18 +373,15 @@ export default {
           // Begin streaming audio input if possible
           var AUDIO_INPUT_MIMETYPE = 'audio/L16;rate=44100,channels=2'
           var requestAudioStream = function requestAudioStream(client) {
-
             // Create new audio stream, associating it with an AudioRecorder
             var stream = client.createAudioStream(AUDIO_INPUT_MIMETYPE)
             var recorder = Guacamole.AudioRecorder.getInstance(stream, AUDIO_INPUT_MIMETYPE)
 
             // If creation of the AudioRecorder failed, simply end the stream
-            if (!recorder)
-              stream.sendEnd()
-                // Otherwise, ensure that another audio stream is created after this
+            if (!recorder) { stream.sendEnd() }
+            // Otherwise, ensure that another audio stream is created after this
             // audio stream is closed
-            else
-              recorder.onclose = requestAudioStream.bind(this, client)
+            else { recorder.onclose = requestAudioStream.bind(this, client) }
             console.log(stream, recorder)
           }
           requestAudioStream(this.client)
@@ -398,7 +394,6 @@ export default {
           console.log('clientState, Disconnected ')
           // this.closeDisplay('clientState Disconnecting')
           break
-
       }
     },
 
@@ -411,7 +406,7 @@ export default {
       this.$alert('关闭窗口=== ' + stats.message, stats, {
         confirmButtonText: '确定',
         callback: action => {
-          let display = document.getElementById('display')
+          const display = document.getElementById('display')
           if (this.client) {
             // display.removeChild(this.client.getDisplay().getElement())
             display.innerHTML = ''
@@ -451,7 +446,6 @@ export default {
       let reader
       // If the received data is text, read it as a simple string
       if (/^text\//.exec(mimetype)) {
-
         reader = new Guacamole.StringReader(stream)
 
         // Assemble received data into a single string
@@ -461,7 +455,7 @@ export default {
         }
 
         // Set clipboard contents once stream is finished
-        reader.onend = async () => {
+        reader.onend = async() => {
           this.clipboardText = data
           if (navigator.clipboard) {
             await navigator.clipboard.writeText(data)
@@ -479,7 +473,6 @@ export default {
           this.clipboardText = reader.getBlob()
         }
       }
-
     },
 
     oncursor(canvas, x, y) {
@@ -493,11 +486,9 @@ export default {
     },
 
     handleMouseState(mouseState) {
-
       // Do not attempt to handle mouse state changes if the client
       // or display are not yet available
-      if (!this.client || !this.display)
-        return
+      if (!this.client || !this.display) { return }
 
       // Send mouse state, show cursor if necessary
       this.display.showCursor(!this.localCursor)
@@ -522,15 +513,15 @@ export default {
 
     onWindowResize() {
       // 监听 window display的变化
-      let pixel_density = window.devicePixelRatio || 1
-      let optimal_width = window.innerWidth * pixel_density
-      let optimal_height = window.innerHeight * pixel_density
+      const pixel_density = window.devicePixelRatio || 1
+      const optimal_width = window.innerWidth * pixel_density
+      const optimal_height = window.innerHeight * pixel_density
       const width = optimal_width - 64
       const height = optimal_height
       if (this.client !== null) {
         const display = this.client.getDisplay()
-        let displayHeight = display.getHeight() * pixel_density
-        let displayWidth = display.getWidth() * pixel_density
+        const displayHeight = display.getHeight() * pixel_density
+        const displayWidth = display.getWidth() * pixel_density
         if (displayHeight === width && displayWidth === height) {
           return
         }
@@ -567,13 +558,13 @@ export default {
     clientFileReceived(stream, mimetype, filename) {
       console.log('clientFileReceived, ', this.tunnel.uuid, stream, mimetype, filename)
       // Build download URL
-      let url = BaseURL + this.apiPrefix
-          + '/tunnels/' + encodeURIComponent(this.tunnel.uuid)
-          + '/streams/' + encodeURIComponent(stream.index)
-          + '/' + encodeURIComponent(sanitizeFilename(filename))
+      const url = BaseURL + this.apiPrefix +
+          '/tunnels/' + encodeURIComponent(this.tunnel.uuid) +
+          '/streams/' + encodeURIComponent(stream.index) +
+          '/' + encodeURIComponent(sanitizeFilename(filename))
 
       // Create temporary hidden iframe to facilitate download
-      let iframe = document.createElement('iframe')
+      const iframe = document.createElement('iframe')
       iframe.style.position = 'fixed'
       iframe.style.border = 'none'
       iframe.style.width = '1px'
@@ -611,7 +602,6 @@ export default {
       // Begin download
       iframe.src = url
       console.log(url)
-
     },
 
     onsync: function(timestamp) {
@@ -633,33 +623,32 @@ export default {
       this.handleFiles(files[0])
     },
     handleFiles: function(file, object, streamName) {
-      let client = this.client
-      let tunnel = this.tunnel
+      const client = this.client
+      const tunnel = this.tunnel
       let stream
       if (!object) {
         stream = client.createFileStream(file.type, file.name)
       } else {
         stream = object.createOutputStream(file.type, streamName)
       }
-      let apiPrefix = this.apiPrefix
+      const apiPrefix = this.apiPrefix
       return new Promise(function(resolve, reject) {
         // Upload file once stream is acknowledged
         stream.onack = function beginUpload(status) {
-
           // Notify of any errors from the Guacamole server
           if (status.isError()) {
             console.log(status.code, status)
             reject(status)
             return
           }
-          let uploadToStream = function uploadStream(tunnel, stream, file,
-                                                     progressCallback) {
+          const uploadToStream = function uploadStream(tunnel, stream, file,
+            progressCallback) {
             // Build upload URL
-            let url = BaseURL + apiPrefix
-                + '/tunnels/' + encodeURIComponent(tunnel)
-                + '/streams/' + encodeURIComponent(stream.index)
-                + '/' + encodeURIComponent(sanitizeFilename(file.name))
-            let xhr = new XMLHttpRequest()
+            const url = BaseURL + apiPrefix +
+                '/tunnels/' + encodeURIComponent(tunnel) +
+                '/streams/' + encodeURIComponent(stream.index) +
+                '/' + encodeURIComponent(sanitizeFilename(file.name))
+            const xhr = new XMLHttpRequest()
             xhr.withCredentials = true
             // Invoke provided callback if upload tracking is supported
             if (progressCallback && xhr.upload) {
@@ -669,10 +658,8 @@ export default {
             }
             // Resolve/reject promise once upload has stopped
             xhr.onreadystatechange = function uploadStatusChanged() {
-
               // Ignore state changes prior to completion
-              if (xhr.readyState !== 4)
-                return
+              if (xhr.readyState !== 4) { return }
 
               // Resolve if HTTP status code indicates success
               if (xhr.status >= 200 && xhr.status < 300) {
@@ -680,8 +667,7 @@ export default {
                 resolve()
               }
               // Parse and reject with resulting JSON error
-              else if (xhr.getResponseHeader('Content-Type') === 'application/json')
-                console.log('failed upload ', xhr.responseText)
+              else if (xhr.getResponseHeader('Content-Type') === 'application/json') { console.log('failed upload ', xhr.responseText) }
               // Warn of lack of permission of a proxy rejects the upload
               else if (xhr.status >= 400 && xhr.status < 500) {
                 console.log('failed upload ', xhr.status)
@@ -716,7 +702,6 @@ export default {
       }
       for (let i = 0; i < keys.length; i++) {
         this.client.sendKeyEvent(1, keys[i])
-
       }
       for (let i = 0; i < keys.length; i++) {
         this.client.sendKeyEvent(0, keys[i])
@@ -724,7 +709,7 @@ export default {
     },
 
     connectGuacamole(connectionParams, wsURL) {
-      let dropbox = document.getElementById('display')
+      const dropbox = document.getElementById('display')
       dropbox.addEventListener('dragenter', this.filedragenter, false)
       dropbox.addEventListener('dragover', this.filedragover, false)
       dropbox.addEventListener('drop', this.filedrop, false)

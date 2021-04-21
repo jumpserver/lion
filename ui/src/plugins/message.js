@@ -1,30 +1,30 @@
-import {MessageBox, Message} from 'element-ui';
-import i18n from "@/i18n";
+import { MessageBox, Message } from 'element-ui'
+import i18n from '@/i18n'
 
 export const $alert = (message, callback, options) => {
-  let title = i18n.t("common.message_box.alert");
+  const title = i18n.t('common.message_box.alert')
   MessageBox.alert(message, title, options).then(() => {
-    callback();
-  });
+    callback()
+  })
 }
 
 export const $confirm = (message, callback, options = {}) => {
-  let defaultOptions = {
-    confirmButtonText: i18n.t("common.button.ok"),
-    cancelButtonText: i18n.t("common.button.cancel"),
+  const defaultOptions = {
+    confirmButtonText: i18n.t('common.button.ok'),
+    cancelButtonText: i18n.t('common.button.cancel'),
     type: 'warning',
     ...options
   }
-  let title = i18n.t("common.message_box.confirm");
+  const title = i18n.t('common.message_box.confirm')
   MessageBox.confirm(message, title, defaultOptions).then(() => {
-    callback();
-  });
+    callback()
+  })
 }
 
 export const $success = (message, duration) => {
   Message.success({
     message: message,
-    type: "success",
+    type: 'success',
     showClose: true,
     duration: duration || 1500
   })
@@ -33,7 +33,7 @@ export const $success = (message, duration) => {
 export const $info = (message, duration) => {
   Message.info({
     message: message,
-    type: "info",
+    type: 'info',
     showClose: true,
     duration: duration || 3000
   })
@@ -42,7 +42,7 @@ export const $info = (message, duration) => {
 export const $warning = (message, duration) => {
   Message.warning({
     message: message,
-    type: "warning",
+    type: 'warning',
     showClose: true,
     duration: duration || 5000
   })
@@ -51,7 +51,7 @@ export const $warning = (message, duration) => {
 export const $error = (message, duration) => {
   Message.error({
     message: message,
-    type: "error",
+    type: 'error',
     showClose: true,
     duration: duration || 10000
   })
@@ -60,12 +60,12 @@ export const $error = (message, duration) => {
 export default {
   install(Vue) {
     // 使用$$前缀，避免与Element UI的冲突
-    Vue.prototype.$$confirm = $confirm;
-    Vue.prototype.$$alert = $alert;
+    Vue.prototype.$$confirm = $confirm
+    Vue.prototype.$$alert = $alert
 
-    Vue.prototype.$success = $success;
-    Vue.prototype.$info = $info;
-    Vue.prototype.$warning = $warning;
-    Vue.prototype.$error = $error;
+    Vue.prototype.$success = $success
+    Vue.prototype.$info = $info
+    Vue.prototype.$warning = $warning
+    Vue.prototype.$error = $error
   }
 }

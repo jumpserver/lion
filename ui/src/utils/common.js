@@ -13,10 +13,7 @@ export function isDirectory(guacFile) {
 
 let streamOrigin
 // Work-around for IE missing window.location.origin
-if (!window.location.origin)
-  streamOrigin = window.location.protocol + '//' + window.location.hostname + (window.location.port ? (':' + window.location.port) : '')
-else
-  streamOrigin = window.location.origin
+if (!window.location.origin) { streamOrigin = window.location.protocol + '//' + window.location.hostname + (window.location.port ? (':' + window.location.port) : '') } else { streamOrigin = window.location.origin }
 
 export const OriginSite = streamOrigin
 
@@ -28,18 +25,17 @@ const sessionBaseAPI = '/api'
 const tokenWSURL = '/lion/ws/token/'
 const wsURL = '/lion/ws/connect/'
 
-
 export function getCurrentConnectParams() {
-  let urlParams = new URLSearchParams(window.location.search.slice(1))
-  let data = {}
+  const urlParams = new URLSearchParams(window.location.search.slice(1))
+  const data = {}
   urlParams.forEach(function(value, key, parent) {
     data[key] = value
   })
-  let result = {}
+  const result = {}
   result['data'] = data
   result['ws'] = wsURL
   result['api'] = sessionBaseAPI
-  let token = urlParams.get('token')
+  const token = urlParams.get('token')
   if (token !== null) {
     result['ws'] = tokenWSURL
     result['api'] = tokenBaseAPI

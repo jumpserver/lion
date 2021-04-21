@@ -1,13 +1,11 @@
 import axios from 'axios'
-import {$error} from './message'
-import {BaseURL} from '@/utils/common'
-
+import { $error } from './message'
+import { BaseURL } from '@/utils/common'
 
 const instance = axios.create({
   baseURL: BaseURL, // url = base url + request url
-  withCredentials: true,
+  withCredentials: true
 })
-
 
 // 请根据实际需求修改
 instance.interceptors.response.use(response => {
@@ -45,19 +43,19 @@ const promise = (request, loading = {}) => {
 }
 
 export const get = (url, data, loading) => {
-  return promise(request({url: url, method: 'get', params: data}), loading)
+  return promise(request({ url: url, method: 'get', params: data }), loading)
 }
 
 export const post = (url, data, loading) => {
-  return promise(request({url: url, method: 'post', data}), loading)
+  return promise(request({ url: url, method: 'post', data }), loading)
 }
 
 export const put = (url, data, loading) => {
-  return promise(request({url: url, method: 'put', data}), loading)
+  return promise(request({ url: url, method: 'put', data }), loading)
 }
 
 export const del = (url, loading) => {
-  return promise(request({url: url, method: 'delete'}), loading)
+  return promise(request({ url: url, method: 'delete' }), loading)
 }
 
 export default {
