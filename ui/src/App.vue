@@ -1,17 +1,14 @@
 <template>
   <div id="app">
-    <GuacamoleConnect />
+    <router-view />
   </div>
 </template>
 
 <script>
-import GuacamoleConnect from './components/GuacamoleConnect'
 
 export default {
-  name: 'App',
-  components: {
-    GuacamoleConnect
-  }
+  name: 'App'
+
 }
 </script>
 
