@@ -42,3 +42,4 @@ ui/pnpm-debug.log*
 *.njsproj
 *.sln
 *.sw?
+ui/yarn.lock
