@@ -148,6 +148,7 @@ func registerRouter(jmsService *service.JMService, tunnelService *tunnel.Guacamo
 			status["timestamp"] = time.Now().UTC()
 			ctx.JSON(http.StatusOK, status)
 		})
+		lionGroup.StaticFile("/monitor", "./ui/lion/index.html")
 	}
 
 	// token 使用 lion 自带认证
@@ -165,6 +166,8 @@ func registerRouter(jmsService *service.JMService, tunnelService *tunnel.Guacamo
 	{
 		wsGroup.Group("/connect").Use(
 			middleware.JmsCookieAuth(jmsService)).GET("/", tunnelService.Connect)
+		wsGroup.Group("/monitor").Use(
+			middleware.JmsCookieAuth(jmsService)).GET("/", tunnelService.Monitor)
 
 		wsGroup.Group("/token").Use(
 			middleware.SessionAuth(jmsService)).GET("/", tunnelService.Connect)

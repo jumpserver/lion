@@ -76,13 +76,18 @@ func (t *Connection) readTunnelInstruction() (*guacd.Instruction, error) {
 		if err != nil {
 			return nil, err
 		}
-		newInstruction := t.inputFilter.Filter(&instruction)
-		if newInstruction == nil {
-			continue
+		newInstruction := &instruction
+		if t.inputFilter != nil {
+			newInstruction = t.inputFilter.Filter(newInstruction)
+			if newInstruction == nil {
+				continue
+			}
 		}
-		newInstruction = t.outputFilter.Filter(newInstruction)
-		if newInstruction == nil {
-			continue
+		if t.outputFilter != nil {
+			newInstruction = t.outputFilter.Filter(newInstruction)
+			if newInstruction == nil {
+				continue
+			}
 		}
 		return newInstruction, nil
 	}
