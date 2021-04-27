@@ -13,7 +13,8 @@
     "element-ui": "^2.15.1",
     "guacamole-common-js": "1.3.0",
     "vue": "^2.6.11",
-    "vue-i18n": "^8.24.2"
+    "vue-i18n": "^8.24.2",
+    "vue-router": "^3.5.1"
   },
   "devDependencies": {
     "@vue/cli-plugin-babel": "~4.5.0",
@@ -34,7 +35,7 @@
       "eslint:recommended"
     ],
     "parserOptions": {
-      "parser": "babel-eslint"
+      "parser": "eslint-parser"
     },
     "rules": {}
   },

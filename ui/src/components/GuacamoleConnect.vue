@@ -8,6 +8,7 @@
       </el-row>
     </el-main>
 
+    <div />
     <el-menu
       :collapse="isMenuCollapse"
       @mouseover.native="isMenuCollapse = false"
@@ -378,6 +379,7 @@ export default {
             var recorder = Guacamole.AudioRecorder.getInstance(stream, AUDIO_INPUT_MIMETYPE)
 
             // If creation of the AudioRecorder failed, simply end the stream
+            // eslint-disable-next-line brace-style
             if (!recorder) { stream.sendEnd() }
             // Otherwise, ensure that another audio stream is created after this
             // audio stream is closed
@@ -461,6 +463,7 @@ export default {
             await navigator.clipboard.writeText(data)
           }
         }
+        // eslint-disable-next-line brace-style
       }
 
       // Otherwise read the clipboard data as a Blob
@@ -665,13 +668,16 @@ export default {
               if (xhr.status >= 200 && xhr.status < 300) {
                 console.log('success upload ')
                 resolve()
+                // eslint-disable-next-line brace-style
               }
               // Parse and reject with resulting JSON error
+              // eslint-disable-next-line brace-style
               else if (xhr.getResponseHeader('Content-Type') === 'application/json') { console.log('failed upload ', xhr.responseText) }
               // Warn of lack of permission of a proxy rejects the upload
               else if (xhr.status >= 400 && xhr.status < 500) {
                 console.log('failed upload ', xhr.status)
                 reject(xhr.status)
+                // eslint-disable-next-line brace-style
               }
               // Assume internal error for all other cases
               else {
