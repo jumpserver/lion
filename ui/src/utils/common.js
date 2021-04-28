@@ -13,7 +13,11 @@ export function isDirectory(guacFile) {
 
 let streamOrigin
 // Work-around for IE missing window.location.origin
-if (!window.location.origin) { streamOrigin = window.location.protocol + '//' + window.location.hostname + (window.location.port ? (':' + window.location.port) : '') } else { streamOrigin = window.location.origin }
+if (!window.location.origin) {
+  streamOrigin = window.location.protocol + '//' + window.location.hostname + (window.location.port ? (':' + window.location.port) : '')
+} else {
+  streamOrigin = window.location.origin
+}
 
 export const OriginSite = streamOrigin
 
@@ -24,9 +28,10 @@ const tokenBaseAPI = '/token'
 const sessionBaseAPI = '/api'
 const tokenWSURL = '/lion/ws/token/'
 const wsURL = '/lion/ws/connect/'
+const monitorWsURL = '/lion/ws/monitor/'
 
 export function getCurrentConnectParams() {
-  const urlParams = new URLSearchParams(window.location.search.slice(1))
+  const urlParams = getURLParams()
   const data = {}
   urlParams.forEach(function(value, key, parent) {
     data[key] = value
@@ -41,4 +46,20 @@ export function getCurrentConnectParams() {
     result['api'] = tokenBaseAPI
   }
   return result
+}
+
+export function getMonitorConnectParams() {
+  const urlParams = getURLParams()
+  const data = {}
+  urlParams.forEach(function(value, key, parent) {
+    data[key] = value
+  })
+  const result = {}
+  result['data'] = data
+  result['ws'] = monitorWsURL
+  return result
+}
+
+function getURLParams() {
+  return new URLSearchParams(window.location.search.slice(1))
 }

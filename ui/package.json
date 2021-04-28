@@ -38,7 +38,7 @@
       "eslint:recommended"
     ],
     "parserOptions": {
-      "parser": "eslint-parser"
+      "parser": "babel-eslint"
     },
     "rules": {}
   },

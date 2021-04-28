@@ -9,16 +9,104 @@
 </template>
 
 <script>
+import Guacamole from 'guacamole-common-js'
+import {getMonitorConnectParams} from '../utils/common'
+
 export default {
   name: 'GuacamoleMonitor',
   data() {
     return {
-      divStyle: {},
+      displayWidth: 0,
+      displayHeight: 0,
       loading: true,
       loadingText: '连接中。。',
     }
   },
+  mounted: function() {
+    const result = getMonitorConnectParams()
+    console.log(result)
+    const sid = result['data']['session']
+    this.getConnectString(sid).then(connectionParams => {
+      this.connectGuacamole(connectionParams, result['ws'])
+    })
+  },
+  computed: {
+    divStyle: function() {
+      return {
+        width: this.displayWidth + 'px',
+        height: this.displayHeight + 'px'
+      }
+    },
+  },
   methods: {
+    displayResize(width, height) {
+      // 监听guacamole display的变化
+      console.log('on display ', width, height)
+      this.displayWidth = width
+      this.displayHeight = height
+    },
+    clientStateChanged(clientState) {
+      switch (clientState) {
+          // Idle
+        case 0:
+          this.clientState = 'IDLE'
+          console.log('clientState, IDLE')
+          break
+
+          // Ignore "connecting" state
+        case 1: // Connecting
+          this.clientState = 'Connecting'
+          this.loadingText = 'Connecting'
+          console.log('clientState, Connecting')
+          break
+
+          // Connected + waiting
+        case 2:
+          this.clientState = 'Connected + waiting'
+          console.log('clientState, Connected + waiting')
+          break
+
+          // Connected
+        case 3:
+          this.clientState = 'Connected'
+          console.log('clientState, Connected ')
+          this.loading = false
+          // Send any clipboard data already provided
+          // if (managedClient.clipboardData)
+          //     ManagedClient.setClipboard(managedClient, managedClient.clipboardData);
+          //
+          // Begin streaming audio input if possible
+          var AUDIO_INPUT_MIMETYPE = 'audio/L16;rate=44100,channels=2'
+          var requestAudioStream = function requestAudioStream(client) {
+            // Create new audio stream, associating it with an AudioRecorder
+            var stream = client.createAudioStream(AUDIO_INPUT_MIMETYPE)
+            var recorder = Guacamole.AudioRecorder.getInstance(stream, AUDIO_INPUT_MIMETYPE)
+
+            // If creation of the AudioRecorder failed, simply end the stream
+            // eslint-disable-next-line brace-style
+            if (!recorder) {
+              stream.sendEnd()
+            }
+                // Otherwise, ensure that another audio stream is created after this
+            // audio stream is closed
+            else {
+              recorder.onclose = requestAudioStream.bind(this, client)
+            }
+            console.log(stream, recorder)
+          }
+          requestAudioStream(this.client)
+          break
+
+          // Update history when disconnecting
+        case 4: // Disconnecting
+        case 5: // Disconnected
+          this.clientState = 'Disconnecting'
+          console.log('clientState, Disconnected ')
+          // this.closeDisplay('clientState Disconnecting')
+          break
+      }
+    },
+
     connectGuacamole(connectionParams, wsURL) {
       var display = document.getElementById('monitor')
       var tunnel = new Guacamole.WebSocketTunnel(wsURL)
