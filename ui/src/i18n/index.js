@@ -26,12 +26,12 @@ export const getLanguage = () => {
 
 const i18n = new VueI18n({
   locale: getLanguage(),
-  messages,
+  messages
 })
 
 const importLanguage = lang => {
   if (!LOADED_LANGUAGES.includes(lang)) {
-    return import(`./lang/${ lang }`).then(response => {
+    return import(`./lang/${lang}`).then(response => {
       i18n.mergeLocaleMessage(lang, response.default)
       LOADED_LANGUAGES.push(lang)
       return Promise.resolve(lang)
@@ -53,7 +53,7 @@ export const setLanguage = lang => {
 
 // 组合翻译，例如key为'请输入{0}'，keys为login.username，则自动将keys翻译并替换到{0} {1}...
 Vue.prototype.$tm = function(key, ...keys) {
-  let values = []
+  const values = []
   for (const k of keys) {
     values.push(i18n.t(k))
   }
