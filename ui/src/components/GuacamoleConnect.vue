@@ -395,6 +395,8 @@ export default {
           this.clientState = 'Disconnecting'
           console.log('clientState, Disconnected ')
           // this.closeDisplay('clientState Disconnecting')
+          var display = document.getElementById('display')
+          display.innerHTML = ''
           break
       }
     },
