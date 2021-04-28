@@ -77,28 +77,24 @@ func runHeartTask(jmsService *service.JMService, cache *tunnel.GuaTunnelCache) {
 	// default 30s
 	beatTicker := time.NewTicker(time.Second * 30)
 	defer beatTicker.Stop()
-	for {
-		select {
-		case <-beatTicker.C:
-			sids := cache.Range()
-			tasks, err := jmsService.TerminalHeartBeat(sids)
-			if err != nil {
-				logger.Error(err)
-				continue
-			}
-			for i := range tasks {
-				task := tasks[i]
-				switch task.Name {
-				case model.TaskKillSession:
-					if connection := cache.GetBySessionId(task.Args); connection != nil {
-						connection.Terminate()
-						if err = jmsService.FinishTask(task.ID); err != nil {
-							logger.Error(err)
-						}
-
+	for range beatTicker.C {
+		sids := cache.Range()
+		tasks, err := jmsService.TerminalHeartBeat(sids)
+		if err != nil {
+			logger.Error(err)
+			continue
+		}
+		for i := range tasks {
+			task := tasks[i]
+			switch task.Name {
+			case model.TaskKillSession:
+				if connection := cache.GetBySessionId(task.Args); connection != nil {
+					connection.Terminate()
+					if err = jmsService.FinishTask(task.ID); err != nil {
+						logger.Error(err)
 					}
-				default:
 				}
+			default:
 			}
 		}
 	}
@@ -120,6 +116,11 @@ func registerRouter(jmsService *service.JMService, tunnelService *tunnel.Guacamo
 		lionGroup.Static("/assets", "./ui/lion/assets")
 		lionGroup.StaticFile("/favicon.ico", "./ui/lion/favicon.ico")
 		lionGroup.StaticFile("/", "./ui/lion/index.html")
+		lionGroup.GET("/health/", func(ctx *gin.Context) {
+			status := make(map[string]interface{})
+			status["timestamp"] = time.Now().UTC()
+			ctx.JSON(http.StatusOK, status)
+		})
 	}
 
 	// token 使用 lion 自带认证
