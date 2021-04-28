@@ -39,6 +39,17 @@ func (g *GuaTunnelCache) Range() []string {
 	return ret
 }
 
+func (g *GuaTunnelCache) RangeUserIds() map[string]struct{} {
+	g.Lock()
+	ret := make(map[string]struct{})
+	for i := range g.Tunnels {
+		currentUser := g.Tunnels[i].Sess.User
+		ret[currentUser.ID] = struct{}{}
+	}
+	g.Unlock()
+	return ret
+}
+
 func (g *GuaTunnelCache) GetBySessionId(sid string) *Connection {
 	g.Lock()
 	defer g.Unlock()

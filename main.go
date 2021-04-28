@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/pprof"
@@ -68,17 +69,19 @@ func main() {
 	}
 	eng := registerRouter(jmsService, &tunnelService)
 	go runHeartTask(jmsService, tunnelService.Cache)
+	go runCleanDriverDisk(tunnelService.Cache)
 	addr := net.JoinHostPort(config.GlobalConfig.BindHost, config.GlobalConfig.HTTPPort)
 	fmt.Printf("Lion Version %s, more see https://www.jumpserver.org\n", Version)
 	logger.Infof("listen on: %s", addr)
 	logger.Fatal(http.ListenAndServe(addr, eng))
 }
-func runHeartTask(jmsService *service.JMService, cache *tunnel.GuaTunnelCache) {
+
+func runHeartTask(jmsService *service.JMService, tunnelCache *tunnel.GuaTunnelCache) {
 	// default 30s
 	beatTicker := time.NewTicker(time.Second * 30)
 	defer beatTicker.Stop()
 	for range beatTicker.C {
-		sids := cache.Range()
+		sids := tunnelCache.Range()
 		tasks, err := jmsService.TerminalHeartBeat(sids)
 		if err != nil {
 			logger.Error(err)
@@ -88,13 +91,37 @@ func runHeartTask(jmsService *service.JMService, cache *tunnel.GuaTunnelCache) {
 			task := tasks[i]
 			switch task.Name {
 			case model.TaskKillSession:
-				if connection := cache.GetBySessionId(task.Args); connection != nil {
+				if connection := tunnelCache.GetBySessionId(task.Args); connection != nil {
 					connection.Terminate()
 					if err = jmsService.FinishTask(task.ID); err != nil {
 						logger.Error(err)
 					}
 				}
 			default:
+			}
+		}
+	}
+}
+
+func runCleanDriverDisk(tunnelCache *tunnel.GuaTunnelCache) {
+	// default 1 hour
+	cleanDriveTicker := time.NewTicker(time.Hour)
+	defer cleanDriveTicker.Stop()
+	drivePath := config.GlobalConfig.DrivePath
+	for range cleanDriveTicker.C {
+		folders, err := ioutil.ReadDir(drivePath)
+		if err != nil {
+			logger.Error(err)
+			continue
+		}
+		currentOnlineUserIds := tunnelCache.RangeUserIds()
+		for i := range folders {
+			if _, ok := currentOnlineUserIds[folders[i].Name()]; ok {
+				continue
+			}
+			logger.Debugf("Remove drive folder %s", folders[i].Name())
+			if err = os.RemoveAll(filepath.Join(drivePath, folders[i].Name())); err != nil {
+				logger.Errorf("Remove drive folder %s err: %s", folders[i].Name(), err)
 			}
 		}
 	}
