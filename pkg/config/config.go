@@ -115,7 +115,7 @@ func EnsureDirExist(path string) error {
 	return nil
 }
 
-const prefixName = "[Guacamole]"
+const prefixName = "[Lion]"
 
 func getDefaultName() string {
 	hostname, _ := os.Hostname()
