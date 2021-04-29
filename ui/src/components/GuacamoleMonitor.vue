@@ -2,7 +2,7 @@
   <el-main>
     <el-row v-loading="loading" :element-loading-text="loadingText" element-loading-background="rgba(0, 0, 0, 0.8">
       <div :style="divStyle">
-        <div id="monitor"/>
+        <div id="monitor" />
       </div>
     </el-row>
   </el-main>
@@ -10,7 +10,8 @@
 
 <script>
 import Guacamole from 'guacamole-common-js'
-import {getMonitorConnectParams} from '../utils/common'
+import { getMonitorConnectParams } from '../utils/common'
+import { GetSupportedMimetypes } from '../utils/image'
 
 export default {
   name: 'GuacamoleMonitor',
@@ -19,7 +20,15 @@ export default {
       displayWidth: 0,
       displayHeight: 0,
       loading: true,
-      loadingText: '连接中。。',
+      loadingText: '连接中。。'
+    }
+  },
+  computed: {
+    divStyle: function() {
+      return {
+        width: this.displayWidth + 'px',
+        height: this.displayHeight + 'px'
+      }
     }
   },
   mounted: function() {
@@ -30,15 +39,52 @@ export default {
       this.connectGuacamole(connectionParams, result['ws'])
     })
   },
-  computed: {
-    divStyle: function() {
-      return {
-        width: this.displayWidth + 'px',
-        height: this.displayHeight + 'px'
-      }
-    },
-  },
   methods: {
+    getSupportedGuacAudios() {
+      return Guacamole.AudioPlayer.getSupportedTypes()
+    },
+
+    getSupportedGuacVideos() {
+      return Guacamole.VideoPlayer.getSupportedTypes()
+    },
+
+    getConnectString(sessionId) {
+      // Calculate optimal width/height for display
+      const pixel_density = window.devicePixelRatio || 1
+      const optimal_dpi = pixel_density * 96
+      const optimal_width = window.innerWidth * pixel_density - 64
+      const optimal_height = window.innerHeight * pixel_density
+      return new Promise((resolve, reject) => {
+        Promise.all([
+          GetSupportedMimetypes(),
+          this.getSupportedGuacAudios(),
+          this.getSupportedGuacVideos()
+        ]).then(values => {
+          // ["image/jpeg", "image/png", "image/webp"]
+          const supportImages = values[0]
+          const supportAudios = values[1]
+          const supportVideos = values[2]
+          this.displayWidth = optimal_width
+          this.displayHeight = optimal_height
+          var connectString =
+              'SESSION_ID=' + encodeURIComponent(sessionId) +
+              '&GUAC_WIDTH=' + Math.floor(optimal_width) +
+              '&GUAC_HEIGHT=' + Math.floor(optimal_height) +
+              '&GUAC_DPI=' + Math.floor(optimal_dpi)
+          supportImages.forEach(function(mimetype) {
+            connectString += '&GUAC_IMAGE=' + encodeURIComponent(mimetype)
+          })
+          supportAudios.forEach(function(mimetype) {
+            connectString += '&GUAC_AUDIO=' + encodeURIComponent(mimetype)
+          })
+          supportVideos.forEach(function(mimetype) {
+            connectString += '&GUAC_VIDEO=' + encodeURIComponent(mimetype)
+          })
+          resolve(connectString)
+        })
+      })
+    },
+
     displayResize(width, height) {
       // 监听guacamole display的变化
       console.log('on display ', width, height)
@@ -47,7 +93,7 @@ export default {
     },
     clientStateChanged(clientState) {
       switch (clientState) {
-          // Idle
+        // Idle
         case 0:
           this.clientState = 'IDLE'
           console.log('clientState, IDLE')
@@ -84,10 +130,9 @@ export default {
 
             // If creation of the AudioRecorder failed, simply end the stream
             // eslint-disable-next-line brace-style
-            if (!recorder) {
-              stream.sendEnd()
-            }
-                // Otherwise, ensure that another audio stream is created after this
+            if (!recorder) { stream.sendEnd() }
+
+            // Otherwise, ensure that another audio stream is created after this
             // audio stream is closed
             else {
               recorder.onclose = requestAudioStream.bind(this, client)
