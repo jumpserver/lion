@@ -60,7 +60,8 @@ func getDefaultConfig() Config {
 	keyFolderPath := filepath.Join(dataFolderPath, "key")
 	accessKeyFilePath := filepath.Join(keyFolderPath, ".access_key")
 
-	folders := []string{dataFolderPath, driveFolderPath, keyFolderPath, LogDirPath}
+	folders := []string{dataFolderPath, driveFolderPath, recordFolderPath,
+		keyFolderPath, LogDirPath}
 	for i := range folders {
 		if err := EnsureDirExist(folders[i]); err != nil {
 			log.Fatalf("Create folder failed: %s", err.Error())
