@@ -142,7 +142,10 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 				}
 
 				switch ret.Opcode {
-				case guacd.InstructionClientSync, guacd.InstructionClientNop:
+				case guacd.InstructionClientSync,
+					 guacd.InstructionClientNop,
+					 guacd.InstructionStreamingAck:
+
 				case guacd.InstructionClientDisconnect:
 					logger.Errorf("Session[%s] receive web client disconnect opcode", t)
 				default:
