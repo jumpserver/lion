@@ -41,7 +41,7 @@ for (const key in testImages) {
   pendingTests.push(imageTest)
 }
 
-export function GetSupportedMimetypes() {
+export function getSupportedMimetypes() {
   return new Promise(function(resolve, reject) {
     Promise.all(pendingTests).then(() => {
       resolve(supportImages)

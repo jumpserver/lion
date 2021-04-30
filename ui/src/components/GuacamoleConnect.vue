@@ -72,7 +72,9 @@
 
 <script>
 import Guacamole from 'guacamole-common-js'
-import { GetSupportedMimetypes } from '../utils/image'
+import { getSupportedMimetypes } from '../utils/image'
+import { getSupportedGuacAudios } from '../utils/audios'
+import { getSupportedGuacVideos } from '../utils/video'
 import { BaseURL, getCurrentConnectParams, sanitizeFilename } from '../utils/common'
 import { createSession } from '../api/session'
 import GuacClipboard from './GuacClipboard'
@@ -263,15 +265,6 @@ export default {
       }
       this.fileDrawer = !this.fileDrawer
     },
-
-    getSupportedGuacAudios() {
-      return Guacamole.AudioPlayer.getSupportedTypes()
-    },
-
-    getSupportedGuacVideos() {
-      return Guacamole.VideoPlayer.getSupportedTypes()
-    },
-
     getConnectString(sessionId) {
       // Calculate optimal width/height for display
       const pixel_density = window.devicePixelRatio || 1
@@ -280,9 +273,9 @@ export default {
       const optimal_height = window.innerHeight * pixel_density
       return new Promise((resolve, reject) => {
         Promise.all([
-          GetSupportedMimetypes(),
-          this.getSupportedGuacAudios(),
-          this.getSupportedGuacVideos()
+          getSupportedMimetypes(),
+          getSupportedGuacAudios(),
+          getSupportedGuacVideos()
         ]).then(values => {
           // ["image/jpeg", "image/png", "image/webp"]
           const supportImages = values[0]

@@ -11,7 +11,9 @@
 <script>
 import Guacamole from 'guacamole-common-js'
 import { getMonitorConnectParams } from '../utils/common'
-import { GetSupportedMimetypes } from '../utils/image'
+import { getSupportedMimetypes } from '../utils/image'
+import { getSupportedGuacAudios } from '../utils/audios'
+import { getSupportedGuacVideos } from '../utils/video'
 
 export default {
   name: 'GuacamoleMonitor',
@@ -37,16 +39,11 @@ export default {
     const sid = result['data']['session']
     this.getConnectString(sid).then(connectionParams => {
       this.connectGuacamole(connectionParams, result['ws'])
+    }).catch(err => {
+      console.log(err)
     })
   },
   methods: {
-    getSupportedGuacAudios() {
-      return Guacamole.AudioPlayer.getSupportedTypes()
-    },
-
-    getSupportedGuacVideos() {
-      return Guacamole.VideoPlayer.getSupportedTypes()
-    },
 
     getConnectString(sessionId) {
       // Calculate optimal width/height for display
@@ -56,9 +53,9 @@ export default {
       const optimal_height = window.innerHeight * pixel_density
       return new Promise((resolve, reject) => {
         Promise.all([
-          GetSupportedMimetypes(),
-          this.getSupportedGuacAudios(),
-          this.getSupportedGuacVideos()
+          getSupportedMimetypes(),
+          getSupportedGuacAudios(),
+          getSupportedGuacVideos()
         ]).then(values => {
           // ["image/jpeg", "image/png", "image/webp"]
           const supportImages = values[0]
@@ -87,9 +84,9 @@ export default {
 
     displayResize(width, height) {
       // 监听guacamole display的变化
-      console.log('on display ', width, height)
       this.displayWidth = width
       this.displayHeight = height
+      window.resizeTo(width, height)
     },
     clientStateChanged(clientState) {
       switch (clientState) {
@@ -124,7 +121,8 @@ export default {
           // Begin streaming audio input if possible
           var AUDIO_INPUT_MIMETYPE = 'audio/L16;rate=44100,channels=2'
           var requestAudioStream = function requestAudioStream(client) {
-            // Create new audio stream, associating it with an AudioRecorder
+            // Create new audio stream, associating it wit
+            // AudioRecorder
             var stream = client.createAudioStream(AUDIO_INPUT_MIMETYPE)
             var recorder = Guacamole.AudioRecorder.getInstance(stream, AUDIO_INPUT_MIMETYPE)
 
@@ -147,7 +145,6 @@ export default {
         case 5: // Disconnected
           this.clientState = 'Disconnecting'
           console.log('clientState, Disconnected ')
-          // this.closeDisplay('clientState Disconnecting')
           break
       }
     },
@@ -158,6 +155,7 @@ export default {
       var client = new Guacamole.Client(tunnel)
       tunnel.onerror = function tunnelError(status) {
         console.log('tunnelError ', status)
+        display.innerHTML = ''
       }
       tunnel.onuuid = function tunnelAssignedUUID(uuid) {
         console.log('tunnelAssignedUUID ', uuid)

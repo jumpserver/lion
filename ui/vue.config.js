@@ -8,7 +8,7 @@ module.exports = {
       '^/lion': {
         target: 'http://localhost:8081',
         ws: true,
-        changeOrigin: true,
+        changeOrigin: true
       }
     }
   }
