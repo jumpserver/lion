@@ -3,9 +3,7 @@ import Router from 'vue-router'
 
 Vue.use(Router)
 
-export const constantRoutes = [
-
-]
+export const constantRoutes = []
 
 /**
  * admin
@@ -15,12 +13,16 @@ export const allRoleRoutes = [
   {
     path: '/',
     component: () => import('../components/GuacamoleConnect')
+  },
+  {
+    path: '/monitor',
+    component: () => import('../components/GuacamoleMonitor')
   }
 ]
 
 const createRouter = () => new Router({
   mode: 'history', // require service support
-  scrollBehavior: () => ({ y: 0 }),
+  // scrollBehavior: () => ({y: 0}),
   base: '/lion/',
   routes: allRoleRoutes
 })

@@ -321,7 +321,7 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 			_ = fdReader.Close()
 			if err := stream.WaitErr(); err != nil {
 				logger.Errorf("Session[%s] upload file %s err: %s", tun, filename, err)
-				 g.SessionService.AuditFileOperation(fileLog)
+				g.SessionService.AuditFileOperation(fileLog)
 				continue
 			}
 			logger.Infof("Session[%s] upload file %s success", tun, filename)
@@ -331,4 +331,60 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 		return
 	}
 	ctx.AbortWithStatus(http.StatusNotFound)
+}
+
+func (g *GuacamoleTunnelServer) Monitor(ctx *gin.Context) {
+	ws, err := upGrader.Upgrade(ctx.Writer, ctx.Request, ctx.Writer.Header())
+	if err != nil {
+		logger.Errorf("Websocket Upgrade err: %+v", err)
+		ctx.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	userItem, ok := ctx.Get(config.GinCtxUserKey)
+	if !ok {
+		data := guacd.NewInstruction(
+			guacd.InstructionServerError, "no auth user", "504")
+		_ = ws.WriteMessage(websocket.TextMessage, []byte(data.String()))
+		return
+	}
+	user := userItem.(*model.User)
+	if user.ID == "" {
+		data := guacd.NewInstruction(
+			guacd.InstructionServerError, "no auth user", "504")
+		_ = ws.WriteMessage(websocket.TextMessage, []byte(data.String()))
+		return
+	}
+	sessionId, ok := ctx.GetQuery("SESSION_ID")
+	if !ok {
+		data := guacd.NewInstruction(
+			guacd.InstructionServerError, "no session id", "504")
+		_ = ws.WriteMessage(websocket.TextMessage, []byte(data.String()))
+		return
+	}
+	info := g.getClientInfo(ctx)
+	tunnelCon := g.Cache.GetBySessionId(sessionId)
+	if tunnelCon == nil {
+		data := guacd.NewInstruction(
+			guacd.InstructionServerError, "no found tunnel", "504")
+		_ = ws.WriteMessage(websocket.TextMessage, []byte(data.String()))
+		return
+	}
+	guacdConnectID := tunnelCon.guacdTunnel.UUID
+	conf := tunnelCon.Sess.GuaConfiguration()
+	conf.ConnectionID = guacdConnectID
+	guacdAddr := net.JoinHostPort(config.GlobalConfig.GuaHost, config.GlobalConfig.GuaPort)
+	tunnel, err := guacd.NewTunnel(guacdAddr, conf, info)
+	if err != nil {
+		logger.Errorf("Connect tunnel err: %+v", err)
+		data := guacd.NewInstruction(
+			guacd.InstructionServerError, err.Error(), "504")
+		_ = ws.WriteMessage(websocket.TextMessage, []byte(data.String()))
+		return
+	}
+	conn := Connection{
+		Sess:        tunnelCon.Sess,
+		guacdTunnel: tunnel,
+		ws:          ws,
+	}
+	_ = conn.Run(ctx)
 }
