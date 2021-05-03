@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -230,7 +231,9 @@ func (s *Server) RegisterFinishReplayCallback(tunnel TunnelSession) func() error
 		// 压缩完成则删除源文件
 		defer os.Remove(originReplayFilePath)
 		if replayStorage := storage.NewReplayStorage(replayConfig); replayStorage != nil {
-			err = replayStorage.Upload(dstReplayFilePath, tunnel.Created.Format(recordDirTimeFormat))
+			targetName := strings.Join([]string{tunnel.Created.Format(recordDirTimeFormat),
+				tunnel.ID + ReplayFileNameSuffix}, "/")
+			err = replayStorage.Upload(dstReplayFilePath, targetName)
 		} else {
 			err = s.JmsService.Upload(tunnel.ID, dstReplayFilePath)
 		}

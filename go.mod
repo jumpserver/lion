@@ -9,13 +9,13 @@ require (
 	github.com/baiyubin/aliyun-sts-go-sdk v0.0.0-20180326062324-cfa1a18b161f // indirect
 	github.com/gin-contrib/sessions v0.0.3
 	github.com/gin-gonic/gin v1.6.3
+	github.com/go-redis/redis/v8 v8.8.2
 	github.com/gofrs/uuid v4.0.0+incompatible
 	github.com/gorilla/websocket v1.4.2
 	github.com/satori/go.uuid v1.2.0 // indirect
 	github.com/shirou/gopsutil/v3 v3.21.3
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.7.1
-	github.com/stretchr/testify v1.7.0 // indirect
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0

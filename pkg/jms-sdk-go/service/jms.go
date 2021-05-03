@@ -15,7 +15,12 @@ var AccessKeyUnauthorized = errors.New("access key unauthorized")
 
 var ConnectErr = errors.New("api connect err")
 
-const minTimeOut = time.Second * 30
+const (
+	minTimeOut = time.Second * 30
+
+	orgHeaderKey   = "X-JMS-ORG"
+	orgHeaderValue = "ROOT"
+)
 
 func NewAuthJMService(opts ...Option) (*JMService, error) {
 	opt := option{
@@ -35,6 +40,7 @@ func NewAuthJMService(opts ...Option) (*JMService, error) {
 	if opt.sign != nil {
 		httpClient.SetAuthSign(opt.sign)
 	}
+	httpClient.SetHeader(orgHeaderKey, orgHeaderValue)
 	return &JMService{authClient: httpClient}, nil
 }
 

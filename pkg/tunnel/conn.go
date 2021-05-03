@@ -1,6 +1,7 @@
 package tunnel
 
 import (
+	"net"
 	"sort"
 	"sync"
 	"time"
@@ -8,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 
+	"lion/pkg/config"
 	"lion/pkg/guacd"
 	"lion/pkg/logger"
 	"lion/pkg/session"
@@ -47,6 +49,11 @@ type Connection struct {
 	outputFilter *OutputStreamInterceptingFilter
 
 	inputFilter *InputStreamInterceptingFilter
+
+	done chan struct{}
+
+	traceLock sync.Mutex
+	traceMap  map[*guacd.Tunnel]struct{}
 }
 
 func (t *Connection) SendWsMessage(msg guacd.Instruction) error {
@@ -95,6 +102,7 @@ func (t *Connection) readTunnelInstruction() (*guacd.Instruction, error) {
 }
 
 func (t *Connection) Run(ctx *gin.Context) (err error) {
+	defer t.releaseMonitorTunnel()
 	// 需要发送 uuid 返回给 guacamole tunnel
 	err = t.SendWsMessage(guacd.NewInstruction(
 		INTERNALDATAOPCODE, t.guacdTunnel.UUID))
@@ -148,8 +156,8 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 
 				switch ret.Opcode {
 				case guacd.InstructionClientSync,
-					 guacd.InstructionClientNop,
-					 guacd.InstructionStreamingAck:
+					guacd.InstructionClientNop,
+					guacd.InstructionStreamingAck:
 
 				case guacd.InstructionClientDisconnect:
 					logger.Errorf("Session[%s] receive web client disconnect opcode", t)
@@ -211,4 +219,48 @@ func (t *Connection) Terminate() {
 
 func (t *Connection) String() string {
 	return t.Sess.ID
+}
+
+func (t *Connection) CloneMonitorTunnel() (*guacd.Tunnel, error) {
+	info := guacd.NewClientInformation()
+	conf := guacd.NewConfiguration()
+	conf.ConnectionID = t.guacdTunnel.UUID
+	guacdAddr := net.JoinHostPort(config.GlobalConfig.GuaHost,
+		config.GlobalConfig.GuaPort)
+	monitorTunnel, err := guacd.NewTunnel(guacdAddr, conf, info)
+	if err != nil {
+		return nil, err
+	}
+	t.traceMonitorTunnel(monitorTunnel)
+	return monitorTunnel, err
+}
+
+func (t *Connection) traceMonitorTunnel(monitorTunnel *guacd.Tunnel) {
+	t.traceLock.Lock()
+	defer t.traceLock.Unlock()
+	if t.traceMap == nil {
+		t.traceMap = make(map[*guacd.Tunnel]struct{})
+	}
+	t.traceMap[monitorTunnel] = struct{}{}
+}
+
+func (t *Connection) releaseMonitorTunnel() {
+	t.traceLock.Lock()
+	defer t.traceLock.Unlock()
+	if t.traceMap == nil {
+		return
+	}
+	for tunneler := range t.traceMap {
+		_ = tunneler.Close()
+	}
+
+}
+
+func (t *Connection) unTraceMonitorTunnel(monitorTunnel *guacd.Tunnel) {
+	t.traceLock.Lock()
+	defer t.traceLock.Unlock()
+	if t.traceMap == nil {
+		return
+	}
+	delete(t.traceMap, monitorTunnel)
 }

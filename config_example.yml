@@ -22,3 +22,12 @@ BOOTSTRAP_TOKEN: <PleasgeChangeSameWithJumpserver>
 
 # Guacamole Server 端口号，默认4822
 # GUA_PORT: 4822
+
+# 会话共享使用的类型 [local, redis], 默认local
+# SHARE_ROOM_TYPE: local
+
+# Redis配置
+# REDIS_HOST: 127.0.0.1
+# REDIS_PORT: 6379
+# REDIS_PASSWORD:
+# REDIS_DB_ROOM:

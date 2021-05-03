@@ -31,6 +31,12 @@ type Config struct {
 	DisableAllUpDownload      bool   `mapstructure:"JUMPSERVER_DISABLE_ALL_UPLOAD_DOWNLOAD"`
 	EnableRemoteAppUpDownLoad bool   `mapstructure:"JUMPSERVER_REMOTE_APP_UPLOAD_DOWNLOAD_ENABLE"`
 	EnableRemoteAPPCopyPaste  bool   `mapstructure:"JUMPSERVER_REMOTE_APP_COPY_PASTE_ENABLE"`
+
+	ShareRoomType string `mapstructure:"SHARE_ROOM_TYPE"`
+	RedisHost     string `mapstructure:"REDIS_HOST"`
+	RedisPort     int    `mapstructure:"REDIS_PORT"`
+	RedisPassword string `mapstructure:"REDIS_PASSWORD"`
+	RedisDBIndex  int    `mapstructure:"REDIS_DB_ROOM"`
 }
 
 func Setup(configPath string) {

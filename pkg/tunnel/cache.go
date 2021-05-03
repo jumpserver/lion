@@ -3,62 +3,34 @@ package tunnel
 import (
 	"sync"
 
+	"lion/pkg/guacd"
 	"lion/pkg/session"
 )
 
-type GuaTunnelCache struct {
-	sync.Mutex
-	Tunnels map[string]*Connection
+type Tunneler interface {
+	WriteAndFlush(p []byte) (int, error)
+	ReadInstruction() (guacd.Instruction, error)
+	Close() error
 }
 
-func (g *GuaTunnelCache) Add(t *Connection) {
-	g.Lock()
-	defer g.Unlock()
-	g.Tunnels[t.guacdTunnel.UUID] = t
+type GuaTunnelCache interface {
+	Add(*Connection)
+	Delete(*Connection)
+	Get(string) *Connection
+	RangeActiveSessionIds() []string
+	RangeActiveUserIds() map[string]struct{}
+	GetBySessionId(sid string) *Connection
+	GetMonitorTunnelerBySessionId(sid string) Tunneler
+	RemoveMonitorTunneler(sid string, monitorTunnel Tunneler)
 }
 
-func (g *GuaTunnelCache) Delete(t *Connection) {
-	g.Lock()
-	defer g.Unlock()
-	delete(g.Tunnels, t.guacdTunnel.UUID)
-}
+var (
+	_ GuaTunnelCache = (*GuaTunnelLocalCache)(nil)
+	_ GuaTunnelCache = (*GuaTunnelRedisCache)(nil)
+)
 
-func (g *GuaTunnelCache) Get(tid string) *Connection {
-	g.Lock()
-	defer g.Unlock()
-	return g.Tunnels[tid]
-}
-
-func (g *GuaTunnelCache) Range() []string {
-	g.Lock()
-	ret := make([]string, 0, len(g.Tunnels))
-	for i := range g.Tunnels {
-		ret = append(ret, g.Tunnels[i].Sess.ID)
-	}
-	g.Unlock()
-	return ret
-}
-
-func (g *GuaTunnelCache) RangeUserIds() map[string]struct{} {
-	g.Lock()
-	ret := make(map[string]struct{})
-	for i := range g.Tunnels {
-		currentUser := g.Tunnels[i].Sess.User
-		ret[currentUser.ID] = struct{}{}
-	}
-	g.Unlock()
-	return ret
-}
-
-func (g *GuaTunnelCache) GetBySessionId(sid string) *Connection {
-	g.Lock()
-	defer g.Unlock()
-	for i := range g.Tunnels {
-		if sid == g.Tunnels[i].Sess.ID {
-			return g.Tunnels[i]
-		}
-	}
-	return nil
+type GuaTunnelCacheManager struct {
+	GuaTunnelCache
 }
 
 type SessionCache struct {

@@ -86,9 +86,9 @@ func (filter *InputStreamInterceptingFilter) addInputStream(stream *InputStreamR
 // 上传文件的对象
 type InputStreamResource struct {
 	streamIndex string
-	mediaType   string // application/octet-stream
-	reader      io.ReadCloser
-	done        chan struct{}
+	//mediaType   string // application/octet-stream
+	reader io.ReadCloser
+	done   chan struct{}
 
 	err error
 }

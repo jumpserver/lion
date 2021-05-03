@@ -10,6 +10,7 @@ import (
 	"net/http/pprof"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -58,8 +59,8 @@ func main() {
 	jmsService := MustJMService()
 	bootstrap(jmsService)
 	tunnelService := tunnel.GuacamoleTunnelServer{
-		Cache: &tunnel.GuaTunnelCache{
-			Tunnels: make(map[string]*tunnel.Connection),
+		Cache: &tunnel.GuaTunnelCacheManager{
+			GuaTunnelCache: NewGuaTunnelCache(),
 		},
 		SessCache: &tunnel.SessionCache{
 			Sessions: make(map[string]*session.TunnelSession),
@@ -76,12 +77,26 @@ func main() {
 	logger.Fatal(http.ListenAndServe(addr, eng))
 }
 
-func runHeartTask(jmsService *service.JMService, tunnelCache *tunnel.GuaTunnelCache) {
+func NewGuaTunnelCache() tunnel.GuaTunnelCache {
+	switch strings.ToLower(config.GlobalConfig.ShareRoomType) {
+	case config.ShareTypeRedis:
+		return tunnel.NewGuaTunnelRedisCache(tunnel.Config{
+			Addr: net.JoinHostPort(config.GlobalConfig.RedisHost,
+				strconv.Itoa(config.GlobalConfig.RedisPort)),
+			Password: config.GlobalConfig.RedisPassword,
+			DBIndex:  config.GlobalConfig.RedisDBIndex,
+		})
+	default:
+		return tunnel.NewLocalTunnelLocalCache()
+	}
+}
+
+func runHeartTask(jmsService *service.JMService, tunnelCache *tunnel.GuaTunnelCacheManager) {
 	// default 30s
 	beatTicker := time.NewTicker(time.Second * 30)
 	defer beatTicker.Stop()
 	for range beatTicker.C {
-		sids := tunnelCache.Range()
+		sids := tunnelCache.RangeActiveSessionIds()
 		tasks, err := jmsService.TerminalHeartBeat(sids)
 		if err != nil {
 			logger.Error(err)
@@ -103,7 +118,7 @@ func runHeartTask(jmsService *service.JMService, tunnelCache *tunnel.GuaTunnelCa
 	}
 }
 
-func runCleanDriverDisk(tunnelCache *tunnel.GuaTunnelCache) {
+func runCleanDriverDisk(tunnelCache *tunnel.GuaTunnelCacheManager) {
 	// default 1 hour
 	cleanDriveTicker := time.NewTicker(time.Hour)
 	defer cleanDriveTicker.Stop()
@@ -114,7 +129,7 @@ func runCleanDriverDisk(tunnelCache *tunnel.GuaTunnelCache) {
 			logger.Error(err)
 			continue
 		}
-		currentOnlineUserIds := tunnelCache.RangeUserIds()
+		currentOnlineUserIds := tunnelCache.RangeActiveUserIds()
 		for i := range folders {
 			if _, ok := currentOnlineUserIds[folders[i].Name()]; ok {
 				continue
@@ -234,6 +249,7 @@ func uploadRemainReplay(jmsService *service.JMService, remainFiles map[string]st
 			logger.Errorf("Upload replay failed: %s", err)
 			continue
 		}
+		logger.Infof("Upload remain session replay %s success", absGzPath)
 		// 上传成功删除文件
 		_ = os.Remove(absGzPath)
 		if err = jmsService.FinishReply(sid); err != nil {

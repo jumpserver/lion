@@ -8,3 +8,8 @@ const (
 	GinSessionName = "session-Lion"
 	GinSessionKey  = "SESSION"
 )
+
+const (
+	ShareTypeRedis = "redis"
+	ShareTypeLocal = "local"
+)
