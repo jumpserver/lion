@@ -76,28 +76,34 @@ func (s *Server) Create(ctx *gin.Context, user *model.User, targetType, targetId
 		if !permission.EnableConnect() {
 			return TunnelSession{}, fmt.Errorf("%w: connect deny", ErrPermissionDeny)
 		}
+		permInfo, err := s.JmsService.ValidateAssetConnectPermission(user.ID, asset.ID, sysUser.ID)
+		if err != nil {
+			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
+		}
 		sess, err = s.CreateRDPAndVNCSession(user, &asset, &sysUser)
 		if err != nil {
 			return TunnelSession{}, err
 		}
 		sess.Permission = &permission
+		sess.ExpireInfo = &permInfo
 	case TypeRemoteApp:
 		remoteApp, err := s.JmsService.GetRemoteApp(targetId)
 		if err != nil {
 			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
 		}
 		// 校验权限
-		enableConnect, err := s.JmsService.ValidateRemoteApp(user.ID, remoteApp.ID, sysUser.ID)
+		permInfo, err := s.JmsService.ValidateRemoteAppPermission(user.ID, remoteApp.ID, sysUser.ID)
 		if err != nil {
 			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
 		}
-		if !enableConnect {
+		if !permInfo.HasPermission {
 			return TunnelSession{}, fmt.Errorf("%w: connect deny", ErrPermissionDeny)
 		}
 		sess, err = s.CreateRemoteSession(user, &remoteApp, &sysUser)
 		if err != nil {
 			return TunnelSession{}, err
 		}
+		sess.ExpireInfo = &permInfo
 	default:
 		return TunnelSession{}, fmt.Errorf("%w: %s", ErrUnSupportedType, targetType)
 	}

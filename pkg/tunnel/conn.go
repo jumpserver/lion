@@ -204,6 +204,13 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 					t, maxIndexTime)
 				return nil
 			}
+			if t.IsPermissionExpired(detectTime) {
+				errInstruction := guacd.NewInstruction(
+					guacd.InstructionServerError, "Permission has expired", "1012")
+				_ = t.SendWsMessage(errInstruction)
+				logger.Errorf("Session[%s] permission has expired", t)
+				return nil
+			}
 		}
 	}
 
@@ -219,6 +226,10 @@ func (t *Connection) Terminate() {
 
 func (t *Connection) String() string {
 	return t.Sess.ID
+}
+
+func (t *Connection) IsPermissionExpired(now time.Time) bool {
+	return t.Sess.ExpireInfo.IsExpired(now)
 }
 
 func (t *Connection) CloneMonitorTunnel() (*guacd.Tunnel, error) {

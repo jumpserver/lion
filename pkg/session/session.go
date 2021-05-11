@@ -19,6 +19,7 @@ type TunnelSession struct {
 	Permission     *model.Permission         `json:"permission"`
 	Domain         *model.Domain             `json:"-"`
 	TerminalConfig *model.TerminalConfig     `json:"-"`
+	ExpireInfo     *model.ExpireInfo         `json:"expire_info"`
 
 	ConnectedCallback        func() error          `json:"-"`
 	ConnectedSuccessCallback func() error          `json:"-"`
@@ -31,7 +32,6 @@ const (
 	vnc = "vnc"
 	rdp = "rdp"
 )
-
 
 func (s TunnelSession) GuaConfiguration() guacd.Configuration {
 	switch strings.ToLower(s.SystemUser.Protocol) {

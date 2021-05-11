@@ -95,7 +95,7 @@ func TestJMService_ValidateRemoteApp(t *testing.T) {
 	remoteId := "9f2313df-bd54-4428-9708-b9e54eba735a"
 	sysId := "d9341b5a-426c-4d3a-8a10-2c23a7e06997"
 	userId := "68f1648b-5c6c-4f47-97a1-c47c192458e3"
-	ok, err := jms.ValidateRemoteApp(userId, remoteId, sysId)
-	t.Logf("%+v,%+v", ok, err)
+	info, err := jms.ValidateRemoteAppPermission(userId, remoteId, sysId)
+	t.Logf("%+v,%+v", info, err)
 
 }
