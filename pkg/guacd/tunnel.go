@@ -180,7 +180,7 @@ func (t *Tunnel) ReadInstruction() (instruction Instruction, err error) {
 		if retInstruction, err := ParseInstructionString(ret); err == nil {
 			return retInstruction, nil
 		} else {
-			log.Println(err.Error())
+			log.Printf("%s %v\n", ret, err.Error())
 		}
 	}
 }

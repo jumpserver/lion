@@ -40,11 +40,11 @@ func (m *MonitorCon) writeTunnelMessage(p []byte) (int, error) {
 	return m.guacdTunnel.WriteAndFlush(p)
 }
 func (m *MonitorCon) readTunnelInstruction() (*guacd.Instruction, error) {
-		instruction, err := m.guacdTunnel.ReadInstruction()
-		if err != nil {
-			return nil, err
-		}
-		return &instruction, nil
+	instruction, err := m.guacdTunnel.ReadInstruction()
+	if err != nil {
+		return nil, err
+	}
+	return &instruction, nil
 }
 
 func (m *MonitorCon) Run(ctx context.Context) (err error) {
@@ -91,6 +91,7 @@ func (m *MonitorCon) Run(ctx context.Context) (err error) {
 				break
 			}
 		}
+		_ = t.guacdTunnel.Close()
 	}(m)
 
 	for {
@@ -98,8 +99,6 @@ func (m *MonitorCon) Run(ctx context.Context) (err error) {
 		case err = <-exit:
 			return err
 		case <-ctx.Done():
-			_ = m.ws.Close()
-			_ = m.guacdTunnel.Close()
 			return nil
 		}
 	}
