@@ -22,6 +22,7 @@ func TestValidateInstructionString(t *testing.T) {
 			"12.disable-copy,13.disable-paste,15.wol-send-packet,12.wol-mac-addr,18.wol-broadcast-addr,13.wol-wait-time;",
 		"5.audio,1.1,31.audio/L16;",
 		"5e.audio,1.1,31.audio/L16;",
+		";",
 	}
 
 	for i := range tests {

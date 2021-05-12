@@ -43,13 +43,17 @@ const (
 )
 
 var (
-	ErrInstructionMissDot    = errors.New("instruction without dot")
-	ErrInstructionBadDigit   = errors.New("instruction with bad digit")
-	ErrInstructionBadContent = errors.New("instruction with bad Content")
+	ErrInstructionMissSemicolon = errors.New("instruction without semicolon")
+	ErrInstructionMissDot       = errors.New("instruction without dot")
+	ErrInstructionBadDigit      = errors.New("instruction with bad digit")
+	ErrInstructionBadContent    = errors.New("instruction with bad Content")
 )
 
 // raw 是以 `;` 为结束符的原生字符串
 func ParseInstructionString(raw string) (ret Instruction, err error) {
+	if !strings.HasSuffix(raw, semicolonDelimiter) {
+		return Instruction{}, fmt.Errorf("%w: %s", ErrInstructionMissSemicolon, raw)
+	}
 	raw = trimSuffixSemicolonDelimiter(raw)
 	rawRune := []rune(raw)
 	args := make([]string, 0, 1024)
@@ -81,6 +85,12 @@ func ParseInstructionString(raw string) (ret Instruction, err error) {
 		default:
 			i++
 		}
+		if i >= len(rawRune) {
+			return Instruction{}, fmt.Errorf("%w: %s", ErrInstructionBadContent, raw)
+		}
+	}
+	if len(args) < 1 {
+		return Instruction{}, fmt.Errorf("%w: no content", ErrInstructionBadContent)
 	}
 	return NewInstruction(args[0], args[1:]...), nil
 }

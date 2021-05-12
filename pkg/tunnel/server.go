@@ -347,28 +347,28 @@ func (g *GuacamoleTunnelServer) Monitor(ctx *gin.Context) {
 	userItem, ok := ctx.Get(config.GinCtxUserKey)
 	if !ok {
 		data := guacd.NewInstruction(
-			guacd.InstructionServerError, "no auth user", "504")
+			guacd.InstructionServerDisconnect, "no auth user", "504")
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(data.String()))
 		return
 	}
 	user := userItem.(*model.User)
 	if user.ID == "" {
 		data := guacd.NewInstruction(
-			guacd.InstructionServerError, "no auth user", "504")
+			guacd.InstructionServerDisconnect, "no auth user", "504")
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(data.String()))
 		return
 	}
 	sessionId, ok := ctx.GetQuery("SESSION_ID")
 	if !ok {
 		data := guacd.NewInstruction(
-			guacd.InstructionServerError, "no session id", "504")
+			guacd.InstructionServerDisconnect, "no session id", "504")
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(data.String()))
 		return
 	}
 	tunnelCon := g.Cache.GetMonitorTunnelerBySessionId(sessionId)
 	if tunnelCon == nil {
 		data := guacd.NewInstruction(
-			guacd.InstructionServerError, "no found tunnel", "504")
+			guacd.InstructionServerDisconnect, "no found tunnel", "504")
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(data.String()))
 		return
 	}
