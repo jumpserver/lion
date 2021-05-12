@@ -3,7 +3,7 @@ module.exports = {
   outputDir: 'lion',
   assetsDir: 'assets',
   devServer: {
-    port: 9528,
+    port: 9529,
     proxy: {
       '^/lion': {
         target: 'http://localhost:8081',
