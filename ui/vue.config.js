@@ -11,5 +11,7 @@ module.exports = {
         changeOrigin: true
       }
     }
+  },
+  chainWebpack(config) {
   }
 }

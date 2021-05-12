@@ -1,7 +1,5 @@
 <template>
-  <el-row>
-    <textarea class="clipboard" :value="value" @input="debounceInput" />
-  </el-row>
+  <el-input type="textarea" class="clipboard" :rows="10" :value="value" @input="debounceInput" />
 </template>
 
 <script>
@@ -26,20 +24,18 @@ export default {
 </script>
 
 <style scoped>
-
 .clipboard {
   position: relative;
-  border: 1px solid #AAA;
   -moz-border-radius: 0.25em;
   -webkit-border-radius: 0.25em;
   -khtml-border-radius: 0.25em;
   border-radius: 0.25em;
-  width: 100%;
-  height: 2in;
   white-space: pre;
   font-size: 1em;
   overflow: auto;
-  padding: 0.25em;
+  padding-left: 10px;
+  height: 100%;
+  width: calc(100% - 20px);
 }
 
 .clipboard div {

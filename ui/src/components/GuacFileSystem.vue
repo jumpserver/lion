@@ -1,5 +1,6 @@
 <template>
-  <div>
+  <div style="padding: 20px">
+    <span>{{ guacObject.name }}</span>
     <el-row :gutter="20">
       <el-col :span="6"><span @click="ChangeParentFolder">{{ currentFolder.streamName }} </span></el-col>
       <el-col :span="6" :offset="10">

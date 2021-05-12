@@ -24,30 +24,23 @@
       </el-submenu>
       <el-menu-item :disabled="menuDisable" index="2"><i class="el-icon-document-copy" />
         <span @click="toggleClipboard">剪切板</span>
-        <el-drawer direction="ltr" :visible.sync="clipboardDrawer" @close="onCloseDrawer">
-          <el-row>
-            <el-col :span="12" :offset="8">
-              <div class="grid-content bg-purple">
-                <GuacClipboard :value="clipboardText" @ClipboardChange="onClipboardChange" />
-              </div>
-            </el-col>
-          </el-row>
+        <el-drawer direction="ltr" title="剪切板" :visible.sync="clipboardDrawer" @close="onCloseDrawer">
+          <div class="grid-content bg-purple" style="width: 100%">
+            <GuacClipboard :value="clipboardText" @ClipboardChange="onClipboardChange" />
+          </div>
         </el-drawer>
       </el-menu-item>
       <el-menu-item v-if="currentFilesystem.object" :disabled="menuDisable" index="3"><i class="el-icon-folder" />
         <span @click="toggleFile">文件管理</span>
-        <el-drawer direction="ltr" :visible.sync="fileDrawer" @close="onCloseDrawer">
-          <el-row>
-            <div>{{ currentFilesystem.name }}</div>
-            <GuacFileSystem
-              ref="filesystem"
-              :guac-object="currentFilesystem.object"
-              :current-folder="currentFolder"
-              @ChangeFolder="onChangeFolder"
-              @DownLoadReceived="onDownloadFile"
-              @UploadFile="onUploadFiles"
-            />
-          </el-row>
+        <el-drawer direction="ltr" title="文件管理" :visible.sync="fileDrawer" class="fileUploaderDraw" @close="onCloseDrawer">
+          <GuacFileSystem
+            ref="filesystem"
+            :guac-object="currentFilesystem.object"
+            :current-folder="currentFolder"
+            @ChangeFolder="onChangeFolder"
+            @DownLoadReceived="onDownloadFile"
+            @UploadFile="onUploadFiles"
+          />
         </el-drawer>
       </el-menu-item>
     </el-menu>
@@ -67,7 +60,6 @@
       </div>
     </el-dialog>
   </el-container>
-
 </template>
 
 <script>
@@ -781,7 +773,7 @@ export default {
 }
 </script>
 
-<style scoped>
+<style lang="scss" scoped>
 .el-container {
   margin: 0 auto;
 }
@@ -797,5 +789,12 @@ export default {
 
 .el-icon-arrow-down {
   font-size: 12px;
+}
+
+.fileUploaderDraw {
+  /deep/ .el-drawer__header {
+    line-height: 30px;
+    margin-bottom: 0;
+  }
 }
 </style>

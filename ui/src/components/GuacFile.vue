@@ -1,10 +1,9 @@
 <template>
-  <el-row>
+  <el-row style="height: 30px">
     <i v-if="fileItem.type==='NORMAL'" class="el-icon-document" />
     <i v-else class="el-icon-folder" />
     <span @click="clickFile"> {{ fileItem.name }}</span>
   </el-row>
-
 </template>
 
 <script>
