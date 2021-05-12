@@ -20,6 +20,8 @@ PLATFORM_LIST = \
 WINDOWS_ARCH_LIST = \
 	windows-amd64
 
+all-arch: $(PLATFORM_LIST) $(WINDOWS_ARCH_LIST)
+
 darwin-amd64:
 	GOARCH=amd64 GOOS=darwin $(GOBUILD) -o $(BUILDDIR)/$(NAME)-$@
 
@@ -32,8 +34,6 @@ linux-arm64:
 windows-amd64:
 	GOARCH=amd64 GOOS=windows $(GOBUILD) -o $(BUILDDIR)/$(NAME)-$@.exe
 
-
-all-arch: $(PLATFORM_LIST) $(WINDOWS_ARCH_LIST)
 
 clean:
 	rm -rf $(BUILDDIR)
