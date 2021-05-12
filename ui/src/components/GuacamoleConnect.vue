@@ -219,9 +219,12 @@ export default {
         this.loadingText = 'Upload Files'
         this.loading = true
         this.handleFiles(files[i], this.currentFilesystem.object, streamName).then(() => {
-          this.loading = false
           this.loadingText = ''
           this.$refs.filesystem.refresh()
+        }).catch(status => {
+          this.$warning(status.message)
+        }).finally(() => {
+          this.loading = false
         })
       }
     },
@@ -478,7 +481,9 @@ export default {
     handleMouseState(mouseState) {
       // Do not attempt to handle mouse state changes if the client
       // or display are not yet available
-      if (!this.client || !this.display) { return }
+      if (!this.client || !this.display) {
+        return
+      }
 
       // Send mouse state, show cursor if necessary
       this.display.showCursor(!this.localCursor)
@@ -610,7 +615,9 @@ export default {
       e.preventDefault()
       const dt = e.dataTransfer
       const files = dt.files
-      this.handleFiles(files[0])
+      this.handleFiles(files[0]).catch(status => {
+        this.$warning(status.message)
+      })
     },
     handleFiles: function(file, object, streamName) {
       const client = this.client
@@ -631,8 +638,7 @@ export default {
             reject(status)
             return
           }
-          const uploadToStream = function uploadStream(tunnel, stream, file,
-            progressCallback) {
+          const uploadToStream = function uploadStream(tunnel, stream, file, progressCallback) {
             // Build upload URL
             const url = BaseURL + apiPrefix +
                 '/tunnels/' + encodeURIComponent(tunnel) +
