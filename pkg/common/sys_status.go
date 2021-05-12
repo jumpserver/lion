@@ -18,6 +18,9 @@ func CpuLoad1Usage() float64 {
 		avgLoadStat *load.AvgStat
 	)
 	cpuCount, err = cpu.Counts(true)
+	if err != nil {
+		return -1
+	}
 	avgLoadStat, err = load.Avg()
 	if err != nil {
 		return -1
