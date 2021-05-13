@@ -1,7 +1,7 @@
 <template>
   <el-drawer direction="ltr" title="剪切板" :visible="visible" @update:visible="updateVisible" @close="onCloseDrawer">
     <div class="grid-content bg-purple" style="width: 100%">
-      <el-input v-model="value" type="textarea" class="clipboard" :rows="10" />
+      <el-input v-model="clipboardText" type="textarea" class="clipboard" :rows="10" />
     </div>
   </el-drawer>
 </template>
@@ -27,19 +27,28 @@ export default {
   },
   data() {
     return {
-      value: ''
+      clipboardText: ''
     }
   },
   watch: {
-    value(newValue) {
-      this.sendClipboardToRemote(newValue)
+    clipboardText(newValue) {
+      this.sendDataToRemoteClipboard(newValue)
+      this.setLocalClipboard(newValue)
     }
   },
   methods: {
+    sendClipboardToRemote() {
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        navigator.clipboard.readText().then((text) => {
+          this.sendDataToRemoteClipboard(text)
+          this.clipboardText = text
+        })
+      }
+    },
     updateVisible(value) {
       this.$emit('update:visible', value)
     },
-    sendClipboardToRemote(value) {
+    sendDataToRemoteClipboard(value) {
       const data = {
         type: 'text/plain',
         data: value
@@ -47,8 +56,7 @@ export default {
       if (!this.client) {
         return
       }
-      this.clipboardText = data
-      this.setLocalClipboard(data)
+      this.clipboardText = value
       let writer
       // Create stream with proper mimetype
       const stream = this.client.createClipboardStream(data.type)

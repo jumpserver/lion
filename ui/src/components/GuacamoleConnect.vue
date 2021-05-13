@@ -45,7 +45,6 @@
     <GuacClipboard
       v-if="clipboardInited"
       ref="clipboard"
-      :value="clipboardText"
       :visible.sync="clipboardDrawer"
       :client="client"
       :tunnel="tunnel"
@@ -98,7 +97,6 @@ export default {
       tunnel: null,
       displayWidth: 0,
       displayHeight: 0,
-      clipboardText: '',
       connected: false,
       clipboardData: {
         type: 'text/plain',
@@ -442,11 +440,7 @@ export default {
 
     onWindowFocus() {
       console.log('onWindowFocus ')
-      if (navigator.clipboard && navigator.clipboard.readText && this.clientState === 'Connected') {
-        navigator.clipboard.readText().then((text) => {
-          this.$refs.clipboard.sendClipboardToRemote(text)
-        })
-      }
+      this.$refs.clipboard.sendClipboardToRemote()
     },
 
     onsync: function(timestamp) {
