@@ -29,9 +29,9 @@ export default {
   methods: {
     clickFile() {
       if (this.fileItem.type === FileType.NORMAL) {
-        this.$emit('DownLoadFile', this.fileItem)
+        this.$emit('downloadFile', this.fileItem)
       } else {
-        this.$emit('ChangeFolder', this.fileItem)
+        this.$emit('changeFolder', this.fileItem)
       }
     }
   }

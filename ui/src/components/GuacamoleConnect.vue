@@ -7,7 +7,6 @@
         </div>
       </el-row>
     </el-main>
-
     <div />
     <el-menu
       :collapse="isMenuCollapse"
@@ -15,33 +14,17 @@
     >
       <el-submenu :disabled="menuDisable" index="1">
         <template slot="title">
-          <i class="el-icon-position" />
-          <span>快捷键</span>
+          <i class="el-icon-position" /><span>快捷键</span>
         </template>
         <el-menu-item v-for="(item, i) in combinationKeys" :key="i" :index="menuIndex('1-',i)" @click="handleKeys(item.keys)">
           {{ item.name }}
         </el-menu-item>
       </el-submenu>
-      <el-menu-item :disabled="menuDisable" index="2"><i class="el-icon-document-copy" />
-        <span @click="toggleClipboard">剪切板</span>
-        <el-drawer direction="ltr" title="剪切板" :visible.sync="clipboardDrawer" @close="onCloseDrawer">
-          <div class="grid-content bg-purple" style="width: 100%">
-            <GuacClipboard :value="clipboardText" @ClipboardChange="onClipboardChange" />
-          </div>
-        </el-drawer>
+      <el-menu-item :disabled="menuDisable" index="2">
+        <i class="el-icon-document-copy" /><span @click="toggleClipboard">剪切板</span>
       </el-menu-item>
-      <el-menu-item v-if="currentFilesystem.object" :disabled="menuDisable" index="3"><i class="el-icon-folder" />
-        <span @click="toggleFile">文件管理</span>
-        <el-drawer direction="ltr" title="文件管理" :visible.sync="fileDrawer" class="fileUploaderDraw" @close="onCloseDrawer">
-          <GuacFileSystem
-            ref="filesystem"
-            :guac-object="currentFilesystem.object"
-            :current-folder="currentFolder"
-            @ChangeFolder="onChangeFolder"
-            @DownLoadReceived="onDownloadFile"
-            @UploadFile="onUploadFiles"
-          />
-        </el-drawer>
+      <el-menu-item :disabled="menuDisable" index="3" @click="toggleFile">
+        <i class="el-icon-folder" /><span>文件管理</span>
       </el-menu-item>
     </el-menu>
     <el-dialog title="认证参数" :visible="dialogFormVisible" @close="cancelSubmitParams">
@@ -59,16 +42,31 @@
         <el-button type="primary" @click="submitParams">确 定</el-button>
       </div>
     </el-dialog>
+    <el-drawer direction="ltr" title="剪切板" :visible.sync="clipboardDrawer" @close="onCloseDrawer">
+      <div class="grid-content bg-purple" style="width: 100%">
+        <GuacClipboard :value="clipboardText" @ClipboardChange="onClipboardChange" />
+      </div>
+    </el-drawer>
+    <GuacFileSystem
+      v-if="!loading"
+      ref="fileSystem"
+      :client="client"
+      :tunnel="tunnel"
+      :show.sync="fileDrawer"
+      :current-filesystem="currentFilesystem"
+      @downloadReceived="onDownloadFile"
+      @closeDrawer="onCloseDrawer"
+    />
   </el-container>
 </template>
 
 <script>
 import Guacamole from 'guacamole-common-js'
-import { getSupportedMimetypes } from '../utils/image'
-import { getSupportedGuacAudios } from '../utils/audios'
-import { getSupportedGuacVideos } from '../utils/video'
-import { BaseURL, getCurrentConnectParams, sanitizeFilename } from '../utils/common'
-import { createSession } from '../api/session'
+import { getSupportedMimetypes } from '@/utils/image'
+import { getSupportedGuacAudios } from '@/utils/audios'
+import { getSupportedGuacVideos } from '@/utils/video'
+import { BaseURL, getCurrentConnectParams, sanitizeFilename } from '@/utils/common'
+import { createSession } from '@/api/session'
 import GuacClipboard from './GuacClipboard'
 import GuacFileSystem from './GuacFileSystem'
 
@@ -89,31 +87,25 @@ export default {
       loading: true,
       session: null,
       tunnelState: '',
-      loadingText: '连中。。。',
-      clientState: '连中。。。',
+      loadingText: '连接中。。。',
+      clientState: '连接中。。。',
       localCursor: false,
       client: null,
       tunnel: null,
       displayWidth: 0,
       displayHeight: 0,
       clipboardText: '',
+      connected: false,
       clipboardData: {
         type: 'text/plain',
         data: ''
       },
-      sink: null,
-      keyboard: null,
       currentFilesystem: {
         object: null,
         name: ''
       },
-      currentFolder: {
-        mimetype: Guacamole.Object.STREAM_INDEX_MIMETYPE,
-        streamName: Guacamole.Object.ROOT_STREAM,
-        type: 'DIRECTORY',
-        files: {},
-        parent: null
-      },
+      sink: null,
+      keyboard: null,
       combinationKeys: [
         {
           keys: ['65507', '65513', '65535'],
@@ -157,6 +149,11 @@ export default {
       return !(this.clientState === 'Connected') || !(this.tunnelState === 'OPEN')
     }
   },
+  watch: {
+    fileDrawer(newValue, oldValue) {
+      console.log(`File drawer change: ${oldValue} => ${newValue}`)
+    }
+  },
   mounted: function() {
     const result = getCurrentConnectParams()
     this.apiPrefix = result['api']
@@ -175,6 +172,13 @@ export default {
   methods: {
     checkPasswordInput(name) {
       return name.match('password')
+    },
+    toggleFile(e) {
+      if (this.menuDisable || !this.currentFilesystem.object) {
+        return
+      }
+      console.log('Toggle file to: ', !this.fileDrawer, e)
+      this.fileDrawer = !this.fileDrawer
     },
     submitParams() {
       if (this.client) {
@@ -210,30 +214,6 @@ export default {
       return index + num
     },
 
-    onUploadFiles(files) {
-      for (let i = 0; i < files.length; i++) {
-        let streamName
-        if (this.currentFolder) {
-          streamName = this.currentFolder.streamName + '/' + files[i].name
-        }
-        this.loadingText = 'Upload Files'
-        this.loading = true
-        this.handleFiles(files[i], this.currentFilesystem.object, streamName).then(() => {
-          this.loading = false
-          this.loadingText = ''
-          this.$refs.filesystem.refresh()
-        })
-      }
-    },
-
-    onDownloadFile(stream, mimetype, filename) {
-      this.clientFileReceived(stream, mimetype, filename)
-    },
-
-    onChangeFolder(fileItem) {
-      this.currentFolder = fileItem
-    },
-
     onClipboardChange(data) {
       console.log('ClipboardChange emit ', data)
       this.clipboardText = data
@@ -251,12 +231,6 @@ export default {
       this.clipboardDrawer = !this.clipboardDrawer
     },
 
-    toggleFile() {
-      if (this.menuDisable || !this.currentFilesystem.object) {
-        return
-      }
-      this.fileDrawer = !this.fileDrawer
-    },
     getConnectString(sessionId) {
       // Calculate optimal width/height for display
       const pixel_density = window.devicePixelRatio || 1
@@ -488,7 +462,7 @@ export default {
     onmousedown(mouseState) {
       document.body.focus()
       this.handleMouseState(mouseState)
-      this.isMenuCollapse = true
+      // this.isMenuCollapse = true
     },
 
     onmouseout(mouseState) {
@@ -528,23 +502,26 @@ export default {
 
     onWindowFocus() {
       console.log('onWindowFocus   ')
-      if (navigator.clipboard && navigator.clipboard.readText && this.clientState === 'Connected') {
-        navigator.clipboard.readText().then((text) => {
-          this.clipboardText = text
-          this.sendClientClipboard({
-            'data': text,
-            'type': 'text/plain'
-          })
-        })
-      }
+      return
+      // if (navigator.clipboard && navigator.clipboard.readText && this.clientState === 'Connected') {
+      //   navigator.clipboard.readText().then((text) => {
+      //     this.clipboardText = text
+      //     this.sendClientClipboard({
+      //       'data': text,
+      //       'type': 'text/plain'
+      //     })
+      //   })
+      // }
     },
-
     fileSystemReceived(object, name) {
       console.log('fileSystemReceived ', object, name)
       this.currentFilesystem.object = object
       this.currentFilesystem.name = name
     },
-
+    onDownloadFile(stream, mimetype, filename) {
+      console.log('On download file')
+      this.clientFileReceived(stream, mimetype, filename)
+    },
     clientFileReceived(stream, mimetype, filename) {
       console.log('clientFileReceived, ', this.tunnel.uuid, stream, mimetype, filename)
       // Build download URL
@@ -584,10 +561,8 @@ export default {
             document.body.removeChild(iframe)
           }
         }, 500)
-        this.loading = false
         this.loadingText = ''
       }.bind(this)
-      this.loading = true
       this.loadingText = 'downloading file'
       // Begin download
       iframe.src = url
@@ -597,96 +572,20 @@ export default {
     onsync: function(timestamp) {
       // console.log('onsync==> ', timestamp)
     },
-    filedragenter: function(e) {
+    fileDragEnter: function(e) {
       e.stopPropagation()
       e.preventDefault()
     },
-    filedragover: function(e) {
+    fileDragOver: function(e) {
       e.stopPropagation()
       e.preventDefault()
     },
-    filedrop: function(e) {
+    fileDrop: function(e) {
       e.stopPropagation()
       e.preventDefault()
       const dt = e.dataTransfer
       const files = dt.files
-      this.handleFiles(files[0])
-    },
-    handleFiles: function(file, object, streamName) {
-      const client = this.client
-      const tunnel = this.tunnel
-      let stream
-      if (!object) {
-        stream = client.createFileStream(file.type, file.name)
-      } else {
-        stream = object.createOutputStream(file.type, streamName)
-      }
-      const apiPrefix = this.apiPrefix
-      return new Promise(function(resolve, reject) {
-        // Upload file once stream is acknowledged
-        stream.onack = function beginUpload(status) {
-          // Notify of any errors from the Guacamole server
-          if (status.isError()) {
-            console.log(status.code, status)
-            reject(status)
-            return
-          }
-          const uploadToStream = function uploadStream(tunnel, stream, file,
-            progressCallback) {
-            // Build upload URL
-            const url = BaseURL + apiPrefix +
-                '/tunnels/' + encodeURIComponent(tunnel) +
-                '/streams/' + encodeURIComponent(stream.index) +
-                '/' + encodeURIComponent(sanitizeFilename(file.name))
-            const xhr = new XMLHttpRequest()
-            xhr.withCredentials = true
-            // Invoke provided callback if upload tracking is supported
-            if (progressCallback && xhr.upload) {
-              xhr.upload.addEventListener('progress', function updateProgress(e) {
-                progressCallback(e)
-              })
-            }
-            // Resolve/reject promise once upload has stopped
-            xhr.onreadystatechange = function uploadStatusChanged() {
-              // Ignore state changes prior to completion
-              if (xhr.readyState !== 4) { return }
-
-              // Resolve if HTTP status code indicates success
-              if (xhr.status >= 200 && xhr.status < 300) {
-                console.log('success upload ')
-                resolve()
-                // eslint-disable-next-line brace-style
-              }
-              // Parse and reject with resulting JSON error
-              // eslint-disable-next-line brace-style
-              else if (xhr.getResponseHeader('Content-Type') === 'application/json') { console.log('failed upload ', xhr.responseText) }
-              // Warn of lack of permission of a proxy rejects the upload
-              else if (xhr.status >= 400 && xhr.status < 500) {
-                console.log('failed upload ', xhr.status)
-                reject(xhr.status)
-                // eslint-disable-next-line brace-style
-              }
-              // Assume internal error for all other cases
-              else {
-                console.log('failed upload ', xhr.status)
-                reject(xhr.status)
-              }
-            }
-            // Perform upload
-            xhr.open('POST', url, true)
-            const fd = new FormData()
-            fd.append('file', file)
-            xhr.send(fd)
-          }
-          // Begin upload
-          uploadToStream(tunnel.uuid, stream, file, function uploadContinuing(event) {
-            console.log('process upload ', event)
-          })
-
-          // Ignore all further acks
-          stream.onack = null
-        }
-      })
+      this.$refs.fileSystem.handleFiles(files[0])
     },
 
     handleKeys(keys) {
@@ -703,15 +602,15 @@ export default {
 
     connectGuacamole(connectionParams, wsURL) {
       const dropbox = document.getElementById('display')
-      dropbox.addEventListener('dragenter', this.filedragenter, false)
-      dropbox.addEventListener('dragover', this.filedragover, false)
-      dropbox.addEventListener('drop', this.filedrop, false)
+      dropbox.addEventListener('dragenter', this.fileDragEnter, false)
+      dropbox.addEventListener('dragover', this.fileDragOver, false)
+      dropbox.addEventListener('drop', this.fileDrop, false)
 
-      var display = document.getElementById('display')
-      var tunnel = new Guacamole.WebSocketTunnel(wsURL)
-      var client = new Guacamole.Client(tunnel)
+      const display = document.getElementById('display')
+      const tunnel = new Guacamole.WebSocketTunnel(wsURL)
+      const client = new Guacamole.Client(tunnel)
       tunnel.onerror = function tunnelError(status) {
-        console.log('tunnelError ', status)
+        this.$message.error('WebSocket 连接失败，请检查网络')
       }
       tunnel.onuuid = function tunnelAssignedUUID(uuid) {
         console.log('tunnelAssignedUUID ', uuid)
@@ -789,12 +688,5 @@ export default {
 
 .el-icon-arrow-down {
   font-size: 12px;
-}
-
-.fileUploaderDraw {
-  /deep/ .el-drawer__header {
-    line-height: 30px;
-    margin-bottom: 0;
-  }
 }
 </style>

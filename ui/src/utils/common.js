@@ -23,6 +23,7 @@ export const OriginSite = streamOrigin
 
 export const BaseAPIURL = streamOrigin + '/lion/api'
 export const BaseURL = streamOrigin + '/lion'
+export const apiPrefix = '/api'
 
 const tokenBaseAPI = '/token'
 const sessionBaseAPI = '/api'
