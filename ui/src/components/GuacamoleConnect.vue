@@ -23,7 +23,7 @@
       <el-menu-item :disabled="menuDisable" index="2">
         <i class="el-icon-document-copy" /><span @click="toggleClipboard">剪切板</span>
       </el-menu-item>
-      <el-menu-item :disabled="menuDisable" index="3" @click="toggleFile">
+      <el-menu-item :disabled="menuDisable" index="3" @click="toggleFileSystem">
         <i class="el-icon-folder" /><span>文件管理</span>
       </el-menu-item>
     </el-menu>
@@ -42,19 +42,21 @@
         <el-button type="primary" @click="submitParams">确 定</el-button>
       </div>
     </el-dialog>
-    <el-drawer direction="ltr" title="剪切板" :visible.sync="clipboardDrawer" @close="onCloseDrawer">
-      <div class="grid-content bg-purple" style="width: 100%">
-        <GuacClipboard :value="clipboardText" @ClipboardChange="onClipboardChange" />
-      </div>
-    </el-drawer>
+    <GuacClipboard
+      v-if="clipboardInited"
+      ref="clipboard"
+      :value="clipboardText"
+      :visible.sync="clipboardDrawer"
+      :client="client"
+      :tunnel="tunnel"
+      @ClipboardChange="onClipboardChange"
+    />
     <GuacFileSystem
-      v-if="!loading"
+      v-if="fileSystemInited"
       ref="fileSystem"
       :client="client"
       :tunnel="tunnel"
       :show.sync="fileDrawer"
-      :current-filesystem="currentFilesystem"
-      @downloadReceived="onDownloadFile"
       @closeDrawer="onCloseDrawer"
     />
   </el-container>
@@ -65,7 +67,7 @@ import Guacamole from 'guacamole-common-js'
 import { getSupportedMimetypes } from '@/utils/image'
 import { getSupportedGuacAudios } from '@/utils/audios'
 import { getSupportedGuacVideos } from '@/utils/video'
-import { BaseURL, getCurrentConnectParams, sanitizeFilename } from '@/utils/common'
+import { getCurrentConnectParams } from '@/utils/common'
 import { createSession } from '@/api/session'
 import GuacClipboard from './GuacClipboard'
 import GuacFileSystem from './GuacFileSystem'
@@ -87,6 +89,8 @@ export default {
       loading: true,
       session: null,
       tunnelState: '',
+      fileSystemInited: false,
+      clipboardInited: false,
       loadingText: '连接中。。。',
       clientState: '连接中。。。',
       localCursor: false,
@@ -100,10 +104,7 @@ export default {
         type: 'text/plain',
         data: ''
       },
-      currentFilesystem: {
-        object: null,
-        name: ''
-      },
+
       sink: null,
       keyboard: null,
       combinationKeys: [
@@ -161,7 +162,6 @@ export default {
       this.session = res.data
       window.addEventListener('resize', this.onWindowResize)
       window.onfocus = this.onWindowFocus
-      console.log(res.data)
       this.getConnectString(res.data.id).then(connectionParams => {
         this.connectGuacamole(connectionParams, result['ws'])
       })
@@ -173,12 +173,36 @@ export default {
     checkPasswordInput(name) {
       return name.match('password')
     },
-    toggleFile(e) {
-      if (this.menuDisable || !this.currentFilesystem.object) {
+    toggleFileSystem(e) {
+      if (this.menuDisable) {
         return
       }
       console.log('Toggle file to: ', !this.fileDrawer, e)
       this.fileDrawer = !this.fileDrawer
+    },
+    initFileSystem() {
+      this.fileSystemInited = true
+      setTimeout(() => {
+        const dropbox = document.getElementById('display')
+        dropbox.addEventListener('dragenter', function(e) {
+          e.stopPropagation()
+          e.preventDefault()
+        }, false)
+        dropbox.addEventListener('dragover', function(e) {
+          e.stopPropagation()
+          e.preventDefault()
+        }, false)
+        dropbox.addEventListener('drop', this.$refs.fileSystem.fileDrop, false)
+
+        this.client.onfile = this.$refs.fileSystem.fileSystemReceived
+        this.client.onfilesystem = this.$refs.fileSystem.fileSystemReceived
+      }, 300)
+    },
+    initClipboard() {
+      this.client.onclipboard = this.receiveClientClipboard
+      setTimeout(() => {
+        this.clipboardInited = true
+      }, 300)
     },
     submitParams() {
       if (this.client) {
@@ -377,76 +401,8 @@ export default {
         }
       })
     },
-
-    sendClientClipboard(data) {
-      if (!this.client) {
-        return
-      }
-      let writer
-      // Create stream with proper mimetype
-      const stream = this.client.createClipboardStream(data.type)
-
-      // Send data as a string if it is stored as a string
-      if (typeof data.data === 'string') {
-        writer = new Guacamole.StringWriter(stream)
-        writer.sendText(data.data)
-        writer.sendEnd()
-      } else {
-        // Write File/Blob asynchronously
-        writer = new Guacamole.BlobWriter(stream)
-        writer.oncomplete = function clipboardSent() {
-          writer.sendEnd()
-        }
-
-        // Begin sending data
-        writer.sendBlob(data.data)
-      }
-      console.log('send: ', data)
-    },
-
-    receiveClientClipboard(stream, mimetype) {
-      console.log('recv: ', stream, mimetype)
-      let reader
-      // If the received data is text, read it as a simple string
-      if (/^text\//.exec(mimetype)) {
-        reader = new Guacamole.StringReader(stream)
-
-        // Assemble received data into a single string
-        let data = ''
-        reader.ontext = function textReceived(text) {
-          data += text
-        }
-
-        // Set clipboard contents once stream is finished
-        reader.onend = async() => {
-          this.clipboardText = data
-          if (navigator.clipboard) {
-            await navigator.clipboard.writeText(data)
-          }
-        }
-        // eslint-disable-next-line brace-style
-      }
-
-      // Otherwise read the clipboard data as a Blob
-      else {
-        reader = new Guacamole.BlobReader(stream, mimetype)
-        reader.onprogress = function blobReceived(text) {
-          console.log('blobReceived: ', text)
-        }
-        reader.onend = function end() {
-          this.clipboardText = reader.getBlob()
-        }
-      }
-    },
-
     oncursor(canvas, x, y) {
       this.localCursor = true
-    },
-
-    setLocalClipboard(data) {
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(data)
-      }
     },
 
     handleMouseState(mouseState) {
@@ -501,8 +457,7 @@ export default {
     },
 
     onWindowFocus() {
-      console.log('onWindowFocus   ')
-      return
+      console.log('onWindowFocus ')
       // if (navigator.clipboard && navigator.clipboard.readText && this.clientState === 'Connected') {
       //   navigator.clipboard.readText().then((text) => {
       //     this.clipboardText = text
@@ -513,79 +468,9 @@ export default {
       //   })
       // }
     },
-    fileSystemReceived(object, name) {
-      console.log('fileSystemReceived ', object, name)
-      this.currentFilesystem.object = object
-      this.currentFilesystem.name = name
-    },
-    onDownloadFile(stream, mimetype, filename) {
-      console.log('On download file')
-      this.clientFileReceived(stream, mimetype, filename)
-    },
-    clientFileReceived(stream, mimetype, filename) {
-      console.log('clientFileReceived, ', this.tunnel.uuid, stream, mimetype, filename)
-      // Build download URL
-      const url = BaseURL + this.apiPrefix +
-          '/tunnels/' + encodeURIComponent(this.tunnel.uuid) +
-          '/streams/' + encodeURIComponent(stream.index) +
-          '/' + encodeURIComponent(sanitizeFilename(filename))
-
-      // Create temporary hidden iframe to facilitate download
-      const iframe = document.createElement('iframe')
-      iframe.style.position = 'fixed'
-      iframe.style.border = 'none'
-      iframe.style.width = '1px'
-      iframe.style.height = '1px'
-      iframe.style.left = '-1px'
-      iframe.style.top = '-1px'
-
-      // The iframe MUST be part of the DOM for the download to occur
-      document.body.appendChild(iframe)
-
-      // Automatically remove iframe from DOM when download completes, if
-      // browser supports tracking of iframe downloads via the "load" event
-      iframe.onload = function downloadComplete() {
-        document.body.removeChild(iframe)
-      }
-
-      // Acknowledge (and ignore) any received blobs
-      stream.onblob = function acknowledgeData() {
-        stream.sendAck('OK', Guacamole.Status.Code.SUCCESS)
-      }
-
-      // Automatically remove iframe from DOM a few seconds after the stream
-      // ends, in the browser does NOT fire the "load" event for downloads
-      stream.onend = function downloadComplete() {
-        window.setTimeout(function cleanupIframe() {
-          if (iframe.parentElement) {
-            document.body.removeChild(iframe)
-          }
-        }, 500)
-        this.loadingText = ''
-      }.bind(this)
-      this.loadingText = 'downloading file'
-      // Begin download
-      iframe.src = url
-      console.log(url)
-    },
 
     onsync: function(timestamp) {
       // console.log('onsync==> ', timestamp)
-    },
-    fileDragEnter: function(e) {
-      e.stopPropagation()
-      e.preventDefault()
-    },
-    fileDragOver: function(e) {
-      e.stopPropagation()
-      e.preventDefault()
-    },
-    fileDrop: function(e) {
-      e.stopPropagation()
-      e.preventDefault()
-      const dt = e.dataTransfer
-      const files = dt.files
-      this.$refs.fileSystem.handleFiles(files[0])
     },
 
     handleKeys(keys) {
@@ -601,11 +486,6 @@ export default {
     },
 
     connectGuacamole(connectionParams, wsURL) {
-      const dropbox = document.getElementById('display')
-      dropbox.addEventListener('dragenter', this.fileDragEnter, false)
-      dropbox.addEventListener('dragover', this.fileDragOver, false)
-      dropbox.addEventListener('drop', this.fileDrop, false)
-
       const display = document.getElementById('display')
       const tunnel = new Guacamole.WebSocketTunnel(wsURL)
       const client = new Guacamole.Client(tunnel)
@@ -628,9 +508,10 @@ export default {
       client.onstatechange = this.clientStateChanged
       client.onerror = this.clientOnErr
       // 处理从虚拟机收到的剪贴板内容
-      client.onclipboard = this.receiveClientClipboard
-      client.onfilesystem = this.fileSystemReceived
-      client.onfile = this.clientFileReceived
+      this.initClipboard()
+
+      this.initFileSystem()
+
       client.onsync = this.onsync
       // Handle any received files
       client.connect(connectionParams)

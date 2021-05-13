@@ -18,7 +18,7 @@
         :http-request="uploadFile"
       >
         <el-button slot="trigger" size="small" type="primary">上传文件</el-button>
-<!--        <div slot="tip" class="el-upload__tip">只能上传jpg/png文件，且不超过500kb</div>-->
+        <el-button size="small" type="default" @click="clearFileList" style="margin-left: 10px">清理已完成</el-button>
       </el-upload>
       <div style="padding: 20px" class="fileList">
         <el-row :gutter="20" style="padding-bottom: 20px">
@@ -26,7 +26,7 @@
             <span @click="changeParentFolder">{{ currentFolder.streamName }} </span>
           </el-col>
           <el-col :span="6" :offset="10">
-            <i class="el-icon-refresh" style="padding-left: 20px;" @click="refresh"></i>
+            <i class="el-icon-refresh" style="padding-left: 20px;" @click="refresh" />
           </el-col>
         </el-row>
         <div style="padding-left: 10px">
@@ -65,10 +65,6 @@ export default {
     show: {
       type: Boolean,
       default: false
-    },
-    currentFilesystem: {
-      type: Object,
-      required: true
     }
   },
   data() {
@@ -81,7 +77,11 @@ export default {
         files: {},
         parent: null
       },
-      fileList: []
+      fileList: [],
+      currentFilesystem: {
+        object: null,
+        name: ''
+      }
     }
   },
   computed: {
@@ -105,23 +105,88 @@ export default {
     }
   },
   mounted: function() {
-    console.log('mounted GuacFileSystem ', this.currentFolder)
-    console.log('mounted guacObj', this.guacObject)
-    this.updateDirectory(this.currentFolder).then(files => {
-      console.log(files)
-      this.files = files
-    })
   },
   destroyed: function() {
     console.log('destroyed GuacFileSystem')
   },
   methods: {
+    clearFileList() {
+      this.fileList.splice(0, this.fileList.length)
+    },
+    fileSystemReceived(object, name) {
+      console.log('fileSystemReceived ', object, name)
+      this.currentFilesystem.object = object
+      this.currentFilesystem.name = name
+
+      this.updateDirectory(this.currentFolder).then(files => {
+        console.log(files)
+        this.files = files
+      })
+    },
     updateShow(value) {
       console.log('Update show to: ', value)
       this.$emit('update:show', value)
     },
     onCloseDrawer() {
       this.$emit('closeDrawer')
+    },
+    onDownloadFile(stream, mimetype, filename) {
+      console.log('On download file')
+      this.clientFileReceived(stream, mimetype, filename)
+    },
+    clientFileReceived(stream, mimetype, filename) {
+      console.log('clientFileReceived, ', this.tunnel.uuid, stream, mimetype, filename)
+      // Build download URL
+      const url = BaseAPIURL +
+          '/tunnels/' + encodeURIComponent(this.tunnel.uuid) +
+          '/streams/' + encodeURIComponent(stream.index) +
+          '/' + encodeURIComponent(sanitizeFilename(filename))
+
+      // Create temporary hidden iframe to facilitate download
+      const iframe = document.createElement('iframe')
+      iframe.style.position = 'fixed'
+      iframe.style.border = 'none'
+      iframe.style.width = '1px'
+      iframe.style.height = '1px'
+      iframe.style.left = '-1px'
+      iframe.style.top = '-1px'
+
+      // The iframe MUST be part of the DOM for the download to occur
+      document.body.appendChild(iframe)
+
+      // Automatically remove iframe from DOM when download completes, if
+      // browser supports tracking of iframe downloads via the "load" event
+      iframe.onload = function downloadComplete() {
+        document.body.removeChild(iframe)
+      }
+
+      // Acknowledge (and ignore) any received blobs
+      stream.onblob = function acknowledgeData() {
+        stream.sendAck('OK', Guacamole.Status.Code.SUCCESS)
+      }
+
+      // Automatically remove iframe from DOM a few seconds after the stream
+      // ends, in the browser does NOT fire the "load" event for downloads
+      stream.onend = function downloadComplete() {
+        window.setTimeout(function cleanupIframe() {
+          if (iframe.parentElement) {
+            document.body.removeChild(iframe)
+          }
+        }, 500)
+        this.loadingText = ''
+      }.bind(this)
+      this.loadingText = 'downloading file'
+      // Begin download
+      iframe.src = url
+      console.log(url)
+    },
+
+    fileDrop: function(e) {
+      e.stopPropagation()
+      e.preventDefault()
+      const dt = e.dataTransfer
+      const files = dt.files
+      this.handleFiles(files[0])
     },
     handleFiles: function(file, object, streamName, progressCallback) {
       const client = this.client
@@ -230,7 +295,7 @@ export default {
         // Parse filename from string
         const filename = path.match(/(.*[\\/])?(.*)/)[2]
         // Start download
-        this.$emit('downloadReceived', stream, mimetype, filename)
+        this.onDownloadFile(stream, mimetype, filename)
       }.bind(this)
       this.guacObject.requestInputStream(path, downloadStreamReceived)
     },
