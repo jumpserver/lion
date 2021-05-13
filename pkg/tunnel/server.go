@@ -287,6 +287,7 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 	filename := ctx.Param("filename")
 	form, err := ctx.MultipartForm()
 	if err != nil {
+		logger.Errorf("Upload file err: %s", err)
 		ctx.JSON(http.StatusBadRequest, ErrorResponse(err))
 		return
 	}
@@ -377,6 +378,8 @@ func (g *GuacamoleTunnelServer) Monitor(ctx *gin.Context) {
 		guacdTunnel: tunnelCon,
 		ws:          ws,
 	}
+	logger.Infof("User %s start to monitor session %s", sessionId, user)
 	_ = conn.Run(ctx.Request.Context())
 	g.Cache.RemoveMonitorTunneler(sessionId, tunnelCon)
+	logger.Infof("User %s stop to monitor session %s", sessionId, user)
 }
