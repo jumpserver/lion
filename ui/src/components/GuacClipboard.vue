@@ -62,14 +62,10 @@ export default {
       const stream = this.client.createClipboardStream(data.type)
 
       // Send data as a string if it is stored as a string
-      console.log('Typeof data: ', typeof data.data)
       if (typeof data.data === 'string') {
         writer = new Guacamole.StringWriter(stream)
         writer.sendText(data.data)
-        writer.oncomplete = () => {
-          writer.sendEnd()
-          console.log('send done: ', data)
-        }
+        writer.sendEnd()
         console.log('send text: ', data)
       } else {
         // Write File/Blob asynchronously

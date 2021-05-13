@@ -20,7 +20,7 @@
         <el-button slot="trigger" size="small" type="primary">上传文件</el-button>
         <el-button size="small" type="default" @click="clearFileList" style="margin-left: 10px">清理已完成</el-button>
       </el-upload>
-      <div style="padding: 20px" class="fileList">
+      <div style="padding: 20px" class="fileZone">
         <el-row :gutter="20" style="padding-bottom: 20px">
           <el-col :span="6">
             <span @click="changeParentFolder">{{ currentFolder.streamName }} </span>
@@ -29,7 +29,7 @@
             <i class="el-icon-refresh" style="padding-left: 20px;" @click="refresh" />
           </el-col>
         </el-row>
-        <div style="padding-left: 10px">
+        <div class="filterList">
           <GuacFile
             v-for="(item ,index) in sortedFiles"
             :key="index"
@@ -321,6 +321,11 @@ export default {
       })
     },
     updateDirectory(file) {
+      if (!this.guacObject) {
+        return new Promise((resolve, reject) => {
+          reject('No guacObject')
+        })
+      }
       const guacObject = this.guacObject
       return new Promise(function(resolve, reject) {
         // Do not attempt to refresh the contents of directories
@@ -408,7 +413,7 @@ export default {
   }
 }
 
-.fileList {
+.fileZone {
   color: #409eff;
   font-size: 14px;
   cursor: pointer;
@@ -417,5 +422,10 @@ export default {
 
 .el-icon-refresh:hover {
   color: #10355A;
+}
+
+.fileList {
+  overflow: auto;
+  padding-left: 10px;
 }
 </style>

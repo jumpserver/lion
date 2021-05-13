@@ -169,7 +169,6 @@ export default {
       if (this.menuDisable) {
         return
       }
-      console.log('Toggle file to: ', !this.fileDrawer, e)
       this.fileDrawer = !this.fileDrawer
     },
     initFileSystem() {
@@ -185,16 +184,10 @@ export default {
           e.preventDefault()
         }, false)
         dropbox.addEventListener('drop', this.$refs.fileSystem.fileDrop, false)
-
-        this.client.onfile = this.$refs.fileSystem.fileSystemReceived
-        this.client.onfilesystem = this.$refs.fileSystem.fileSystemReceived
       }, 300)
     },
     initClipboard() {
       this.clipboardInited = true
-      setTimeout(() => {
-        this.client.onclipboard = this.$refs.clipboard.receiveClientClipboard
-      }, 300)
     },
     submitParams() {
       if (this.client) {
@@ -286,6 +279,8 @@ export default {
         case Guacamole.Tunnel.State.OPEN:
           this.tunnelState = 'OPEN'
           console.log('tunnelStateChanged Tunnel.State.OPEN ')
+          this.initFileSystem()
+          this.initClipboard()
           break
 
           // Connection is established but misbehaving
@@ -349,7 +344,6 @@ export default {
             // Otherwise, ensure that another audio stream is created after this
             // audio stream is closed
             else { recorder.onclose = requestAudioStream.bind(this, client) }
-            console.log(stream, recorder)
           }
           requestAudioStream(this.client)
           break
@@ -481,11 +475,15 @@ export default {
       display.appendChild(client.getDisplay().getElement())
       client.onstatechange = this.clientStateChanged
       client.onerror = this.clientOnErr
-      // 处理从虚拟机收到的剪贴板内容
-      this.initClipboard()
-
-      this.initFileSystem()
-
+      client.onfilesystem = (obj, name) => {
+        return this.$refs.fileSystem.fileSystemReceived(obj, name)
+      }
+      client.onfile = (stream, mimetype, filename) => {
+        return this.$refs.fileSystem.clientFileReceived(stream, mimetype, filename)
+      }
+      client.onclipboard = (stream, mimetype) => {
+        return this.$refs.clipboard.receiveClientClipboard(stream, mimetype)
+      }
       client.onsync = this.onsync
       // Handle any received files
       client.connect(connectionParams)
