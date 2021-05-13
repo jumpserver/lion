@@ -1,13 +1,13 @@
 <template>
-  <el-row style="height: 30px">
+  <div class="fileItem">
     <i v-if="fileItem.type==='NORMAL'" class="el-icon-document" />
     <i v-else class="el-icon-folder" />
-    <span @click="clickFile"> {{ fileItem.name }}</span>
-  </el-row>
+    <el-link class="filename" @click="clickFile"> {{ filename }} </el-link>
+  </div>
 </template>
 
 <script>
-import { FileType } from '../utils/common'
+import { FileType } from '@/utils/common'
 /*
 {
   mimetype:   String,
@@ -26,6 +26,17 @@ export default {
       default: null
     }
   },
+  computed: {
+    filename() {
+      const filename = this.fileItem.name
+      const filenameLen = filename.length
+      if (filenameLen < 45) {
+        return filename
+      } else {
+        return filename.slice(0, 30) + '...' + filename.slice(filenameLen - 15, filenameLen)
+      }
+    }
+  },
   methods: {
     clickFile() {
       if (this.fileItem.type === FileType.NORMAL) {
@@ -39,5 +50,11 @@ export default {
 </script>
 
 <style scoped>
+.fileItem {
+  cursor: pointer;
+}
 
+.filename {
+  padding-left: 6px;
+}
 </style>

@@ -21,7 +21,7 @@
         <el-button size="small" type="default" @click="clearFileList" style="margin-left: 10px">清理已完成</el-button>
       </el-upload>
       <div style="padding: 20px" class="fileZone">
-        <el-row :gutter="20" style="padding-bottom: 20px">
+        <el-row :gutter="20"  class="currentFolder">
           <el-col :span="6">
             <span @click="changeParentFolder">{{ currentFolder.streamName }} </span>
           </el-col>
@@ -29,7 +29,7 @@
             <i class="el-icon-refresh" style="padding-left: 20px;" @click="refresh" />
           </el-col>
         </el-row>
-        <div class="filterList">
+        <div class="fileList">
           <GuacFile
             v-for="(item ,index) in sortedFiles"
             :key="index"
@@ -416,8 +416,7 @@ export default {
 .fileZone {
   color: #409eff;
   font-size: 14px;
-  cursor: pointer;
-  line-height: 20px;
+  line-height: 25px;
 }
 
 .el-icon-refresh:hover {
@@ -427,5 +426,12 @@ export default {
 .fileList {
   overflow: auto;
   padding-left: 10px;
+  height: calc(100vh - 200px);
+}
+
+.currentFolder {
+  cursor: pointer;
+  font-weight: bold;
+  padding-bottom: 20px
 }
 </style>

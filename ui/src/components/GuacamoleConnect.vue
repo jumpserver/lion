@@ -475,17 +475,23 @@ export default {
       display.appendChild(client.getDisplay().getElement())
       client.onstatechange = this.clientStateChanged
       client.onerror = this.clientOnErr
+
+      // 文件挂载
       client.onfilesystem = (obj, name) => {
         return this.$refs.fileSystem.fileSystemReceived(obj, name)
       }
       client.onfile = (stream, mimetype, filename) => {
         return this.$refs.fileSystem.clientFileReceived(stream, mimetype, filename)
       }
+
+      // 剪贴板
       client.onclipboard = (stream, mimetype) => {
         return this.$refs.clipboard.receiveClientClipboard(stream, mimetype)
       }
       client.onsync = this.onsync
       // Handle any received files
+
+      // 开始连接
       client.connect(connectionParams)
 
       window.onunload = function() {
@@ -493,15 +499,15 @@ export default {
       }
       var mouse = new Guacamole.Mouse(client.getDisplay().getElement())
       // Ensure focus is regained via mousedown before forwarding event
-      mouse.onMouseDown = this.onMouseDown
+      mouse.onmousedown = this.onMouseDown
 
       mouse.onmouseup = mouse.onmousemove = this.handleMouseState
       // Hide software cursor when mouse leaves display
-      mouse.onMouseOut = function() {
+      mouse.onmouseout = function() {
         if (!client.getDisplay()) return
         client.getDisplay().showCursor(false)
       }
-      client.getDisplay().onCursor = this.onCursor
+      client.getDisplay().oncursor = this.onCursor
       client.getDisplay().getElement().onclick = function(e) {
         e.preventDefault()
         return false
@@ -535,7 +541,6 @@ export default {
 }
 
 .el-dropdown-link {
-  cursor: pointer;
   color: #409eff;
 }
 
