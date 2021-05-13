@@ -49,7 +49,7 @@
       :visible.sync="clipboardDrawer"
       :client="client"
       :tunnel="tunnel"
-      @ClipboardChange="onClipboardChange"
+      @closeDrawer="onCloseDrawer"
     />
     <GuacFileSystem
       v-if="fileSystemInited"
@@ -104,7 +104,6 @@ export default {
         type: 'text/plain',
         data: ''
       },
-
       sink: null,
       keyboard: null,
       combinationKeys: [
@@ -148,11 +147,6 @@ export default {
     },
     menuDisable: function() {
       return !(this.clientState === 'Connected') || !(this.tunnelState === 'OPEN')
-    }
-  },
-  watch: {
-    fileDrawer(newValue, oldValue) {
-      console.log(`File drawer change: ${oldValue} => ${newValue}`)
     }
   },
   mounted: function() {
@@ -199,9 +193,9 @@ export default {
       }, 300)
     },
     initClipboard() {
-      this.client.onclipboard = this.receiveClientClipboard
+      this.clipboardInited = true
       setTimeout(() => {
-        this.clipboardInited = true
+        this.client.onclipboard = this.$refs.clipboard.receiveClientClipboard
       }, 300)
     },
     submitParams() {
@@ -236,16 +230,6 @@ export default {
 
     menuIndex(index, num) {
       return index + num
-    },
-
-    onClipboardChange(data) {
-      console.log('ClipboardChange emit ', data)
-      this.clipboardText = data
-      this.sendClientClipboard({
-        'data': data,
-        'type': 'text/plain'
-      })
-      this.setLocalClipboard(data)
     },
 
     toggleClipboard() {
@@ -401,7 +385,7 @@ export default {
         }
       })
     },
-    oncursor(canvas, x, y) {
+    onCursor(canvas, x, y) {
       this.localCursor = true
     },
 
@@ -415,13 +399,13 @@ export default {
       this.client.sendMouseState(mouseState, true)
     },
 
-    onmousedown(mouseState) {
+    onMouseDown(mouseState) {
       document.body.focus()
       this.handleMouseState(mouseState)
       // this.isMenuCollapse = true
     },
 
-    onmouseout(mouseState) {
+    onMouseOut(mouseState) {
       if (!this.display) return
       this.display.showCursor(false)
     },
@@ -458,15 +442,11 @@ export default {
 
     onWindowFocus() {
       console.log('onWindowFocus ')
-      // if (navigator.clipboard && navigator.clipboard.readText && this.clientState === 'Connected') {
-      //   navigator.clipboard.readText().then((text) => {
-      //     this.clipboardText = text
-      //     this.sendClientClipboard({
-      //       'data': text,
-      //       'type': 'text/plain'
-      //     })
-      //   })
-      // }
+      if (navigator.clipboard && navigator.clipboard.readText && this.clientState === 'Connected') {
+        navigator.clipboard.readText().then((text) => {
+          this.$refs.clipboard.sendClipboardToRemote(text)
+        })
+      }
     },
 
     onsync: function(timestamp) {
@@ -521,15 +501,15 @@ export default {
       }
       var mouse = new Guacamole.Mouse(client.getDisplay().getElement())
       // Ensure focus is regained via mousedown before forwarding event
-      mouse.onmousedown = this.onmousedown
+      mouse.onMouseDown = this.onMouseDown
 
       mouse.onmouseup = mouse.onmousemove = this.handleMouseState
       // Hide software cursor when mouse leaves display
-      mouse.onmouseout = function() {
+      mouse.onMouseOut = function() {
         if (!client.getDisplay()) return
         client.getDisplay().showCursor(false)
       }
-      client.getDisplay().oncursor = this.oncursor
+      client.getDisplay().onCursor = this.onCursor
       client.getDisplay().getElement().onclick = function(e) {
         e.preventDefault()
         return false

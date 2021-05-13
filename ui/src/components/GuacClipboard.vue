@@ -1,5 +1,5 @@
 <template>
-  <el-drawer direction="ltr" title="剪切板" v-bind="$attrs" @close="onCloseDrawer">
+  <el-drawer direction="ltr" title="剪切板" :visible="visible" @update:visible="updateVisible" @close="onCloseDrawer">
     <div class="grid-content bg-purple" style="width: 100%">
       <el-input v-model="value" type="textarea" class="clipboard" :rows="10" />
     </div>
@@ -19,6 +19,10 @@ export default {
     tunnel: {
       type: Object,
       required: true
+    },
+    visible: {
+      type: Boolean,
+      default: false
     }
   },
   data() {
@@ -28,37 +32,50 @@ export default {
   },
   watch: {
     value(newValue) {
-      this.onClipboardChange(newValue)
+      this.sendClipboardToRemote(newValue)
     }
   },
   methods: {
-    sendClientClipboard(data) {
+    updateVisible(value) {
+      this.$emit('update:visible', value)
+    },
+    sendClipboardToRemote(value) {
+      const data = {
+        type: 'text/plain',
+        data: value
+      }
       if (!this.client) {
         return
       }
+      this.clipboardText = data
+      this.setLocalClipboard(data)
       let writer
       // Create stream with proper mimetype
       const stream = this.client.createClipboardStream(data.type)
 
       // Send data as a string if it is stored as a string
+      console.log('Typeof data: ', typeof data.data)
       if (typeof data.data === 'string') {
         writer = new Guacamole.StringWriter(stream)
         writer.sendText(data.data)
-        writer.sendEnd()
+        writer.oncomplete = () => {
+          writer.sendEnd()
+          console.log('send done: ', data)
+        }
+        console.log('send text: ', data)
       } else {
         // Write File/Blob asynchronously
         writer = new Guacamole.BlobWriter(stream)
         writer.oncomplete = function clipboardSent() {
           writer.sendEnd()
         }
-
         // Begin sending data
+        console.log('Send blob: ', data)
         writer.sendBlob(data.data)
       }
-      console.log('send: ', data)
     },
     receiveClientClipboard(stream, mimetype) {
-      console.log('recv: ', stream, mimetype)
+      console.log('Recv clipboard: ', stream, mimetype)
       let reader
       // If the received data is text, read it as a simple string
       if (/^text\//.exec(mimetype)) {
@@ -79,7 +96,6 @@ export default {
         }
         // eslint-disable-next-line brace-style
       }
-
       // Otherwise read the clipboard data as a Blob
       else {
         reader = new Guacamole.BlobReader(stream, mimetype)
@@ -91,24 +107,13 @@ export default {
         }
       }
     },
-
     setLocalClipboard(data) {
       if (navigator.clipboard) {
         navigator.clipboard.writeText(data)
       }
     },
-
     onCloseDrawer() {
       this.$emit('closeDrawer')
-    },
-    onClipboardChange(data) {
-      console.log('ClipboardChange emit ', data)
-      this.clipboardText = data
-      this.sendClientClipboard({
-        'data': data,
-        'type': 'text/plain'
-      })
-      this.setLocalClipboard(data)
     }
   }
 }
@@ -119,7 +124,6 @@ export default {
   position: relative;
   -moz-border-radius: 0.25em;
   -webkit-border-radius: 0.25em;
-  -khtml-border-radius: 0.25em;
   border-radius: 0.25em;
   white-space: pre;
   font-size: 1em;
