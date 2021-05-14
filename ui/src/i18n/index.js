@@ -28,7 +28,6 @@ export const getLanguage = () => {
   } else {
     language = 'cn'
   }
-  console.log('Language: ', language)
   return language
 }
 

@@ -189,7 +189,13 @@ export default {
       e.preventDefault()
       const dt = e.dataTransfer
       const files = dt.files
-      this.handleFiles(files[0])
+      this.handleFiles(files[0]).catch(status => {
+        let msg = status.message
+        if (getLanguage() === 'cn') {
+          msg = this.$t(ErrorStatusCodes[status.code]) || status.message
+        }
+        this.$warning(msg)
+      })
     },
     handleFiles: function(file, object, streamName, progressCallback) {
       const client = this.client

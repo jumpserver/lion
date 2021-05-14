@@ -491,7 +491,7 @@ export default {
       client.onerror = this.clientOnErr
       // 文件挂载
       client.onfilesystem = (obj, name) => {
-        if (vm.$refs.filesystem) {
+        if (vm.$refs.fileSystem) {
           return vm.$refs.fileSystem.fileSystemReceived(obj, name)
         }
       }
