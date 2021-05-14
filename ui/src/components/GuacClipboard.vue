@@ -1,5 +1,5 @@
 <template>
-  <el-drawer direction="ltr" title="剪切板" :visible="visible" @update:visible="updateVisible" @close="onCloseDrawer">
+  <el-drawer direction="ltr" :title="$t('Clipboard')" :visible="visible" @update:visible="updateVisible" @close="onCloseDrawer">
     <div class="grid-content bg-purple" style="width: 100%">
       <el-input v-model="clipboardText" type="textarea" class="clipboard" :rows="10" />
     </div>
@@ -40,8 +40,10 @@ export default {
     sendClipboardToRemote() {
       if (navigator.clipboard && navigator.clipboard.readText) {
         navigator.clipboard.readText().then((text) => {
-          this.sendDataToRemoteClipboard(text)
-          this.clipboardText = text
+          if (text !== this.clipboardText) {
+            this.sendDataToRemoteClipboard(text)
+            this.clipboardText = text
+          }
         })
       }
     },
@@ -87,7 +89,7 @@ export default {
 
         // Assemble received data into a single string
         let data = ''
-        reader.ontext = function textReceived(text) {
+        reader.ontext = (text) => {
           data += text
         }
 
@@ -103,10 +105,10 @@ export default {
       // Otherwise read the clipboard data as a Blob
       else {
         reader = new Guacamole.BlobReader(stream, mimetype)
-        reader.onprogress = function blobReceived(text) {
+        reader.onprogress = (text) => {
           this.$log.debug('blobReceived: ', text)
         }
-        reader.onend = function end() {
+        reader.onend = () => {
           this.clipboardText = reader.getBlob()
         }
       }

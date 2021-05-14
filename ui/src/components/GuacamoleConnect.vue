@@ -1,7 +1,7 @@
 <template>
   <el-container>
     <el-main>
-      <el-row v-loading="loading" :element-loading-text="loadingText" element-loading-background="rgba(0, 0, 0, 0.8">
+      <el-row v-loading="loading" :element-loading-text="loadingText" element-loading-background="#676a6c">
         <div :style="divStyle">
           <div id="display" />
         </div>
@@ -9,6 +9,7 @@
     </el-main>
     <div />
     <el-menu
+      v-if="!loading"
       :collapse="isMenuCollapse"
       class="menu"
       @mouseover.native="isMenuCollapse = false"
@@ -280,13 +281,13 @@ export default {
         // Connection is being established
         case Guacamole.Tunnel.State.CONNECTING:
           this.tunnelState = 'CONNECTING'
-          this.$log.debug('tunnelStateChanged Tunnel.State.CONNECTING ')
+          this.$log.debug('Tunnel state change to Tunnel.State.CONNECTING ')
           break
 
           // Connection is established / no longer unstable
         case Guacamole.Tunnel.State.OPEN:
           this.tunnelState = 'OPEN'
-          this.$log.debug('tunnelStateChanged Tunnel.State.OPEN ')
+          this.$log.debug('Tunnel state change to Tunnel.State.OPEN ')
           this.initFileSystem()
           this.initClipboard()
           break
@@ -294,17 +295,17 @@ export default {
           // Connection is established but misbehaving
         case Guacamole.Tunnel.State.UNSTABLE:
           this.tunnelState = 'UNSTABLE'
-          this.$log.debug('tunnelStateChanged Tunnel.State.UNSTABLE ')
+          this.$log.debug('Tunnel state change to Tunnel.State.UNSTABLE ')
           break
 
           // Connection has closed
         case Guacamole.Tunnel.State.CLOSED:
           this.tunnelState = 'CLOSED'
-          this.$log.debug('tunnelStateChanged Tunnel.State.CLOSED ')
+          this.$log.debug('Tunnel state change to Tunnel.State.CLOSED ')
           break
         default:
           this.tunnelState = 'unknown'
-          this.$log.debug('tunnelStateChanged unknown ', state)
+          this.$log.debug('Tunnel state change tounknown ', state)
           break
       }
     },
@@ -373,9 +374,9 @@ export default {
     },
 
     closeDisplay(stats) {
-      this.$log.debug(stats)
+      this.$log.debug('Close display, stats: ', stats)
       this.$alert('关闭窗口=== ' + stats.message, stats, {
-        confirmButtonText: '确定',
+        confirmButtonText: this.$t('Confirm'),
         callback: action => {
           const display = document.getElementById('display')
           if (this.client) {
@@ -435,13 +436,13 @@ export default {
 
     displayResize(width, height) {
       // 监听guacamole display的变化
-      this.$log.debug('on display ', width, height)
+      this.$log.debug('Display resize: ', width, height)
       this.displayWidth = width
       this.displayHeight = height
     },
 
     onWindowFocus() {
-      this.$log.debug('onWindowFocus ')
+      this.$log.debug('On window focus ')
       this.$refs.clipboard.sendClipboardToRemote()
     },
 
@@ -461,31 +462,24 @@ export default {
       }
     },
 
-    connectGuacamole(connectionParams, wsURL) {
-      const display = document.getElementById('display')
-      const tunnel = new Guacamole.WebSocketTunnel(wsURL)
-      const client = new Guacamole.Client(tunnel)
+    setTunnelCallback(tunnel) {
       const vm = this
       tunnel.onerror = (status) => {
-        vm.$message.error(this.$t('WebSocketError'))
+        vm.$message.error(vm.$t('WebSocketError'))
         vm.logger.error('Tunnel error: ', status)
       }
       tunnel.onuuid = (uuid) => {
         vm.$log.debug('Tunnel assigned UUID: ', uuid)
-        tunnel.uuid = uuid
+        vm.tunnel.uuid = uuid
       }
-      client.onrequired = this.onRequireParams
+      tunnel.onstatechange = vm.onTunnelStateChanged
+    },
 
-      tunnel.onstatechange = this.onTunnelStateChanged
-      this.client = client
-      this.tunnel = tunnel
-      this.display = this.client.getDisplay()
-      this.display.onresize = this.displayResize
-      // client.getDisplay()
-      display.appendChild(client.getDisplay().getElement())
+    setClientCallback(client) {
+      const vm = this
+      client.onrequired = this.onRequireParams
       client.onstatechange = this.clientStateChanged
       client.onerror = this.clientOnErr
-
       // 文件挂载
       client.onfilesystem = (obj, name) => {
         return vm.$refs.fileSystem.fileSystemReceived(obj, name)
@@ -493,48 +487,67 @@ export default {
       client.onfile = (stream, mimetype, filename) => {
         return vm.$refs.fileSystem.clientFileReceived(stream, mimetype, filename)
       }
-
       // 剪贴板
       client.onclipboard = (stream, mimetype) => {
         return vm.$refs.clipboard.receiveClientClipboard(stream, mimetype)
       }
       client.onsync = this.onsync
-      // Handle any received files
+    },
+    setDisplayCallback(display) {
+      display.onresize = this.displayResize
+      display.oncursor = this.onCursor
 
-      // 开始连接
-      client.connect(connectionParams)
-
-      window.onunload = function() {
-        client.disconnect()
-      }
-      var mouse = new Guacamole.Mouse(client.getDisplay().getElement())
-      // Ensure focus is regained via mousedown before forwarding event
-      mouse.onmousedown = this.onMouseDown
-
-      mouse.onmouseup = mouse.onmousemove = this.handleMouseState
-      // Hide software cursor when mouse leaves display
-      mouse.onmouseout = this.onMouseOut
-      client.getDisplay().oncursor = this.onCursor
-      client.getDisplay().getElement().onclick = (e) => {
+      const displayEl = display.getElement()
+      this.$log.debug('Display el: ', displayEl)
+      displayEl.onclick = (e) => {
         e.preventDefault()
         return false
       }
+      const mouse = new Guacamole.Mouse(displayEl)
+      // Ensure focus is regained via mousedown before forwarding event
+      mouse.onmousedown = this.onMouseDown
+      mouse.onmouseup = mouse.onmousemove = this.handleMouseState
+      // Hide software cursor when mouse leaves display
+      mouse.onmouseout = this.onMouseOut
+      this.mouse = mouse
+
+      // 输入下沉
       const sink = new Guacamole.InputSink()
-      display.appendChild(sink.getElement())
       sink.focus()
+      this.sink = sink
+
       // Keyboard
       const keyboard = new Guacamole.Keyboard(sink.getElement())
-      keyboard.onkeydown = function(keysym) {
-        client.sendKeyEvent(1, keysym)
+      keyboard.onkeydown = (keysym) => {
+        this.client.sendKeyEvent(1, keysym)
       }
-      keyboard.onkeyup = function(keysym) {
-        client.sendKeyEvent(0, keysym)
+      keyboard.onkeyup = (keysym) => {
+        this.client.sendKeyEvent(0, keysym)
       }
-      this.sink = sink
       this.keyboard = keyboard
+    },
+    connectGuacamole(connectionParams, wsURL) {
+      const displayRef = document.getElementById('display')
+      const tunnel = new Guacamole.WebSocketTunnel(wsURL)
+      const client = new Guacamole.Client(tunnel)
+      this.client = client
+      this.tunnel = tunnel
+      this.display = client.getDisplay()
+
+      this.setTunnelCallback(this.tunnel)
+      this.setClientCallback(this.client)
+      this.setDisplayCallback(this.display)
+      // client.getDisplay()
+      displayRef.appendChild(this.display.getElement())
+      displayRef.appendChild(this.sink.getElement())
+      this.$log.debug('Display : ', displayRef)
+      // 开始连接
+      client.connect(connectionParams)
+      window.onunload = function() {
+        client.disconnect()
+      }
     }
   }
-
 }
 </script>
 

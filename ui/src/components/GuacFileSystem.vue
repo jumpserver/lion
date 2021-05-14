@@ -2,7 +2,7 @@
   <div>
     <el-drawer
       direction="ltr"
-      title="文件管理"
+      :title="$t('Files')"
       :visible="show"
       class="fileUploaderDraw"
       @update:visible="updateShow"
@@ -16,9 +16,10 @@
         :file-list="fileList"
         :auto-upload="true"
         :http-request="uploadFile"
+        :on-success="refresh"
       >
-        <el-button slot="trigger" size="small" type="primary">上传文件</el-button>
-        <el-button size="small" type="default" style="margin-left: 10px" @click="clearFileList">清理已完成</el-button>
+        <el-button slot="trigger" size="small" type="primary">{{ $t('UploadFile') }}</el-button>
+        <el-button size="small" type="default" style="margin-left: 10px" @click="clearFileList">{{ $t('ClearDone') }}</el-button>
       </el-upload>
       <div style="padding: 20px" class="fileZone">
         <el-row :gutter="20" class="currentFolder">
@@ -191,6 +192,7 @@ export default {
     handleFiles: function(file, object, streamName, progressCallback) {
       const client = this.client
       const tunnel = this.tunnel
+      const vm = this
       let stream
       if (!object) {
         stream = client.createFileStream(file.type, file.name)
@@ -221,31 +223,31 @@ export default {
               })
             }
             // Resolve/reject promise once upload has stopped
-            xhr.onreadystatechange = function uploadStatusChanged() {
+            xhr.onreadystatechange = () => {
               // Ignore state changes prior to completion
               if (xhr.readyState !== 4) { return }
 
               // Resolve if HTTP status code indicates success
               if (xhr.status >= 200 && xhr.status < 300) {
-                this.$log.debug('Upload load success')
+                vm.$log.debug('Upload load success')
                 resolve()
                 // eslint-disable-next-line brace-style
               }
               // Parse and reject with resulting JSON error
               // eslint-disable-next-line brace-style
               else if (xhr.getResponseHeader('Content-Type') === 'application/json') {
-                this.$log.debug('failed upload ', xhr.responseText)
+                vm.$log.debug('failed upload ', xhr.responseText)
                 // eslint-disable-next-line brace-style
               }
               // Warn of lack of permission of a proxy rejects the upload
               else if (xhr.status >= 400 && xhr.status < 500) {
-                this.$log.debug('Upload failed: ', xhr.status)
+                vm.$log.debug('Upload failed: ', xhr.status)
                 reject(xhr.status)
                 // eslint-disable-next-line brace-style
               }
               // Assume internal error for all other cases
               else {
-                this.$log.debug('Upload failed: ', xhr.status)
+                vm.$log.debug('Upload failed: ', xhr.status)
                 reject(xhr.status)
               }
             }
@@ -276,7 +278,7 @@ export default {
       this.$log.debug('File is: ', file)
       const onprogress = function progress(e) {
         if (e.total > 0) {
-          e.percent = e.loaded / e.total * 100
+          e.percent = e.loaded / e.total * 99
         }
         fileObj.onProgress(e)
       }

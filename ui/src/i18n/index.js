@@ -23,7 +23,7 @@ export const getLanguage = () => {
   } else {
     language = language.toLowerCase()
   }
-  if (language.indexOf('en') > 0) {
+  if (language.indexOf('en') >= 0) {
     language = 'en'
   } else {
     language = 'cn'
