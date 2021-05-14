@@ -1,7 +1,7 @@
 <template>
   <el-container>
     <el-main>
-      <el-row v-loading="loading" :element-loading-text="loadingText" element-loading-background="rgba(0, 0, 0, 0.8">
+      <el-row v-loading="loading" :element-loading-text="loadingText" element-loading-background="#676a6c">
         <div :style="divStyle">
           <div id="display" />
         </div>
@@ -9,22 +9,29 @@
     </el-main>
     <div />
     <el-menu
+      v-if="!loading"
       :collapse="isMenuCollapse"
+      class="menu"
       @mouseover.native="isMenuCollapse = false"
     >
       <el-submenu :disabled="menuDisable" index="1">
         <template slot="title">
-          <i class="el-icon-position" /><span>快捷键</span>
+          <i class="el-icon-position" /><span>{{ $t('Shortcuts') }}</span>
         </template>
-        <el-menu-item v-for="(item, i) in combinationKeys" :key="i" :index="menuIndex('1-',i)" @click="handleKeys(item.keys)">
+        <el-menu-item
+          v-for="(item, i) in combinationKeys"
+          :key="i"
+          :index="menuIndex('1-',i)"
+          @click="handleKeys(item.keys)"
+        >
           {{ item.name }}
         </el-menu-item>
       </el-submenu>
       <el-menu-item :disabled="menuDisable" index="2">
-        <i class="el-icon-document-copy" /><span @click="toggleClipboard">剪切板</span>
+        <i class="el-icon-document-copy" /><span @click="toggleClipboard">{{ $t('Clipboard') }}</span>
       </el-menu-item>
       <el-menu-item :disabled="menuDisable" index="3" @click="toggleFileSystem">
-        <i class="el-icon-folder" /><span>文件管理</span>
+        <i class="el-icon-folder" /><span>{{ $t('Files') }}</span>
       </el-menu-item>
     </el-menu>
     <el-dialog title="认证参数" :visible="dialogFormVisible" @close="cancelSubmitParams">
@@ -70,6 +77,7 @@ import { getCurrentConnectParams } from '@/utils/common'
 import { createSession } from '@/api/session'
 import GuacClipboard from './GuacClipboard'
 import GuacFileSystem from './GuacFileSystem'
+import i18n from '@/i18n'
 
 export default {
   name: 'GuacamoleConnect',
@@ -90,8 +98,8 @@ export default {
       tunnelState: '',
       fileSystemInited: false,
       clipboardInited: false,
-      loadingText: '连接中。。。',
-      clientState: '连接中。。。',
+      loadingText: i18n.t('Connecting') + ' ...',
+      clientState: 'Connecting',
       localCursor: false,
       client: null,
       tunnel: null,
@@ -150,6 +158,7 @@ export default {
   mounted: function() {
     const result = getCurrentConnectParams()
     this.apiPrefix = result['api']
+    const vm = this
     createSession(result['api'], result['data']).then(res => {
       this.session = res.data
       window.addEventListener('resize', this.onWindowResize)
@@ -158,7 +167,7 @@ export default {
         this.connectGuacamole(connectionParams, result['ws'])
       })
     }).catch(err => {
-      console.log('err ', err.message)
+      vm.$log.debug('err ', err.message)
     })
   },
   methods: {
@@ -192,8 +201,8 @@ export default {
     submitParams() {
       if (this.client) {
         for (let i = 0; i < this.requireParams.length; i++) {
-          var stream = this.client.createArgumentValueStream('text/plain', this.requireParams[i].name)
-          var writer = new Guacamole.StringWriter(stream)
+          const stream = this.client.createArgumentValueStream('text/plain', this.requireParams[i].name)
+          const writer = new Guacamole.StringWriter(stream)
           writer.sendText(this.requireParams[i].value)
           writer.sendEnd()
         }
@@ -232,10 +241,10 @@ export default {
 
     getConnectString(sessionId) {
       // Calculate optimal width/height for display
-      const pixel_density = window.devicePixelRatio || 1
-      const optimal_dpi = pixel_density * 96
-      const optimal_width = window.innerWidth * pixel_density - 64
-      const optimal_height = window.innerHeight * pixel_density
+      const pixelDensity = window.devicePixelRatio || 1
+      const optimal_dpi = pixelDensity * 96
+      const optimalWidth = window.innerWidth * pixelDensity - 30
+      const optimalHeight = window.innerHeight * pixelDensity
       return new Promise((resolve, reject) => {
         Promise.all([
           getSupportedMimetypes(),
@@ -246,12 +255,12 @@ export default {
           const supportImages = values[0]
           const supportAudios = values[1]
           const supportVideos = values[2]
-          this.displayWidth = optimal_width
-          this.displayHeight = optimal_height
+          this.displayWidth = optimalWidth
+          this.displayHeight = optimalHeight
           var connectString =
               'SESSION_ID=' + encodeURIComponent(sessionId) +
-              '&GUAC_WIDTH=' + Math.floor(optimal_width) +
-              '&GUAC_HEIGHT=' + Math.floor(optimal_height) +
+              '&GUAC_WIDTH=' + Math.floor(optimalWidth) +
+              '&GUAC_HEIGHT=' + Math.floor(optimalHeight) +
               '&GUAC_DPI=' + Math.floor(optimal_dpi)
           supportImages.forEach(function(mimetype) {
             connectString += '&GUAC_IMAGE=' + encodeURIComponent(mimetype)
@@ -272,13 +281,13 @@ export default {
         // Connection is being established
         case Guacamole.Tunnel.State.CONNECTING:
           this.tunnelState = 'CONNECTING'
-          console.log('tunnelStateChanged Tunnel.State.CONNECTING ')
+          this.$log.debug('Tunnel state change to Tunnel.State.CONNECTING ')
           break
 
           // Connection is established / no longer unstable
         case Guacamole.Tunnel.State.OPEN:
           this.tunnelState = 'OPEN'
-          console.log('tunnelStateChanged Tunnel.State.OPEN ')
+          this.$log.debug('Tunnel state change to Tunnel.State.OPEN ')
           this.initFileSystem()
           this.initClipboard()
           break
@@ -286,17 +295,17 @@ export default {
           // Connection is established but misbehaving
         case Guacamole.Tunnel.State.UNSTABLE:
           this.tunnelState = 'UNSTABLE'
-          console.log('tunnelStateChanged Tunnel.State.UNSTABLE ')
+          this.$log.debug('Tunnel state change to Tunnel.State.UNSTABLE ')
           break
 
           // Connection has closed
         case Guacamole.Tunnel.State.CLOSED:
           this.tunnelState = 'CLOSED'
-          console.log('tunnelStateChanged Tunnel.State.CLOSED ')
+          this.$log.debug('Tunnel state change to Tunnel.State.CLOSED ')
           break
         default:
           this.tunnelState = 'unknown'
-          console.log('tunnelStateChanged unknown ', state)
+          this.$log.debug('Tunnel state change tounknown ', state)
           break
       }
     },
@@ -306,26 +315,25 @@ export default {
         // Idle
         case 0:
           this.clientState = 'IDLE'
-          console.log('clientState, IDLE')
+          this.$log.debug('clientState, IDLE')
           break
 
           // Ignore "connecting" state
         case 1: // Connecting
           this.clientState = 'Connecting'
-          this.loadingText = 'Connecting'
-          console.log('clientState, Connecting')
+          this.$log.debug('clientState, Connecting')
           break
 
           // Connected + waiting
         case 2:
           this.clientState = 'Connected + waiting'
-          console.log('clientState, Connected + waiting')
+          this.$log.debug('clientState, Connected + waiting')
           break
 
           // Connected
         case 3:
           this.clientState = 'Connected'
-          console.log('clientState, Connected ')
+          this.$log.debug('clientState, Connected ')
           this.loading = false
           // Send any clipboard data already provided
           // if (managedClient.clipboardData)
@@ -352,7 +360,7 @@ export default {
         case 4: // Disconnecting
         case 5: // Disconnected
           this.clientState = 'Disconnecting'
-          console.log('clientState, Disconnected ')
+          this.$log.debug('clientState, Disconnected ')
           // this.closeDisplay('clientState Disconnecting')
           var display = document.getElementById('display')
           display.innerHTML = ''
@@ -365,9 +373,9 @@ export default {
     },
 
     closeDisplay(stats) {
-      console.log(stats)
+      this.$log.debug('Close display, stats: ', stats)
       this.$alert('关闭窗口=== ' + stats.message, stats, {
-        confirmButtonText: '确定',
+        confirmButtonText: this.$t('Confirm'),
         callback: action => {
           const display = document.getElementById('display')
           if (this.client) {
@@ -394,7 +402,7 @@ export default {
     onMouseDown(mouseState) {
       document.body.focus()
       this.handleMouseState(mouseState)
-      // this.isMenuCollapse = true
+      this.isMenuCollapse = true
     },
 
     onMouseOut(mouseState) {
@@ -403,21 +411,21 @@ export default {
     },
 
     onCloseDrawer() {
-      console.log('onCloseDrawer', this.sink)
+      this.$log.debug('onCloseDrawer', this.sink)
       this.sink.focus()
     },
 
     onWindowResize() {
       // 监听 window display的变化
-      const pixel_density = window.devicePixelRatio || 1
-      const optimal_width = window.innerWidth * pixel_density
-      const optimal_height = window.innerHeight * pixel_density
-      const width = optimal_width - 64
-      const height = optimal_height
+      const pixelDensity = window.devicePixelRatio || 1
+      const optimalWidth = window.innerWidth * pixelDensity
+      const optimalHeight = window.innerHeight * pixelDensity
+      const width = optimalWidth - 30
+      const height = optimalHeight
       if (this.client !== null) {
         const display = this.client.getDisplay()
-        const displayHeight = display.getHeight() * pixel_density
-        const displayWidth = display.getWidth() * pixel_density
+        const displayHeight = display.getHeight() * pixelDensity
+        const displayWidth = display.getWidth() * pixelDensity
         if (displayHeight === width && displayWidth === height) {
           return
         }
@@ -427,18 +435,18 @@ export default {
 
     displayResize(width, height) {
       // 监听guacamole display的变化
-      console.log('on display ', width, height)
+      this.$log.debug('Display resize: ', width, height)
       this.displayWidth = width
       this.displayHeight = height
     },
 
     onWindowFocus() {
-      console.log('onWindowFocus ')
+      this.$log.debug('On window focus ')
       this.$refs.clipboard.sendClipboardToRemote()
     },
 
     onsync: function(timestamp) {
-      // console.log('onsync==> ', timestamp)
+      // this.$log.debug('onsync==> ', timestamp)
     },
 
     handleKeys(keys) {
@@ -453,81 +461,92 @@ export default {
       }
     },
 
-    connectGuacamole(connectionParams, wsURL) {
-      const display = document.getElementById('display')
-      const tunnel = new Guacamole.WebSocketTunnel(wsURL)
-      const client = new Guacamole.Client(tunnel)
-      tunnel.onerror = function tunnelError(status) {
-        this.$message.error('WebSocket 连接失败，请检查网络')
+    setTunnelCallback(tunnel) {
+      const vm = this
+      tunnel.onerror = (status) => {
+        vm.$message.error(vm.$t('WebSocketError'))
+        vm.logger.error('Tunnel error: ', status)
       }
-      tunnel.onuuid = function tunnelAssignedUUID(uuid) {
-        console.log('tunnelAssignedUUID ', uuid)
-        tunnel.uuid = uuid
+      tunnel.onuuid = (uuid) => {
+        vm.$log.debug('Tunnel assigned UUID: ', uuid)
+        vm.tunnel.uuid = uuid
       }
-      client.onrequired = this.onRequireParams
+      tunnel.onstatechange = vm.onTunnelStateChanged
+    },
 
-      tunnel.onstatechange = this.onTunnelStateChanged
-      this.client = client
-      this.tunnel = tunnel
-      this.display = this.client.getDisplay()
-      this.display.onresize = this.displayResize
-      // client.getDisplay()
-      display.appendChild(client.getDisplay().getElement())
+    setClientCallback(client) {
+      const vm = this
+      client.onrequired = this.onRequireParams
       client.onstatechange = this.clientStateChanged
       client.onerror = this.clientOnErr
-
       // 文件挂载
       client.onfilesystem = (obj, name) => {
-        return this.$refs.fileSystem.fileSystemReceived(obj, name)
+        return vm.$refs.fileSystem.fileSystemReceived(obj, name)
       }
       client.onfile = (stream, mimetype, filename) => {
-        return this.$refs.fileSystem.clientFileReceived(stream, mimetype, filename)
+        return vm.$refs.fileSystem.clientFileReceived(stream, mimetype, filename)
       }
-
       // 剪贴板
       client.onclipboard = (stream, mimetype) => {
-        return this.$refs.clipboard.receiveClientClipboard(stream, mimetype)
+        return vm.$refs.clipboard.receiveClientClipboard(stream, mimetype)
       }
       client.onsync = this.onsync
-      // Handle any received files
+    },
+    setDisplayCallback(display) {
+      display.onresize = this.displayResize
+      display.oncursor = this.onCursor
 
-      // 开始连接
-      client.connect(connectionParams)
-
-      window.onunload = function() {
-        client.disconnect()
-      }
-      var mouse = new Guacamole.Mouse(client.getDisplay().getElement())
-      // Ensure focus is regained via mousedown before forwarding event
-      mouse.onmousedown = this.onMouseDown
-
-      mouse.onmouseup = mouse.onmousemove = this.handleMouseState
-      // Hide software cursor when mouse leaves display
-      mouse.onmouseout = function() {
-        if (!client.getDisplay()) return
-        client.getDisplay().showCursor(false)
-      }
-      client.getDisplay().oncursor = this.onCursor
-      client.getDisplay().getElement().onclick = function(e) {
+      const displayEl = display.getElement()
+      this.$log.debug('Display el: ', displayEl)
+      displayEl.onclick = (e) => {
         e.preventDefault()
         return false
       }
+      const mouse = new Guacamole.Mouse(displayEl)
+      // Ensure focus is regained via mousedown before forwarding event
+      mouse.onmousedown = this.onMouseDown
+      mouse.onmouseup = mouse.onmousemove = this.handleMouseState
+      // Hide software cursor when mouse leaves display
+      mouse.onmouseout = this.onMouseOut
+      this.mouse = mouse
+
+      // 输入下沉
       const sink = new Guacamole.InputSink()
-      display.appendChild(sink.getElement())
       sink.focus()
+      this.sink = sink
+
       // Keyboard
       const keyboard = new Guacamole.Keyboard(sink.getElement())
-      keyboard.onkeydown = function(keysym) {
-        client.sendKeyEvent(1, keysym)
+      keyboard.onkeydown = (keysym) => {
+        this.client.sendKeyEvent(1, keysym)
       }
-      keyboard.onkeyup = function(keysym) {
-        client.sendKeyEvent(0, keysym)
+      keyboard.onkeyup = (keysym) => {
+        this.client.sendKeyEvent(0, keysym)
       }
-      this.sink = sink
       this.keyboard = keyboard
+    },
+    connectGuacamole(connectionParams, wsURL) {
+      const displayRef = document.getElementById('display')
+      const tunnel = new Guacamole.WebSocketTunnel(wsURL)
+      const client = new Guacamole.Client(tunnel)
+      this.client = client
+      this.tunnel = tunnel
+      this.display = client.getDisplay()
+
+      this.setTunnelCallback(this.tunnel)
+      this.setClientCallback(this.client)
+      this.setDisplayCallback(this.display)
+      // client.getDisplay()
+      displayRef.appendChild(this.display.getElement())
+      displayRef.appendChild(this.sink.getElement())
+      this.$log.debug('Display : ', displayRef)
+      // 开始连接
+      client.connect(connectionParams)
+      window.onunload = function() {
+        client.disconnect()
+      }
     }
   }
-
 }
 </script>
 
@@ -547,4 +566,51 @@ export default {
 .el-icon-arrow-down {
   font-size: 12px;
 }
+
+.el-menu {
+  background-color: rgb(60, 56, 56);
+  border: none;
+
+  /deep/ .el-submenu {
+    background-color: rgb(60, 56, 56);
+
+    .el-submenu__title {
+      color: white;
+    }
+    .el-menu-item {
+      line-height: 36px;
+      height: 36px;
+    }
+    .el-submenu__title:hover {
+      background-color: #463e3e;
+    }
+  }
+
+  /deep/ .el-submenu:hover {
+    background-color: #463e3e;
+  }
+}
+
+.el-menu-item {
+  color: white;
+  background-color: rgb(60, 56, 56);
+  padding-left: 20px;
+}
+
+.el-menu-item:hover {
+  background-color: #463e3e;
+}
+
+.el-menu--collapse {
+  width: 32px;
+
+  .el-menu-item {
+    padding-left: 5px !important;
+  }
+
+  /deep/ .el-submenu__title {
+    padding-left: 5px !important;
+  }
+}
+
 </style>

@@ -35,12 +35,12 @@ export default {
   },
   mounted: function() {
     const result = getMonitorConnectParams()
-    console.log(result)
+    this.$log.debug(result)
     const sid = result['data']['session']
     this.getConnectString(sid).then(connectionParams => {
       this.connectGuacamole(connectionParams, result['ws'])
     }).catch(err => {
-      console.log(err)
+      this.$log.debug(err)
     })
   },
   methods: {
@@ -93,26 +93,26 @@ export default {
         // Idle
         case 0:
           this.clientState = 'IDLE'
-          console.log('clientState, IDLE')
+          this.$log.debug('clientState, IDLE')
           break
 
           // Ignore "connecting" state
         case 1: // Connecting
           this.clientState = 'Connecting'
           this.loadingText = 'Connecting'
-          console.log('clientState, Connecting')
+          this.$log.debug('clientState, Connecting')
           break
 
           // Connected + waiting
         case 2:
           this.clientState = 'Connected + waiting'
-          console.log('clientState, Connected + waiting')
+          this.$log.debug('clientState, Connected + waiting')
           break
 
           // Connected
         case 3:
           this.clientState = 'Connected'
-          console.log('clientState, Connected ')
+          this.$log.debug('clientState, Connected ')
           this.loading = false
           // Send any clipboard data already provided
           // if (managedClient.clipboardData)
@@ -135,7 +135,7 @@ export default {
             else {
               recorder.onclose = requestAudioStream.bind(this, client)
             }
-            console.log(stream, recorder)
+            this.$log.debug(stream, recorder)
           }
           requestAudioStream(this.client)
           break
@@ -144,7 +144,7 @@ export default {
         case 4: // Disconnecting
         case 5: // Disconnected
           this.clientState = 'Disconnecting'
-          console.log('clientState, Disconnected ')
+          this.$log.debug('clientState, Disconnected ')
           break
       }
     },
@@ -154,11 +154,11 @@ export default {
       var tunnel = new Guacamole.WebSocketTunnel(wsURL)
       var client = new Guacamole.Client(tunnel)
       tunnel.onerror = function tunnelError(status) {
-        console.log('tunnelError ', status)
+        this.$log.debug('tunnelError ', status)
         display.innerHTML = ''
       }
       tunnel.onuuid = function tunnelAssignedUUID(uuid) {
-        console.log('tunnelAssignedUUID ', uuid)
+        this.$log.debug('tunnelAssignedUUID ', uuid)
         tunnel.uuid = uuid
       }
       tunnel.onstatechange = this.onTunnelStateChanged
