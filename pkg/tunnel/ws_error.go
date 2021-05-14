@@ -6,14 +6,46 @@ import (
 	"lion/pkg/guacd"
 )
 
-type GuacamoleServerError struct {
-	err  error
+type JMSGuacamoleError struct {
 	code int
+	msg  string
 }
 
-func (g GuacamoleServerError) String() guacd.Instruction {
+func (g JMSGuacamoleError) String() string {
+	ins := g.Instruction()
+	return ins.String()
+}
+
+func (g JMSGuacamoleError) Instruction() guacd.Instruction {
 	return guacd.NewInstruction(
 		guacd.InstructionServerError,
-		g.err.Error(),
+		g.msg,
 		strconv.Itoa(g.code))
 }
+
+func NewJMSGuacamoleError(code int, msg string) JMSGuacamoleError {
+	return JMSGuacamoleError{
+		code: code,
+		msg:  msg,
+	}
+}
+
+var (
+	ErrNoSession = NewJMSGuacamoleError(1000, "Not Found Session")
+
+	ErrAuthUser = NewJMSGuacamoleError(1001, "Not auth user")
+
+	ErrBadParams = NewJMSGuacamoleError(1002, "Not session params")
+
+	ErrIdleTimeOut = NewJMSGuacamoleError(1003, "Terminated by idle timeout")
+
+	ErrPermissionExpired = NewJMSGuacamoleError(1004, "Terminated by permission expired")
+
+	ErrTerminatedByAdmin = NewJMSGuacamoleError(1005, "Terminated by Admin")
+
+	ErrAPIFailed = NewJMSGuacamoleError(1006, "API failed")
+
+	ErrGatewayFailed = NewJMSGuacamoleError(1007, "Gateway not available")
+
+	ErrGuacamoleServer = NewJMSGuacamoleError(1008, "Connect guacamole server failed")
+)

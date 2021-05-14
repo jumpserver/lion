@@ -78,6 +78,8 @@ import { createSession } from '@/api/session'
 import GuacClipboard from './GuacClipboard'
 import GuacFileSystem from './GuacFileSystem'
 import i18n from '@/i18n'
+import { ErrorStatusCodes } from '@/utils/status'
+import { getLanguage } from '../i18n'
 
 export default {
   name: 'GuacamoleConnect',
@@ -368,14 +370,20 @@ export default {
       }
     },
 
-    clientOnErr(stats) {
-      this.closeDisplay(stats)
+    clientOnErr(status) {
+      this.$log.debug('clientOnErr', status)
+      this.closeDisplay(status)
     },
 
-    closeDisplay(stats) {
-      this.$log.debug('Close display, stats: ', stats)
-      this.$alert('关闭窗口=== ' + stats.message, stats, {
-        confirmButtonText: this.$t('Confirm'),
+    closeDisplay(status) {
+      this.$log.debug(status, i18n.locale)
+      const code = status.code
+      let msg = status.message
+      if (getLanguage() === 'cn') {
+        msg = ErrorStatusCodes[code] ? this.$t(ErrorStatusCodes[code]) : status.message
+      }
+      this.$alert(msg, this.$t('ErrTitle'), {
+        confirmButtonText: '确定',
         callback: action => {
           const display = document.getElementById('display')
           if (this.client) {
@@ -442,7 +450,9 @@ export default {
 
     onWindowFocus() {
       this.$log.debug('On window focus ')
-      this.$refs.clipboard.sendClipboardToRemote()
+      if (this.$refs.clipboard) {
+        this.$refs.clipboard.sendClipboardToRemote()
+      }
     },
 
     onsync: function(timestamp) {
@@ -465,7 +475,7 @@ export default {
       const vm = this
       tunnel.onerror = (status) => {
         vm.$message.error(vm.$t('WebSocketError'))
-        vm.logger.error('Tunnel error: ', status)
+        vm.$log.error('Tunnel error: ', status)
       }
       tunnel.onuuid = (uuid) => {
         vm.$log.debug('Tunnel assigned UUID: ', uuid)
@@ -481,7 +491,9 @@ export default {
       client.onerror = this.clientOnErr
       // 文件挂载
       client.onfilesystem = (obj, name) => {
-        return vm.$refs.fileSystem.fileSystemReceived(obj, name)
+        if (vm.$refs.filesystem) {
+          return vm.$refs.fileSystem.fileSystemReceived(obj, name)
+        }
       }
       client.onfile = (stream, mimetype, filename) => {
         return vm.$refs.fileSystem.clientFileReceived(stream, mimetype, filename)

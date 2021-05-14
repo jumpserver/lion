@@ -48,6 +48,8 @@
 import Guacamole from 'guacamole-common-js'
 import { BaseAPIURL, FileType, isDirectory, sanitizeFilename } from '@/utils/common'
 import GuacFile from './GuacFile'
+import { ErrorStatusCodes } from '@/utils/status'
+import { getLanguage } from '@/i18n'
 
 export default {
   name: 'GuacFileSystem',
@@ -204,7 +206,7 @@ export default {
         stream.onack = function beginUpload(status) {
           // Notify of any errors from the Guacamole server
           if (status.isError()) {
-            this.$log.debug('Upload error', status.code, status)
+            vm.$log.debug('Upload error', status.code, status)
             reject(status)
             return
           }
@@ -288,6 +290,11 @@ export default {
       }).catch(err => {
         fileObj.onError(err)
         this.$log.debug('Upload error: ', err)
+        let msg = err.message
+        if (getLanguage() === 'cn') {
+          msg = this.$t(ErrorStatusCodes[err.code]) || err.message
+        }
+        this.$warning(msg)
       })
     },
     downloadFile(fileItem) {

@@ -81,36 +81,26 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	defer ws.Close()
 	sessionId, ok := ctx.GetQuery("SESSION_ID")
 	if !ok {
-		data := guacd.NewInstruction(
-			guacd.InstructionServerError, "no session id", "504")
-		_ = ws.WriteMessage(websocket.TextMessage, []byte(data.String()))
+		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrBadParams.String()))
 		return
 	}
 	tunnelSession := g.SessCache.Pop(sessionId)
 	if tunnelSession == nil {
-		data := guacd.NewInstruction(
-			guacd.InstructionServerError, "no found session", "504")
-		_ = ws.WriteMessage(websocket.TextMessage, []byte(data.String()))
+		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrNoSession.String()))
 		return
 	}
 	userItem, ok := ctx.Get(config.GinCtxUserKey)
 	if !ok {
-		data := guacd.NewInstruction(
-			guacd.InstructionServerError, "no auth user", "504")
-		_ = ws.WriteMessage(websocket.TextMessage, []byte(data.String()))
+		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrAuthUser.String()))
 		return
 	}
 	if user := userItem.(*model.User); user.ID != tunnelSession.User.ID {
-		data := guacd.NewInstruction(
-			guacd.InstructionServerError, "no auth user", "504")
-		_ = ws.WriteMessage(websocket.TextMessage, []byte(data.String()))
+		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrAuthUser.String()))
 		return
 	}
 
 	if err = tunnelSession.ConnectedCallback(); err != nil {
-		data := guacd.NewInstruction(
-			guacd.InstructionServerError, err.Error(), "504")
-		_ = ws.WriteMessage(websocket.TextMessage, []byte(data.String()))
+		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrAPIFailed.String()))
 		return
 	}
 	info := g.getClientInfo(ctx)
@@ -125,9 +115,7 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 		}
 		if err = domainGateway.Start(); err != nil {
 			logger.Errorf("Start domain gateway err: %+v", err)
-			data := guacd.NewInstruction(
-				guacd.InstructionServerError, err.Error(), "504")
-			_ = ws.WriteMessage(websocket.TextMessage, []byte(data.String()))
+			_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrGatewayFailed.String()))
 			return
 		}
 		defer domainGateway.Stop()
@@ -143,9 +131,7 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	tunnel, err = guacd.NewTunnel(guacdAddr, conf, info)
 	if err != nil {
 		logger.Errorf("Connect tunnel err: %+v", err)
-		data := guacd.NewInstruction(
-			guacd.InstructionServerError, err.Error(), "504")
-		_ = ws.WriteMessage(websocket.TextMessage, []byte(data.String()))
+		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrGuacamoleServer.String()))
 		if err = tunnelSession.ConnectedFailedCallback(err); err != nil {
 			logger.Errorf("Update session connect status failed %+v", err)
 		}
@@ -182,6 +168,7 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	if err = tunnelSession.FinishReplayCallback(); err != nil {
 		logger.Errorf("Session Replay upload err: %+v", err)
 	}
+	logger.Infof("Session[%s] disconnect", sessionId)
 }
 
 func (g *GuacamoleTunnelServer) CreateSession(ctx *gin.Context) {
@@ -299,6 +286,7 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 	}
 	user := userItem.(*model.User)
 	if tun := g.Cache.Get(tid); tun != nil && tun.Sess.User.ID == user.ID {
+		logger.Infof("User %s upload file %s", user, filename)
 		fileLog := model.FTPLog{
 			User:       tun.Sess.User.String(),
 			Hostname:   tun.Sess.Asset.Hostname,
@@ -347,30 +335,22 @@ func (g *GuacamoleTunnelServer) Monitor(ctx *gin.Context) {
 	defer ws.Close()
 	userItem, ok := ctx.Get(config.GinCtxUserKey)
 	if !ok {
-		data := guacd.NewInstruction(
-			guacd.InstructionServerDisconnect, "no auth user", "504")
-		_ = ws.WriteMessage(websocket.TextMessage, []byte(data.String()))
+		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrAuthUser.String()))
 		return
 	}
 	user := userItem.(*model.User)
 	if user.ID == "" {
-		data := guacd.NewInstruction(
-			guacd.InstructionServerDisconnect, "no auth user", "504")
-		_ = ws.WriteMessage(websocket.TextMessage, []byte(data.String()))
+		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrAuthUser.String()))
 		return
 	}
 	sessionId, ok := ctx.GetQuery("SESSION_ID")
 	if !ok {
-		data := guacd.NewInstruction(
-			guacd.InstructionServerDisconnect, "no session id", "504")
-		_ = ws.WriteMessage(websocket.TextMessage, []byte(data.String()))
+		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrBadParams.String()))
 		return
 	}
 	tunnelCon := g.Cache.GetMonitorTunnelerBySessionId(sessionId)
 	if tunnelCon == nil {
-		data := guacd.NewInstruction(
-			guacd.InstructionServerDisconnect, "no found tunnel", "504")
-		_ = ws.WriteMessage(websocket.TextMessage, []byte(data.String()))
+		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrNoSession.String()))
 		return
 	}
 	defer tunnelCon.Close()
@@ -378,8 +358,8 @@ func (g *GuacamoleTunnelServer) Monitor(ctx *gin.Context) {
 		guacdTunnel: tunnelCon,
 		ws:          ws,
 	}
-	logger.Infof("User %s start to monitor session %s", sessionId, user)
+	logger.Infof("User %s start to monitor session %s", user, sessionId)
 	_ = conn.Run(ctx.Request.Context())
 	g.Cache.RemoveMonitorTunneler(sessionId, tunnelCon)
-	logger.Infof("User %s stop to monitor session %s", sessionId, user)
+	logger.Infof("User %s stop to monitor session %s", user, sessionId)
 }
