@@ -8,6 +8,8 @@ import i18n from './i18n'
 import plugins from './plugins'
 import router from './router'
 
+import '@/styles/index.scss'
+
 Vue.use(VueRouter)
 Vue.use(ElementUI)
 Vue.use(Guacamole)

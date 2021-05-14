@@ -10,13 +10,19 @@
     <div />
     <el-menu
       :collapse="isMenuCollapse"
+      class="menu"
       @mouseover.native="isMenuCollapse = false"
     >
       <el-submenu :disabled="menuDisable" index="1">
         <template slot="title">
           <i class="el-icon-position" /><span>快捷键</span>
         </template>
-        <el-menu-item v-for="(item, i) in combinationKeys" :key="i" :index="menuIndex('1-',i)" @click="handleKeys(item.keys)">
+        <el-menu-item
+          v-for="(item, i) in combinationKeys"
+          :key="i"
+          :index="menuIndex('1-',i)"
+          @click="handleKeys(item.keys)"
+        >
           {{ item.name }}
         </el-menu-item>
       </el-submenu>
@@ -234,7 +240,7 @@ export default {
       // Calculate optimal width/height for display
       const pixel_density = window.devicePixelRatio || 1
       const optimal_dpi = pixel_density * 96
-      const optimal_width = window.innerWidth * pixel_density - 64
+      const optimal_width = window.innerWidth * pixel_density - 30
       const optimal_height = window.innerHeight * pixel_density
       return new Promise((resolve, reject) => {
         Promise.all([
@@ -394,7 +400,7 @@ export default {
     onMouseDown(mouseState) {
       document.body.focus()
       this.handleMouseState(mouseState)
-      // this.isMenuCollapse = true
+      this.isMenuCollapse = true
     },
 
     onMouseOut(mouseState) {
@@ -503,10 +509,7 @@ export default {
 
       mouse.onmouseup = mouse.onmousemove = this.handleMouseState
       // Hide software cursor when mouse leaves display
-      mouse.onmouseout = function() {
-        if (!client.getDisplay()) return
-        client.getDisplay().showCursor(false)
-      }
+      mouse.onmouseout = this.onMouseOut
       client.getDisplay().oncursor = this.onCursor
       client.getDisplay().getElement().onclick = function(e) {
         e.preventDefault()
@@ -547,4 +550,51 @@ export default {
 .el-icon-arrow-down {
   font-size: 12px;
 }
+
+.el-menu {
+  background-color: rgb(60, 56, 56);
+  border: none;
+
+  /deep/ .el-submenu {
+    background-color: rgb(60, 56, 56);
+
+    .el-submenu__title {
+      color: white;
+    }
+    .el-menu-item {
+      line-height: 36px;
+      height: 36px;
+    }
+    .el-submenu__title:hover {
+      background-color: #463e3e;
+    }
+  }
+
+  /deep/ .el-submenu:hover {
+    background-color: #463e3e;
+  }
+}
+
+.el-menu-item {
+  color: white;
+  background-color: rgb(60, 56, 56);
+  padding-left: 20px;
+}
+
+.el-menu-item:hover {
+  background-color: #463e3e;
+}
+
+.el-menu--collapse {
+  width: 32px;
+
+  .el-menu-item {
+    padding-left: 5px !important;
+  }
+
+  /deep/ .el-submenu__title {
+    padding-left: 5px !important;
+  }
+}
+
 </style>
