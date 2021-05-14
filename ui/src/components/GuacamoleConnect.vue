@@ -418,7 +418,7 @@ export default {
       const pixel_density = window.devicePixelRatio || 1
       const optimal_width = window.innerWidth * pixel_density
       const optimal_height = window.innerHeight * pixel_density
-      const width = optimal_width - 64
+      const width = optimal_width - 30
       const height = optimal_height
       if (this.client !== null) {
         const display = this.client.getDisplay()
