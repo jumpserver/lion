@@ -99,7 +99,7 @@ export default {
       fileSystemInited: false,
       clipboardInited: false,
       loadingText: i18n.t('Connecting') + ' ...',
-      clientState: i18n.t('Connecting') + ' ...',
+      clientState: 'Connecting',
       localCursor: false,
       client: null,
       tunnel: null,
@@ -321,7 +321,6 @@ export default {
           // Ignore "connecting" state
         case 1: // Connecting
           this.clientState = 'Connecting'
-          this.loadingText = 'Connecting'
           this.$log.debug('clientState, Connecting')
           break
 

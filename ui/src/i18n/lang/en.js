@@ -5,7 +5,8 @@ const message = {
   Clipboard: 'Clipboard',
   Files: 'Files',
   UploadFile: 'Upload File',
-  ClearDone: 'Clear done'
+  ClearDone: 'Clear done',
+  Connecting: 'Connecting'
 }
 
 export default {
