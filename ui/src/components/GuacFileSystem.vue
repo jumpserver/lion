@@ -18,10 +18,10 @@
         :http-request="uploadFile"
       >
         <el-button slot="trigger" size="small" type="primary">上传文件</el-button>
-        <el-button size="small" type="default" @click="clearFileList" style="margin-left: 10px">清理已完成</el-button>
+        <el-button size="small" type="default" style="margin-left: 10px" @click="clearFileList">清理已完成</el-button>
       </el-upload>
       <div style="padding: 20px" class="fileZone">
-        <el-row :gutter="20"  class="currentFolder">
+        <el-row :gutter="20" class="currentFolder">
           <el-col :span="6">
             <span @click="changeParentFolder">{{ currentFolder.streamName }} </span>
           </el-col>
@@ -107,35 +107,35 @@ export default {
   mounted: function() {
   },
   destroyed: function() {
-    console.log('destroyed GuacFileSystem')
+    this.$log.debug('destroyed GuacFileSystem')
   },
   methods: {
     clearFileList() {
       this.fileList.splice(0, this.fileList.length)
     },
     fileSystemReceived(object, name) {
-      console.log('fileSystemReceived ', object, name)
+      this.$log.debug('fileSystemReceived ', object, name)
       this.currentFilesystem.object = object
       this.currentFilesystem.name = name
 
       this.updateDirectory(this.currentFolder).then(files => {
-        console.log(files)
+        this.$log.debug(files)
         this.files = files
       })
     },
     updateShow(value) {
-      console.log('Update show to: ', value)
+      this.$log.debug('Update show to: ', value)
       this.$emit('update:show', value)
     },
     onCloseDrawer() {
       this.$emit('closeDrawer')
     },
     onDownloadFile(stream, mimetype, filename) {
-      console.log('On download file')
+      this.$log.debug('On download file')
       this.clientFileReceived(stream, mimetype, filename)
     },
     clientFileReceived(stream, mimetype, filename) {
-      console.log('clientFileReceived, ', this.tunnel.uuid, stream, mimetype, filename)
+      this.$log.debug('clientFileReceived, ', this.tunnel.uuid, stream, mimetype, filename)
       // Build download URL
       const url = BaseAPIURL +
           '/tunnels/' + encodeURIComponent(this.tunnel.uuid) +
@@ -178,7 +178,7 @@ export default {
       this.loadingText = 'downloading file'
       // Begin download
       iframe.src = url
-      console.log(url)
+      this.$log.debug(url)
     },
 
     fileDrop: function(e) {
@@ -202,7 +202,7 @@ export default {
         stream.onack = function beginUpload(status) {
           // Notify of any errors from the Guacamole server
           if (status.isError()) {
-            console.log('Upload error', status.code, status)
+            this.$log.debug('Upload error', status.code, status)
             reject(status)
             return
           }
@@ -227,25 +227,25 @@ export default {
 
               // Resolve if HTTP status code indicates success
               if (xhr.status >= 200 && xhr.status < 300) {
-                console.log('Upload load success')
+                this.$log.debug('Upload load success')
                 resolve()
                 // eslint-disable-next-line brace-style
               }
               // Parse and reject with resulting JSON error
               // eslint-disable-next-line brace-style
               else if (xhr.getResponseHeader('Content-Type') === 'application/json') {
-                console.log('failed upload ', xhr.responseText)
+                this.$log.debug('failed upload ', xhr.responseText)
                 // eslint-disable-next-line brace-style
               }
               // Warn of lack of permission of a proxy rejects the upload
               else if (xhr.status >= 400 && xhr.status < 500) {
-                console.log('Upload failed: ', xhr.status)
+                this.$log.debug('Upload failed: ', xhr.status)
                 reject(xhr.status)
                 // eslint-disable-next-line brace-style
               }
               // Assume internal error for all other cases
               else {
-                console.log('Upload failed: ', xhr.status)
+                this.$log.debug('Upload failed: ', xhr.status)
                 reject(xhr.status)
               }
             }
@@ -267,13 +267,13 @@ export default {
       this.currentFolder = fileItem
     },
     uploadFile(fileObj) {
-      console.log('uploadFile: ', fileObj)
+      this.$log.debug('uploadFile: ', fileObj)
       const file = fileObj.file
       let streamName
       if (this.currentFolder) {
         streamName = this.currentFolder.streamName + '/' + file.name
       }
-      console.log('File is: ', file)
+      this.$log.debug('File is: ', file)
       const onprogress = function progress(e) {
         if (e.total > 0) {
           e.percent = e.loaded / e.total * 100
@@ -285,11 +285,11 @@ export default {
         this.refresh()
       }).catch(err => {
         fileObj.onError(err)
-        console.log('Upload error: ', err)
+        this.$log.debug('Upload error: ', err)
       })
     },
     downloadFile(fileItem) {
-      console.log('Down load file: ', fileItem)
+      this.$log.debug('Down load file: ', fileItem)
       const path = fileItem.streamName
       const downloadStreamReceived = function downloadStreamReceived(stream, mimetype) {
         // Parse filename from string
@@ -302,7 +302,7 @@ export default {
 
     changeFolder(fileItem) {
       // this.updateDirectory(fileItem)
-      console.log('ChangeFolder ', fileItem)
+      this.$log.debug('ChangeFolder ', fileItem)
       this.updateDirectory(fileItem).then(files => {
         this.files = files
         this.onChangeFolder(fileItem)
@@ -311,10 +311,10 @@ export default {
     },
     changeParentFolder() {
       if (this.currentFolder.parent === null) {
-        console.log('没有parent目录了')
+        this.$log.debug('没有parent目录了')
         return
       }
-      console.log('切换到parent目录了', this.currentFolder)
+      this.$log.debug('切换到parent目录了', this.currentFolder)
       this.updateDirectory(this.currentFolder.parent).then(files => {
         this.files = files
         this.changeFolder(this.currentFolder.parent)

@@ -1,7 +1,9 @@
 import el from 'element-ui/lib/locale/lang/en'
 
 const message = {
-  // TODO
+  Shortcuts: 'Shortcuts',
+  Clipboard: 'Clipboard',
+  Files: 'Files'
 }
 
 export default {

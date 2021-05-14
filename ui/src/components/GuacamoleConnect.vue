@@ -15,7 +15,7 @@
     >
       <el-submenu :disabled="menuDisable" index="1">
         <template slot="title">
-          <i class="el-icon-position" /><span>快捷键</span>
+          <i class="el-icon-position" /><span>{{ $t('Shortcuts') }}</span>
         </template>
         <el-menu-item
           v-for="(item, i) in combinationKeys"
@@ -27,10 +27,10 @@
         </el-menu-item>
       </el-submenu>
       <el-menu-item :disabled="menuDisable" index="2">
-        <i class="el-icon-document-copy" /><span @click="toggleClipboard">剪切板</span>
+        <i class="el-icon-document-copy" /><span @click="toggleClipboard">{{ $t('Clipboard') }}</span>
       </el-menu-item>
       <el-menu-item :disabled="menuDisable" index="3" @click="toggleFileSystem">
-        <i class="el-icon-folder" /><span>文件管理</span>
+        <i class="el-icon-folder" /><span>{{ $t('Files') }}</span>
       </el-menu-item>
     </el-menu>
     <el-dialog title="认证参数" :visible="dialogFormVisible" @close="cancelSubmitParams">
@@ -76,6 +76,7 @@ import { getCurrentConnectParams } from '@/utils/common'
 import { createSession } from '@/api/session'
 import GuacClipboard from './GuacClipboard'
 import GuacFileSystem from './GuacFileSystem'
+import i18n from '@/i18n'
 
 export default {
   name: 'GuacamoleConnect',
@@ -96,8 +97,8 @@ export default {
       tunnelState: '',
       fileSystemInited: false,
       clipboardInited: false,
-      loadingText: '连接中。。。',
-      clientState: '连接中。。。',
+      loadingText: i18n.t('Connecting') + ' ...',
+      clientState: i18n.t('Connecting') + ' ...',
       localCursor: false,
       client: null,
       tunnel: null,
@@ -156,6 +157,7 @@ export default {
   mounted: function() {
     const result = getCurrentConnectParams()
     this.apiPrefix = result['api']
+    const vm = this
     createSession(result['api'], result['data']).then(res => {
       this.session = res.data
       window.addEventListener('resize', this.onWindowResize)
@@ -164,7 +166,7 @@ export default {
         this.connectGuacamole(connectionParams, result['ws'])
       })
     }).catch(err => {
-      console.log('err ', err.message)
+      vm.$log.debug('err ', err.message)
     })
   },
   methods: {
@@ -198,8 +200,8 @@ export default {
     submitParams() {
       if (this.client) {
         for (let i = 0; i < this.requireParams.length; i++) {
-          var stream = this.client.createArgumentValueStream('text/plain', this.requireParams[i].name)
-          var writer = new Guacamole.StringWriter(stream)
+          const stream = this.client.createArgumentValueStream('text/plain', this.requireParams[i].name)
+          const writer = new Guacamole.StringWriter(stream)
           writer.sendText(this.requireParams[i].value)
           writer.sendEnd()
         }
@@ -238,10 +240,10 @@ export default {
 
     getConnectString(sessionId) {
       // Calculate optimal width/height for display
-      const pixel_density = window.devicePixelRatio || 1
-      const optimal_dpi = pixel_density * 96
-      const optimal_width = window.innerWidth * pixel_density - 30
-      const optimal_height = window.innerHeight * pixel_density
+      const pixelDensity = window.devicePixelRatio || 1
+      const optimal_dpi = pixelDensity * 96
+      const optimalWidth = window.innerWidth * pixelDensity - 30
+      const optimalHeight = window.innerHeight * pixelDensity
       return new Promise((resolve, reject) => {
         Promise.all([
           getSupportedMimetypes(),
@@ -252,12 +254,12 @@ export default {
           const supportImages = values[0]
           const supportAudios = values[1]
           const supportVideos = values[2]
-          this.displayWidth = optimal_width
-          this.displayHeight = optimal_height
+          this.displayWidth = optimalWidth
+          this.displayHeight = optimalHeight
           var connectString =
               'SESSION_ID=' + encodeURIComponent(sessionId) +
-              '&GUAC_WIDTH=' + Math.floor(optimal_width) +
-              '&GUAC_HEIGHT=' + Math.floor(optimal_height) +
+              '&GUAC_WIDTH=' + Math.floor(optimalWidth) +
+              '&GUAC_HEIGHT=' + Math.floor(optimalHeight) +
               '&GUAC_DPI=' + Math.floor(optimal_dpi)
           supportImages.forEach(function(mimetype) {
             connectString += '&GUAC_IMAGE=' + encodeURIComponent(mimetype)
@@ -278,13 +280,13 @@ export default {
         // Connection is being established
         case Guacamole.Tunnel.State.CONNECTING:
           this.tunnelState = 'CONNECTING'
-          console.log('tunnelStateChanged Tunnel.State.CONNECTING ')
+          this.$log.debug('tunnelStateChanged Tunnel.State.CONNECTING ')
           break
 
           // Connection is established / no longer unstable
         case Guacamole.Tunnel.State.OPEN:
           this.tunnelState = 'OPEN'
-          console.log('tunnelStateChanged Tunnel.State.OPEN ')
+          this.$log.debug('tunnelStateChanged Tunnel.State.OPEN ')
           this.initFileSystem()
           this.initClipboard()
           break
@@ -292,17 +294,17 @@ export default {
           // Connection is established but misbehaving
         case Guacamole.Tunnel.State.UNSTABLE:
           this.tunnelState = 'UNSTABLE'
-          console.log('tunnelStateChanged Tunnel.State.UNSTABLE ')
+          this.$log.debug('tunnelStateChanged Tunnel.State.UNSTABLE ')
           break
 
           // Connection has closed
         case Guacamole.Tunnel.State.CLOSED:
           this.tunnelState = 'CLOSED'
-          console.log('tunnelStateChanged Tunnel.State.CLOSED ')
+          this.$log.debug('tunnelStateChanged Tunnel.State.CLOSED ')
           break
         default:
           this.tunnelState = 'unknown'
-          console.log('tunnelStateChanged unknown ', state)
+          this.$log.debug('tunnelStateChanged unknown ', state)
           break
       }
     },
@@ -312,26 +314,26 @@ export default {
         // Idle
         case 0:
           this.clientState = 'IDLE'
-          console.log('clientState, IDLE')
+          this.$log.debug('clientState, IDLE')
           break
 
           // Ignore "connecting" state
         case 1: // Connecting
           this.clientState = 'Connecting'
           this.loadingText = 'Connecting'
-          console.log('clientState, Connecting')
+          this.$log.debug('clientState, Connecting')
           break
 
           // Connected + waiting
         case 2:
           this.clientState = 'Connected + waiting'
-          console.log('clientState, Connected + waiting')
+          this.$log.debug('clientState, Connected + waiting')
           break
 
           // Connected
         case 3:
           this.clientState = 'Connected'
-          console.log('clientState, Connected ')
+          this.$log.debug('clientState, Connected ')
           this.loading = false
           // Send any clipboard data already provided
           // if (managedClient.clipboardData)
@@ -358,7 +360,7 @@ export default {
         case 4: // Disconnecting
         case 5: // Disconnected
           this.clientState = 'Disconnecting'
-          console.log('clientState, Disconnected ')
+          this.$log.debug('clientState, Disconnected ')
           // this.closeDisplay('clientState Disconnecting')
           var display = document.getElementById('display')
           display.innerHTML = ''
@@ -371,7 +373,7 @@ export default {
     },
 
     closeDisplay(stats) {
-      console.log(stats)
+      this.$log.debug(stats)
       this.$alert('关闭窗口=== ' + stats.message, stats, {
         confirmButtonText: '确定',
         callback: action => {
@@ -409,21 +411,21 @@ export default {
     },
 
     onCloseDrawer() {
-      console.log('onCloseDrawer', this.sink)
+      this.$log.debug('onCloseDrawer', this.sink)
       this.sink.focus()
     },
 
     onWindowResize() {
       // 监听 window display的变化
-      const pixel_density = window.devicePixelRatio || 1
-      const optimal_width = window.innerWidth * pixel_density
-      const optimal_height = window.innerHeight * pixel_density
-      const width = optimal_width - 30
-      const height = optimal_height
+      const pixelDensity = window.devicePixelRatio || 1
+      const optimalWidth = window.innerWidth * pixelDensity
+      const optimalHeight = window.innerHeight * pixelDensity
+      const width = optimalWidth - 30
+      const height = optimalHeight
       if (this.client !== null) {
         const display = this.client.getDisplay()
-        const displayHeight = display.getHeight() * pixel_density
-        const displayWidth = display.getWidth() * pixel_density
+        const displayHeight = display.getHeight() * pixelDensity
+        const displayWidth = display.getWidth() * pixelDensity
         if (displayHeight === width && displayWidth === height) {
           return
         }
@@ -433,18 +435,18 @@ export default {
 
     displayResize(width, height) {
       // 监听guacamole display的变化
-      console.log('on display ', width, height)
+      this.$log.debug('on display ', width, height)
       this.displayWidth = width
       this.displayHeight = height
     },
 
     onWindowFocus() {
-      console.log('onWindowFocus ')
+      this.$log.debug('onWindowFocus ')
       this.$refs.clipboard.sendClipboardToRemote()
     },
 
     onsync: function(timestamp) {
-      // console.log('onsync==> ', timestamp)
+      // this.$log.debug('onsync==> ', timestamp)
     },
 
     handleKeys(keys) {
@@ -463,11 +465,13 @@ export default {
       const display = document.getElementById('display')
       const tunnel = new Guacamole.WebSocketTunnel(wsURL)
       const client = new Guacamole.Client(tunnel)
-      tunnel.onerror = function tunnelError(status) {
-        this.$message.error('WebSocket 连接失败，请检查网络')
+      const vm = this
+      tunnel.onerror = (status) => {
+        vm.$message.error(this.$t('WebSocketError'))
+        vm.logger.error('Tunnel error: ', status)
       }
-      tunnel.onuuid = function tunnelAssignedUUID(uuid) {
-        console.log('tunnelAssignedUUID ', uuid)
+      tunnel.onuuid = (uuid) => {
+        vm.$log.debug('Tunnel assigned UUID: ', uuid)
         tunnel.uuid = uuid
       }
       client.onrequired = this.onRequireParams
@@ -484,15 +488,15 @@ export default {
 
       // 文件挂载
       client.onfilesystem = (obj, name) => {
-        return this.$refs.fileSystem.fileSystemReceived(obj, name)
+        return vm.$refs.fileSystem.fileSystemReceived(obj, name)
       }
       client.onfile = (stream, mimetype, filename) => {
-        return this.$refs.fileSystem.clientFileReceived(stream, mimetype, filename)
+        return vm.$refs.fileSystem.clientFileReceived(stream, mimetype, filename)
       }
 
       // 剪贴板
       client.onclipboard = (stream, mimetype) => {
-        return this.$refs.clipboard.receiveClientClipboard(stream, mimetype)
+        return vm.$refs.clipboard.receiveClientClipboard(stream, mimetype)
       }
       client.onsync = this.onsync
       // Handle any received files
@@ -511,7 +515,7 @@ export default {
       // Hide software cursor when mouse leaves display
       mouse.onmouseout = this.onMouseOut
       client.getDisplay().oncursor = this.onCursor
-      client.getDisplay().getElement().onclick = function(e) {
+      client.getDisplay().getElement().onclick = (e) => {
         e.preventDefault()
         return false
       }
