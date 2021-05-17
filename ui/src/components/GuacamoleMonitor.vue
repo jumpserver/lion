@@ -177,12 +177,13 @@ export default {
       var display = document.getElementById('monitor')
       var tunnel = new Guacamole.WebSocketTunnel(wsURL)
       var client = new Guacamole.Client(tunnel)
+      const vm = this
       tunnel.onerror = function tunnelError(status) {
-        this.$log.debug('tunnelError ', status)
+        vm.$log.debug('tunnelError ', status)
         display.innerHTML = ''
       }
       tunnel.onuuid = function tunnelAssignedUUID(uuid) {
-        this.$log.debug('tunnelAssignedUUID ', uuid)
+        vm.$log.debug('tunnelAssignedUUID ', uuid)
         tunnel.uuid = uuid
       }
       tunnel.onstatechange = this.onTunnelStateChanged

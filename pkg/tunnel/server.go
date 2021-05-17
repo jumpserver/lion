@@ -357,20 +357,19 @@ func (g *GuacamoleTunnelServer) Monitor(ctx *gin.Context) {
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrBadParams.String()))
 		return
 	}
-	/*
-		todo: 等待 core API 放开
-		result, err := g.JmsService.ValidateJoinSessionPermission(user.ID, sessionId)
-		if err != nil {
-			logger.Errorf("Validate join session err: %s", err)
-			_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrAPIFailed.String()))
-			return
-		}
-		if !result.Ok {
-			logger.Errorf("Validate join session failed : %s", result.Msg)
-			_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrPermission.String()))
-			return
-		}
-	*/
+
+	result, err := g.JmsService.ValidateJoinSessionPermission(user.ID, sessionId)
+	if err != nil {
+		logger.Errorf("Validate join session err: %s", err)
+		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrAPIFailed.String()))
+		return
+	}
+	if !result.Ok {
+		logger.Errorf("Validate join session failed : %s", result.Msg)
+		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrPermission.String()))
+		return
+	}
+
 	tunnelCon := g.Cache.GetMonitorTunnelerBySessionId(sessionId)
 	if tunnelCon == nil {
 		logger.Error("No session tunnel found")
