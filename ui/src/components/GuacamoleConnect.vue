@@ -372,6 +372,7 @@ export default {
     },
 
     clientOnErr(status) {
+      this.loading = false
       this.$log.debug('clientOnErr', status)
       this.closeDisplay(status)
     },
