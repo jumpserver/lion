@@ -15,6 +15,8 @@ import { getMonitorConnectParams } from '../utils/common'
 import { getSupportedMimetypes } from '../utils/image'
 import { getSupportedGuacAudios } from '../utils/audios'
 import { getSupportedGuacVideos } from '../utils/video'
+import { getLanguage } from '../i18n'
+import { ErrorStatusCodes } from '@/utils/status'
 
 export default {
   name: 'GuacamoleMonitor',
@@ -149,7 +151,28 @@ export default {
           break
       }
     },
-
+    clientOnErr(status) {
+      this.loading = false
+      this.closeDisplay(status)
+    },
+    closeDisplay(status) {
+      this.$log.debug(status, i18n.locale)
+      const code = status.code
+      let msg = status.message
+      if (getLanguage() === 'cn') {
+        msg = ErrorStatusCodes[code] ? this.$t(ErrorStatusCodes[code]) : status.message
+      }
+      this.$alert(msg, this.$t('ErrTitle'), {
+        confirmButtonText: this.$t('OK'),
+        callback: action => {
+          const display = document.getElementById('display')
+          if (this.client) {
+            // display.removeChild(this.client.getDisplay().getElement())
+            display.innerHTML = ''
+          }
+        }
+      })
+    },
     connectGuacamole(connectionParams, wsURL) {
       var display = document.getElementById('monitor')
       var tunnel = new Guacamole.WebSocketTunnel(wsURL)

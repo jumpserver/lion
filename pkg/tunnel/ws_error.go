@@ -48,4 +48,6 @@ var (
 	ErrGatewayFailed = NewJMSGuacamoleError(1007, "Gateway not available")
 
 	ErrGuacamoleServer = NewJMSGuacamoleError(1008, "Connect guacamole server failed")
+
+	//ErrPermission = NewJMSGuacamoleError(256, "No permission")
 )

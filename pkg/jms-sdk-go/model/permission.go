@@ -47,3 +47,8 @@ const (
 	ActionPaste          = "clipboard_paste"
 	ActionCopyPaste      = "clipboard_copy_paste"
 )
+
+type ValidateResult struct {
+	Ok  bool   `json:"ok"`
+	Msg string `json:"msg"`
+}

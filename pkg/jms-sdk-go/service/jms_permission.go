@@ -36,3 +36,12 @@ func (s *JMService) ValidateAssetConnectPermission(userId, assetId, systemUserId
 	_, err = s.authClient.Get(ValidateUserAssetPermissionURL, &info, params)
 	return
 }
+
+func (s *JMService) ValidateJoinSessionPermission(userId, sessionId string) (result model.ValidateResult, err error) {
+	data := map[string]string{
+		"user_id":    userId,
+		"session_id": sessionId,
+	}
+	_, err = s.authClient.Post(JoinRoomValidateURL, data, &result)
+	return
+}
