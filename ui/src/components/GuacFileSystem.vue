@@ -304,7 +304,7 @@ export default {
       })
     },
     downloadFile(fileItem) {
-      this.$log.debug('Down load file: ', fileItem)
+      this.$log.debug('Download file: ', fileItem)
       const path = fileItem.streamName
       const downloadStreamReceived = function downloadStreamReceived(stream, mimetype) {
         // Parse filename from string

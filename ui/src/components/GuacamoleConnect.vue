@@ -30,7 +30,7 @@
       <el-menu-item :disabled="menuDisable" index="2">
         <i class="el-icon-document-copy" /><span @click="toggleClipboard">{{ $t('Clipboard') }}</span>
       </el-menu-item>
-      <el-menu-item :disabled="menuDisable" index="3" @click="toggleFileSystem">
+      <el-menu-item v-if="hasFileSystem" :disabled="menuDisable" index="3" @click="toggleFileSystem">
         <i class="el-icon-folder" /><span>{{ $t('Files') }}</span>
       </el-menu-item>
     </el-menu>
@@ -93,6 +93,7 @@ export default {
       dialogFormVisible: false,
       requireParams: [],
       isMenuCollapse: true,
+      hasFileSystem: false,
       clipboardDrawer: false,
       fileDrawer: false,
       loading: true,
@@ -484,17 +485,18 @@ export default {
       tunnel.onstatechange = vm.onTunnelStateChanged
     },
 
+    onFileSystem(obj, name) {
+      this.hasFileSystem = true
+      if (this.$refs.fileSystem) { this.$refs.fileSystem.fileSystemReceived(obj, name) }
+    },
+
     setClientCallback(client) {
       const vm = this
       client.onrequired = this.onRequireParams
       client.onstatechange = this.clientStateChanged
       client.onerror = this.clientOnErr
       // 文件挂载
-      client.onfilesystem = (obj, name) => {
-        if (vm.$refs.fileSystem) {
-          return vm.$refs.fileSystem.fileSystemReceived(obj, name)
-        }
-      }
+      client.onfilesystem = this.onFileSystem
       client.onfile = (stream, mimetype, filename) => {
         return vm.$refs.fileSystem.clientFileReceived(stream, mimetype, filename)
       }
