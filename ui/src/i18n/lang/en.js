@@ -21,7 +21,8 @@ const message = {
   GuaErrSessionConflict: 'The session has ended because it conflicts with another session.',
   GuaErrClientUnauthorized: 'User failed to logged in. (username and password are incorrect)',
   GuaErrUnSupport: 'The requested operation is unsupported.',
-  GuaErrUpStreamTimeout: 'The remote desktop server is not responding.'
+  GuaErrUpStreamTimeout: 'The remote desktop server is not responding.',
+  OK: 'Ok'
 }
 
 export default {

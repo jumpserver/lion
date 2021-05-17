@@ -22,7 +22,8 @@ const message = {
   GuaErrSessionConflict: '因与另一个连接冲突，远程桌面服务器关闭了本连接。请稍后重试。',
   GuaErrClientUnauthorized: '用户名和密码认证错误，登录失败',
   GuaErrUnSupport: '该操作请求被禁止',
-  GuaErrUpStreamTimeout: '远程桌面服务器无响应'
+  GuaErrUpStreamTimeout: '远程桌面服务器无响应',
+  OK: '确定'
 }
 
 export default {

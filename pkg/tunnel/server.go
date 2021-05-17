@@ -81,25 +81,30 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	defer ws.Close()
 	sessionId, ok := ctx.GetQuery("SESSION_ID")
 	if !ok {
+		logger.Error("No session id params")
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrBadParams.String()))
 		return
 	}
 	tunnelSession := g.SessCache.Pop(sessionId)
 	if tunnelSession == nil {
+		logger.Error("No session found")
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrNoSession.String()))
 		return
 	}
 	userItem, ok := ctx.Get(config.GinCtxUserKey)
 	if !ok {
+		logger.Error("No auth user found")
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrAuthUser.String()))
 		return
 	}
 	if user := userItem.(*model.User); user.ID != tunnelSession.User.ID {
+		logger.Error("No valid auth user found")
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrAuthUser.String()))
 		return
 	}
 
 	if err = tunnelSession.ConnectedCallback(); err != nil {
+		logger.Errorf("Session connect callback err %v", err)
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrAPIFailed.String()))
 		return
 	}
@@ -178,11 +183,13 @@ func (g *GuacamoleTunnelServer) CreateSession(ctx *gin.Context) {
 		SystemUserId string `json:"system_user_id" binding:"required"`
 	}
 	if err := ctx.BindJSON(&jsonData); err != nil {
+		logger.Errorf("Request params err: %+v", err)
 		ctx.JSON(http.StatusBadRequest, ErrorResponse(err))
 		return
 	}
 	value, ok := ctx.Get(config.GinCtxUserKey)
 	if !ok {
+		logger.Error("No auth user found")
 		ctx.JSON(http.StatusBadRequest, ErrorResponse(ErrNoAuthUser))
 		return
 	}
@@ -322,6 +329,7 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 		}
 		return
 	}
+	logger.Infof("No session tunnel found")
 	ctx.AbortWithStatus(http.StatusNotFound)
 }
 
@@ -345,11 +353,13 @@ func (g *GuacamoleTunnelServer) Monitor(ctx *gin.Context) {
 	}
 	sessionId, ok := ctx.GetQuery("SESSION_ID")
 	if !ok {
+		logger.Error("No session found")
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrBadParams.String()))
 		return
 	}
 	tunnelCon := g.Cache.GetMonitorTunnelerBySessionId(sessionId)
 	if tunnelCon == nil {
+		logger.Error("No session tunnel found")
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrNoSession.String()))
 		return
 	}

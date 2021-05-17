@@ -383,7 +383,7 @@ export default {
         msg = ErrorStatusCodes[code] ? this.$t(ErrorStatusCodes[code]) : status.message
       }
       this.$alert(msg, this.$t('ErrTitle'), {
-        confirmButtonText: '确定',
+        confirmButtonText: this.$t('OK'),
         callback: action => {
           const display = document.getElementById('display')
           if (this.client) {

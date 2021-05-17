@@ -10,6 +10,7 @@
 
 <script>
 import Guacamole from 'guacamole-common-js'
+import i18n from '@/i18n'
 import { getMonitorConnectParams } from '../utils/common'
 import { getSupportedMimetypes } from '../utils/image'
 import { getSupportedGuacAudios } from '../utils/audios'
@@ -22,7 +23,7 @@ export default {
       displayWidth: 0,
       displayHeight: 0,
       loading: true,
-      loadingText: '连接中。。'
+      loadingText: i18n.t('Connecting') + ' ...'
     }
   },
   computed: {
