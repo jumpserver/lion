@@ -162,6 +162,7 @@ func (s *Server) CreateRDPAndVNCSession(user *model.User, asset *model.Asset, sy
 		Platform:       &platform,
 		Domain:         assetDomain,
 		TerminalConfig: &terminal,
+		LoginMode:      systemUser.LoginMode,
 	}
 	return newSession, nil
 }

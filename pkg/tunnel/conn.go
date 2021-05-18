@@ -197,17 +197,13 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 			latestActive = time.Now()
 		case detectTime := <-activeDetectTicker.C:
 			if detectTime.After(latestActive.Add(maxIdleMinutes)) {
-				errInstruction := guacd.NewInstruction(
-					guacd.InstructionServerError, "Terminated by timeout ", "1011")
-				_ = t.SendWsMessage(errInstruction)
+				_ = t.SendWsMessage(ErrIdleTimeOut.Instruction())
 				logger.Errorf("Session[%s] terminated by %d min timeout",
 					t, maxIndexTime)
 				return nil
 			}
 			if t.IsPermissionExpired(detectTime) {
-				errInstruction := guacd.NewInstruction(
-					guacd.InstructionServerError, "Permission has expired", "1012")
-				_ = t.SendWsMessage(errInstruction)
+				_ = t.SendWsMessage(ErrPermissionExpired.Instruction())
 				logger.Errorf("Session[%s] permission has expired", t)
 				return nil
 			}
@@ -217,10 +213,7 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 }
 
 func (t *Connection) Terminate() {
-	errInstruction := guacd.NewInstruction(
-		// Todo 定义 code 表明 JMS 终断
-		guacd.InstructionServerError, "admin Terminate", "1011")
-	_ = t.SendWsMessage(errInstruction)
+	_ = t.SendWsMessage(ErrTerminatedByAdmin.Instruction())
 	logger.Errorf("Session[%s] terminated by Admin", t)
 }
 

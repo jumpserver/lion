@@ -4,7 +4,10 @@ package guacd
 
 const (
 	Hostname = "hostname"
-	Port = "port"
+	Port     = "port"
+
+	Username = "username"
+	Password = "password"
 )
 
 // Session Recording

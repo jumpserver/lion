@@ -30,11 +30,11 @@
       <el-menu-item :disabled="menuDisable" index="2">
         <i class="el-icon-document-copy" /><span @click="toggleClipboard">{{ $t('Clipboard') }}</span>
       </el-menu-item>
-      <el-menu-item :disabled="menuDisable" index="3" @click="toggleFileSystem">
+      <el-menu-item v-if="hasFileSystem" :disabled="menuDisable" index="3" @click="toggleFileSystem">
         <i class="el-icon-folder" /><span>{{ $t('Files') }}</span>
       </el-menu-item>
     </el-menu>
-    <el-dialog title="认证参数" :visible="dialogFormVisible" @close="cancelSubmitParams">
+    <el-dialog :title="$t('RequireParams')" :visible="dialogFormVisible" @close="cancelSubmitParams">
       <el-form label-position="left" label-width="80px" @submit.native.prevent="submitParams">
         <el-form-item v-for="(item, index) in requireParams" :key="index" :label="item.name">
           <template v-if="checkPasswordInput(item.name)">
@@ -46,7 +46,7 @@
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
-        <el-button type="primary" @click="submitParams">确 定</el-button>
+        <el-button type="primary" @click="submitParams">{{ $t('OK') }}</el-button>
       </div>
     </el-dialog>
     <GuacClipboard
@@ -65,6 +65,25 @@
       :show.sync="fileDrawer"
       @closeDrawer="onCloseDrawer"
     />
+
+    <el-dialog
+      :visible.sync="manualDialogVisible"
+      center
+    >
+      <el-form :model="manualForm">
+        <el-form-item :label="$t('Username')">
+          <el-input v-model="manualForm.username" autocomplete="off" />
+        </el-form-item>
+        <el-form-item :label="$t('Password')">
+          <el-input v-model="manualForm.password" show-password autocomplete="off" />
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="manualCancelClick">{{ $t('Cancel') }}</el-button>
+        <el-button type="primary" @click="manualSubmitClick">{{ $t('Submit') }}</el-button>
+        <el-button type="primary" @click="manualSkipClick">{{ $t('Skip') }}</el-button>
+      </span>
+    </el-dialog>
   </el-container>
 </template>
 
@@ -74,10 +93,12 @@ import { getSupportedMimetypes } from '@/utils/image'
 import { getSupportedGuacAudios } from '@/utils/audios'
 import { getSupportedGuacVideos } from '@/utils/video'
 import { getCurrentConnectParams } from '@/utils/common'
-import { createSession } from '@/api/session'
+import { createSession, deleteSession, updateSession } from '@/api/session'
 import GuacClipboard from './GuacClipboard'
 import GuacFileSystem from './GuacFileSystem'
 import i18n from '@/i18n'
+import { ErrorStatusCodes } from '@/utils/status'
+import { getLanguage } from '../i18n'
 
 export default {
   name: 'GuacamoleConnect',
@@ -88,9 +109,11 @@ export default {
   data() {
     return {
       apiPrefix: '/api',
+      wsPrefix: '/lion/ws/connect/',
       dialogFormVisible: false,
       requireParams: [],
       isMenuCollapse: true,
+      hasFileSystem: false,
       clipboardDrawer: false,
       fileDrawer: false,
       loading: true,
@@ -141,7 +164,12 @@ export default {
           keys: ['65515'],
           name: 'Windows'
         }
-      ]
+      ],
+      manualForm: {
+        username: '',
+        password: ''
+      },
+      manualDialogVisible: false
     }
   },
   computed: {
@@ -158,14 +186,18 @@ export default {
   mounted: function() {
     const result = getCurrentConnectParams()
     this.apiPrefix = result['api']
+    this.wsPrefix = result['ws']
     const vm = this
     createSession(result['api'], result['data']).then(res => {
+      window.addEventListener('beforeunload', e => this.beforeunloadFn(e))
+      window.addEventListener('unload', e => this.beforeunloadFn(e))
       this.session = res.data
-      window.addEventListener('resize', this.onWindowResize)
-      window.onfocus = this.onWindowFocus
-      this.getConnectString(res.data.id).then(connectionParams => {
-        this.connectGuacamole(connectionParams, result['ws'])
-      })
+      if (this.checkIsManualLogin(res.data)) {
+        this.$log.debug('manual login', res.data)
+        this.manualDialogVisible = true
+        return
+      }
+      this.startConnect()
     }).catch(err => {
       vm.$log.debug('err ', err.message)
     })
@@ -213,9 +245,47 @@ export default {
     cancelSubmitParams() {
       this.dialogFormVisible = false
       if (this.client) {
-        // this.client.disconnect()
+        this.client.disconnect()
       }
       this.requireParams = []
+    },
+    beforeunloadFn(e) {
+      this.removeSession()
+    },
+    checkIsManualLogin(session) {
+      return session.login_mode === 'manual'
+    },
+    manualCancelClick() {
+      this.$log.debug('manual cancel click')
+      this.manualDialogVisible = false
+      this.removeSession()
+    },
+    manualSubmitClick() {
+      this.$log.debug('manual submit click')
+      updateSession(this.apiPrefix, this.session.id, this.manualForm).then(data => {
+        this.manualDialogVisible = false
+        this.startConnect()
+      }).catch(err => {
+        this.$log.debug(err)
+        this.removeSession()
+      })
+    },
+    manualSkipClick() {
+      this.$log.debug('manual skip click')
+      this.manualDialogVisible = false
+      this.startConnect()
+    },
+    startConnect() {
+      window.addEventListener('resize', this.onWindowResize)
+      window.onfocus = this.onWindowFocus
+      this.getConnectString(this.session.id).then(connectionParams => {
+        this.connectGuacamole(connectionParams, this.wsPrefix)
+      })
+    },
+    removeSession() {
+      deleteSession(this.apiPrefix, this.session.id).catch(err => {
+        this.$log.debug(err)
+      })
     },
     onRequireParams(params) {
       this.requireParams = []
@@ -368,14 +438,21 @@ export default {
       }
     },
 
-    clientOnErr(stats) {
-      this.closeDisplay(stats)
+    clientOnErr(status) {
+      this.loading = false
+      this.$log.debug('clientOnErr', status)
+      this.closeDisplay(status)
     },
 
-    closeDisplay(stats) {
-      this.$log.debug('Close display, stats: ', stats)
-      this.$alert('关闭窗口=== ' + stats.message, stats, {
-        confirmButtonText: this.$t('Confirm'),
+    closeDisplay(status) {
+      this.$log.debug(status, i18n.locale)
+      const code = status.code
+      let msg = status.message
+      if (getLanguage() === 'cn') {
+        msg = ErrorStatusCodes[code] ? this.$t(ErrorStatusCodes[code]) : status.message
+      }
+      this.$alert(msg, this.$t('ErrTitle'), {
+        confirmButtonText: this.$t('OK'),
         callback: action => {
           const display = document.getElementById('display')
           if (this.client) {
@@ -442,7 +519,9 @@ export default {
 
     onWindowFocus() {
       this.$log.debug('On window focus ')
-      this.$refs.clipboard.sendClipboardToRemote()
+      if (this.$refs.clipboard) {
+        this.$refs.clipboard.sendClipboardToRemote()
+      }
     },
 
     onsync: function(timestamp) {
@@ -465,7 +544,7 @@ export default {
       const vm = this
       tunnel.onerror = (status) => {
         vm.$message.error(vm.$t('WebSocketError'))
-        vm.logger.error('Tunnel error: ', status)
+        vm.$log.error('Tunnel error: ', status)
       }
       tunnel.onuuid = (uuid) => {
         vm.$log.debug('Tunnel assigned UUID: ', uuid)
@@ -474,15 +553,18 @@ export default {
       tunnel.onstatechange = vm.onTunnelStateChanged
     },
 
+    onFileSystem(obj, name) {
+      this.hasFileSystem = true
+      if (this.$refs.fileSystem) { this.$refs.fileSystem.fileSystemReceived(obj, name) }
+    },
+
     setClientCallback(client) {
       const vm = this
       client.onrequired = this.onRequireParams
       client.onstatechange = this.clientStateChanged
       client.onerror = this.clientOnErr
       // 文件挂载
-      client.onfilesystem = (obj, name) => {
-        return vm.$refs.fileSystem.fileSystemReceived(obj, name)
-      }
+      client.onfilesystem = this.onFileSystem
       client.onfile = (stream, mimetype, filename) => {
         return vm.$refs.fileSystem.clientFileReceived(stream, mimetype, filename)
       }

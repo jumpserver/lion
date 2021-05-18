@@ -48,6 +48,8 @@
 import Guacamole from 'guacamole-common-js'
 import { BaseAPIURL, FileType, isDirectory, sanitizeFilename } from '@/utils/common'
 import GuacFile from './GuacFile'
+import { ErrorStatusCodes } from '@/utils/status'
+import { getLanguage } from '@/i18n'
 
 export default {
   name: 'GuacFileSystem',
@@ -187,7 +189,13 @@ export default {
       e.preventDefault()
       const dt = e.dataTransfer
       const files = dt.files
-      this.handleFiles(files[0])
+      this.handleFiles(files[0]).catch(status => {
+        let msg = status.message
+        if (getLanguage() === 'cn') {
+          msg = this.$t(ErrorStatusCodes[status.code]) || status.message
+        }
+        this.$warning(msg)
+      })
     },
     handleFiles: function(file, object, streamName, progressCallback) {
       const client = this.client
@@ -204,7 +212,7 @@ export default {
         stream.onack = function beginUpload(status) {
           // Notify of any errors from the Guacamole server
           if (status.isError()) {
-            this.$log.debug('Upload error', status.code, status)
+            vm.$log.debug('Upload error', status.code, status)
             reject(status)
             return
           }
@@ -288,10 +296,15 @@ export default {
       }).catch(err => {
         fileObj.onError(err)
         this.$log.debug('Upload error: ', err)
+        let msg = err.message
+        if (getLanguage() === 'cn') {
+          msg = this.$t(ErrorStatusCodes[err.code]) || err.message
+        }
+        this.$warning(msg)
       })
     },
     downloadFile(fileItem) {
-      this.$log.debug('Down load file: ', fileItem)
+      this.$log.debug('Download file: ', fileItem)
       const path = fileItem.streamName
       const downloadStreamReceived = function downloadStreamReceived(stream, mimetype) {
         // Parse filename from string

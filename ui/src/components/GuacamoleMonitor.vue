@@ -10,10 +10,13 @@
 
 <script>
 import Guacamole from 'guacamole-common-js'
+import i18n from '@/i18n'
 import { getMonitorConnectParams } from '../utils/common'
 import { getSupportedMimetypes } from '../utils/image'
 import { getSupportedGuacAudios } from '../utils/audios'
 import { getSupportedGuacVideos } from '../utils/video'
+import { getLanguage } from '../i18n'
+import { ErrorStatusCodes } from '@/utils/status'
 
 export default {
   name: 'GuacamoleMonitor',
@@ -22,7 +25,7 @@ export default {
       displayWidth: 0,
       displayHeight: 0,
       loading: true,
-      loadingText: '连接中。。'
+      loadingText: i18n.t('Connecting') + ' ...'
     }
   },
   computed: {
@@ -148,17 +151,39 @@ export default {
           break
       }
     },
-
+    clientOnErr(status) {
+      this.loading = false
+      this.closeDisplay(status)
+    },
+    closeDisplay(status) {
+      this.$log.debug(status, i18n.locale)
+      const code = status.code
+      let msg = status.message
+      if (getLanguage() === 'cn') {
+        msg = ErrorStatusCodes[code] ? this.$t(ErrorStatusCodes[code]) : status.message
+      }
+      this.$alert(msg, this.$t('ErrTitle'), {
+        confirmButtonText: this.$t('OK'),
+        callback: action => {
+          const display = document.getElementById('display')
+          if (this.client) {
+            // display.removeChild(this.client.getDisplay().getElement())
+            display.innerHTML = ''
+          }
+        }
+      })
+    },
     connectGuacamole(connectionParams, wsURL) {
       var display = document.getElementById('monitor')
       var tunnel = new Guacamole.WebSocketTunnel(wsURL)
       var client = new Guacamole.Client(tunnel)
+      const vm = this
       tunnel.onerror = function tunnelError(status) {
-        this.$log.debug('tunnelError ', status)
+        vm.$log.debug('tunnelError ', status)
         display.innerHTML = ''
       }
       tunnel.onuuid = function tunnelAssignedUUID(uuid) {
-        this.$log.debug('tunnelAssignedUUID ', uuid)
+        vm.$log.debug('tunnelAssignedUUID ', uuid)
         tunnel.uuid = uuid
       }
       tunnel.onstatechange = this.onTunnelStateChanged

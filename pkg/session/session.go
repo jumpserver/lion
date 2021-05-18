@@ -20,6 +20,7 @@ type TunnelSession struct {
 	Domain         *model.Domain             `json:"-"`
 	TerminalConfig *model.TerminalConfig     `json:"-"`
 	ExpireInfo     *model.ExpireInfo         `json:"expire_info"`
+	LoginMode      string                    `json:"login_mode"`
 
 	ConnectedCallback        func() error          `json:"-"`
 	ConnectedSuccessCallback func() error          `json:"-"`
@@ -75,6 +76,15 @@ func (s TunnelSession) configurationRDP() guacd.Configuration {
 		return remoteConf.GetGuacdConfiguration()
 	}
 	return rdpConf.GetGuacdConfiguration()
+}
+
+func (s *TunnelSession) UpdateManualFields(username, password string) {
+	if username != "" {
+		s.SystemUser.Username = username
+	}
+	if password != "" {
+		s.SystemUser.Password = password
+	}
 }
 
 const (
