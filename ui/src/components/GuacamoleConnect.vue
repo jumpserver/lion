@@ -34,7 +34,7 @@
         <i class="el-icon-folder" /><span>{{ $t('Files') }}</span>
       </el-menu-item>
     </el-menu>
-    <el-dialog title="认证参数" :visible="dialogFormVisible" @close="cancelSubmitParams">
+    <el-dialog :title="$t('RequireParams')" :visible="dialogFormVisible" @close="cancelSubmitParams">
       <el-form label-position="left" label-width="80px" @submit.native.prevent="submitParams">
         <el-form-item v-for="(item, index) in requireParams" :key="index" :label="item.name">
           <template v-if="checkPasswordInput(item.name)">
@@ -46,7 +46,7 @@
         </el-form-item>
       </el-form>
       <div slot="footer" class="dialog-footer">
-        <el-button type="primary" @click="submitParams">确 定</el-button>
+        <el-button type="primary" @click="submitParams">{{ $t('OK') }}</el-button>
       </div>
     </el-dialog>
     <GuacClipboard
@@ -65,6 +65,25 @@
       :show.sync="fileDrawer"
       @closeDrawer="onCloseDrawer"
     />
+
+    <el-dialog
+      :visible.sync="manualDialogVisible"
+      center
+    >
+      <el-form :model="manualForm">
+        <el-form-item :label="$t('Username')">
+          <el-input v-model="manualForm.username" autocomplete="off" />
+        </el-form-item>
+        <el-form-item :label="$t('Password')">
+          <el-input v-model="manualForm.password" show-password autocomplete="off" />
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="manualCancelClick">{{ $t('Cancel') }}</el-button>
+        <el-button type="primary" @click="manualSubmitClick">{{ $t('Submit') }}</el-button>
+        <el-button type="primary" @click="manualSkipClick">{{ $t('Skip') }}</el-button>
+      </span>
+    </el-dialog>
   </el-container>
 </template>
 
@@ -74,7 +93,7 @@ import { getSupportedMimetypes } from '@/utils/image'
 import { getSupportedGuacAudios } from '@/utils/audios'
 import { getSupportedGuacVideos } from '@/utils/video'
 import { getCurrentConnectParams } from '@/utils/common'
-import { createSession } from '@/api/session'
+import { createSession, deleteSession, updateSession } from '@/api/session'
 import GuacClipboard from './GuacClipboard'
 import GuacFileSystem from './GuacFileSystem'
 import i18n from '@/i18n'
@@ -90,6 +109,7 @@ export default {
   data() {
     return {
       apiPrefix: '/api',
+      wsPrefix: '/lion/ws/connect/',
       dialogFormVisible: false,
       requireParams: [],
       isMenuCollapse: true,
@@ -144,7 +164,12 @@ export default {
           keys: ['65515'],
           name: 'Windows'
         }
-      ]
+      ],
+      manualForm: {
+        username: '',
+        password: ''
+      },
+      manualDialogVisible: false
     }
   },
   computed: {
@@ -161,14 +186,18 @@ export default {
   mounted: function() {
     const result = getCurrentConnectParams()
     this.apiPrefix = result['api']
+    this.wsPrefix = result['ws']
     const vm = this
     createSession(result['api'], result['data']).then(res => {
+      window.addEventListener('beforeunload', e => this.beforeunloadFn(e))
+      window.addEventListener('unload', e => this.beforeunloadFn(e))
       this.session = res.data
-      window.addEventListener('resize', this.onWindowResize)
-      window.onfocus = this.onWindowFocus
-      this.getConnectString(res.data.id).then(connectionParams => {
-        this.connectGuacamole(connectionParams, result['ws'])
-      })
+      if (this.checkIsManualLogin(res.data)) {
+        this.$log.debug('manual login', res.data)
+        this.manualDialogVisible = true
+        return
+      }
+      this.startConnect()
     }).catch(err => {
       vm.$log.debug('err ', err.message)
     })
@@ -216,9 +245,47 @@ export default {
     cancelSubmitParams() {
       this.dialogFormVisible = false
       if (this.client) {
-        // this.client.disconnect()
+        this.client.disconnect()
       }
       this.requireParams = []
+    },
+    beforeunloadFn(e) {
+      this.removeSession()
+    },
+    checkIsManualLogin(session) {
+      return session.login_mode === 'manual'
+    },
+    manualCancelClick() {
+      this.$log.debug('manual cancel click')
+      this.manualDialogVisible = false
+      this.removeSession()
+    },
+    manualSubmitClick() {
+      this.$log.debug('manual submit click')
+      updateSession(this.apiPrefix, this.session.id, this.manualForm).then(data => {
+        this.manualDialogVisible = false
+        this.startConnect()
+      }).catch(err => {
+        this.$log.debug(err)
+        this.removeSession()
+      })
+    },
+    manualSkipClick() {
+      this.$log.debug('manual skip click')
+      this.manualDialogVisible = false
+      this.startConnect()
+    },
+    startConnect() {
+      window.addEventListener('resize', this.onWindowResize)
+      window.onfocus = this.onWindowFocus
+      this.getConnectString(this.session.id).then(connectionParams => {
+        this.connectGuacamole(connectionParams, this.wsPrefix)
+      })
+    },
+    removeSession() {
+      deleteSession(this.apiPrefix, this.session.id).catch(err => {
+        this.$log.debug(err)
+      })
     },
     onRequireParams(params) {
       this.requireParams = []

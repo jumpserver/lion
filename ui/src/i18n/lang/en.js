@@ -22,7 +22,13 @@ const message = {
   GuaErrClientUnauthorized: 'User failed to logged in. (username and password are incorrect)',
   GuaErrUnSupport: 'The requested operation is unsupported.',
   GuaErrUpStreamTimeout: 'The remote desktop server is not responding.',
-  OK: 'Ok'
+  OK: 'Ok',
+  Submit: 'Submit',
+  Cancel: 'Cancel',
+  Skip: 'Skip',
+  Username: 'Username',
+  Password: 'Password',
+  RequireParams: 'Require Params'
 }
 
 export default {

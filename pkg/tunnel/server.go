@@ -386,3 +386,33 @@ func (g *GuacamoleTunnelServer) Monitor(ctx *gin.Context) {
 	g.Cache.RemoveMonitorTunneler(sessionId, tunnelCon)
 	logger.Infof("User %s stop to monitor session %s", user, sessionId)
 }
+
+func (g *GuacamoleTunnelServer) UpdateSession(ctx *gin.Context) {
+	var jsonData struct {
+		Username string `json:"username" binding:"required"`
+		Password string `json:"password" binding:"required"`
+	}
+	if err := ctx.BindJSON(&jsonData); err != nil {
+		logger.Errorf("Request params err: %+v", err)
+		ctx.JSON(http.StatusBadRequest, ErrorResponse(err))
+		return
+	}
+	sid := ctx.Param("sid")
+	if sess := g.SessCache.Get(sid); sess != nil {
+		logger.Infof("Session[%s] update username and password", sid)
+		sess.UpdateManualFields(jsonData.Username, jsonData.Password)
+		ctx.JSON(http.StatusOK, SuccessResponse(sess))
+		return
+	}
+	logger.Errorf("No Found session %s", sid)
+	ctx.AbortWithStatus(http.StatusNotFound)
+}
+
+func (g *GuacamoleTunnelServer) DeleteSession(ctx *gin.Context) {
+	sid := ctx.Param("sid")
+	if sess := g.SessCache.Pop(sid); sess != nil {
+		logger.Infof("Delete session %s", sid)
+		return
+	}
+	ctx.JSON(http.StatusOK, SuccessResponse(nil))
+}

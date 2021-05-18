@@ -41,7 +41,7 @@ type SystemUserAuthInfo struct {
 	Name       string `json:"name"`
 	Username   string `json:"username"`
 	Protocol   string `json:"protocol"`
-	LoginMode  string `json:"logsin_mode"`
+	LoginMode  string `json:"login_mode"`
 	Password   string `json:"password"`
 	PrivateKey string `json:"private_key"`
 	AdDomain   string `json:"ad_domain"`
