@@ -80,7 +80,7 @@
       </el-form>
       <span slot="footer" class="dialog-footer">
         <el-button @click="manualCancelClick">{{ $t('Cancel') }}</el-button>
-        <el-button type="primary" @click="manualSubmitClick">{{ $t('Submit') }}</el-button>
+        <el-button type="primary" :disabled="disableSubmit" @click="manualSubmitClick">{{ $t('Submit') }}</el-button>
         <el-button type="primary" @click="manualSkipClick">{{ $t('Skip') }}</el-button>
       </span>
     </el-dialog>
@@ -181,6 +181,9 @@ export default {
     },
     menuDisable: function() {
       return !(this.clientState === 'Connected') || !(this.tunnelState === 'OPEN')
+    },
+    disableSubmit: function() {
+      return (this.manualForm.username === '') || (this.manualForm.password === '')
     }
   },
   mounted: function() {
@@ -196,6 +199,7 @@ export default {
         this.$log.debug('manual login', res.data)
         this.manualForm.username = res.data.system_user.username
         this.manualDialogVisible = true
+        this.$log.debug(this.manualForm)
         return
       }
       this.startConnect()
