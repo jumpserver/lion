@@ -194,6 +194,7 @@ export default {
       this.session = res.data
       if (this.checkIsManualLogin(res.data)) {
         this.$log.debug('manual login', res.data)
+        this.manualForm.username = res.data.system_user.username
         this.manualDialogVisible = true
         return
       }

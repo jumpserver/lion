@@ -22,14 +22,14 @@ type SystemUser struct {
 	AdDomain             string   `json:"ad_domain"`
 	Comment              string   `json:"comment"`
 	LoginMode            string   `json:"login_mode"`
-	Password             string   `json:"password"`
-	PrivateKey           string   `json:"private_key"`
+	Password             string   `json:"-"`
+	PrivateKey           string   `json:"-"`
 	Actions              []string `json:"actions"`
 	SftpRoot             string   `json:"sftp_root"`
 	OrgId                string   `json:"org_id"`
 	OrgName              string   `json:"org_name"`
 	UsernameSameWithUser bool     `json:"username_same_with_user"`
-	Token                string   `json:"token"`
+	Token                string   `json:"-"`
 }
 
 func (s *SystemUser) String() string {
