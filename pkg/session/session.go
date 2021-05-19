@@ -22,6 +22,8 @@ type TunnelSession struct {
 	ExpireInfo     *model.ExpireInfo         `json:"expire_info"`
 	LoginMode      string                    `json:"login_mode"`
 
+	DisplaySystemUser *model.SystemUser `json:"system_user"`
+
 	ConnectedCallback        func() error          `json:"-"`
 	ConnectedSuccessCallback func() error          `json:"-"`
 	ConnectedFailedCallback  func(err error) error `json:"-"`
