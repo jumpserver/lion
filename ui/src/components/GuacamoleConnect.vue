@@ -245,9 +245,6 @@ export default {
     },
     cancelSubmitParams() {
       this.dialogFormVisible = false
-      if (this.client) {
-        this.client.disconnect()
-      }
       this.requireParams = []
     },
     beforeunloadFn(e) {
