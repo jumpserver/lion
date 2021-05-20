@@ -6,7 +6,7 @@ module.exports = {
     port: 9529,
     proxy: {
       '^/lion': {
-        target: 'http://localhost:8081',
+        target: 'http://192.168.1.47:8081',
         ws: true,
         changeOrigin: true
       }
