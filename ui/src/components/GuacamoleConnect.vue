@@ -314,8 +314,8 @@ export default {
     getConnectString(sessionId) {
       // Calculate optimal width/height for display
       const pixelDensity = window.devicePixelRatio || 1
-      const optimal_dpi = pixelDensity * 96
-      const optimalWidth = window.innerWidth * pixelDensity - 30
+      const optimalDpi = pixelDensity * 96
+      const optimalWidth = window.innerWidth * pixelDensity - 32
       const optimalHeight = window.innerHeight * pixelDensity
       return new Promise((resolve, reject) => {
         Promise.all([
@@ -333,7 +333,7 @@ export default {
               'SESSION_ID=' + encodeURIComponent(sessionId) +
               '&GUAC_WIDTH=' + Math.floor(optimalWidth) +
               '&GUAC_HEIGHT=' + Math.floor(optimalHeight) +
-              '&GUAC_DPI=' + Math.floor(optimal_dpi)
+              '&GUAC_DPI=' + Math.floor(optimalDpi)
           supportImages.forEach(function(mimetype) {
             connectString += '&GUAC_IMAGE=' + encodeURIComponent(mimetype)
           })
@@ -499,7 +499,7 @@ export default {
       const pixelDensity = window.devicePixelRatio || 1
       const optimalWidth = window.innerWidth * pixelDensity
       const optimalHeight = window.innerHeight * pixelDensity
-      const width = optimalWidth - 30
+      const width = optimalWidth - 32
       const height = optimalHeight
       if (this.client !== null) {
         const display = this.client.getDisplay()
@@ -641,6 +641,7 @@ export default {
 
 .el-main {
   padding: 0;
+  overflow: hidden;
 }
 
 .el-dropdown-link {
@@ -653,7 +654,7 @@ export default {
 
 .el-menu {
   background-color: rgb(60, 56, 56);
-  border: none;
+  border: solid 1px rgb(60, 56, 56);
 
   /deep/ .el-submenu {
     background-color: rgb(60, 56, 56);
