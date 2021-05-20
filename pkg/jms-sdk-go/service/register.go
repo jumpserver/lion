@@ -10,7 +10,7 @@ import (
 	"lion/pkg/jms-sdk-go/model"
 )
 
-const ComponentName = "guacamole"
+const ComponentName = "lion"
 
 func RegisterTerminalAccount(coreHost, name, token string) (res model.Terminal, err error) {
 	client, err := httplib.NewClient(coreHost, time.Second*30)
@@ -19,7 +19,7 @@ func RegisterTerminalAccount(coreHost, name, token string) (res model.Terminal, 
 	}
 	client.SetHeader("Authorization", fmt.Sprintf("BootstrapToken %s", token))
 	data := map[string]string{"name": name,
-		"comment": "Guacamole",
+		"comment": ComponentName,
 		"type":    ComponentName}
 	_, err = client.Post(TerminalRegisterURL, data, &res)
 	return

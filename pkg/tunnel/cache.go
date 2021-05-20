@@ -44,6 +44,12 @@ func (g *SessionCache) Add(s *session.TunnelSession) {
 	g.Sessions[s.ID] = s
 }
 
+func (g *SessionCache) Get(sid string) *session.TunnelSession {
+	g.Lock()
+	defer g.Unlock()
+	return g.Sessions[sid]
+}
+
 func (g *SessionCache) Pop(sid string) *session.TunnelSession {
 	g.Lock()
 	defer g.Unlock()

@@ -1,5 +1,13 @@
-import { post } from '../plugins/request'
+import { del, post } from '../plugins/request'
 
 export function createSession(url, data) {
   return post(url + '/session', data, {})
+}
+
+export function updateSession(url, sid, data) {
+  return post(url + `/sessions/${sid}/`, data, {})
+}
+
+export function deleteSession(url, sid) {
+  return del(url + `/sessions/${sid}/`, {})
 }

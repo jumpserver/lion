@@ -152,6 +152,10 @@ func (s *Server) CreateRDPAndVNCSession(user *model.User, asset *model.Asset, sy
 		}
 		assetDomain = &domain
 	}
+	// 手动登录的系统用户，删除自身的密码
+	if sysUserAuth.LoginMode == model.LoginModeManual {
+		sysUserAuth.Password = ""
+	}
 
 	newSession := TunnelSession{
 		ID:             common.UUID(),
@@ -162,6 +166,9 @@ func (s *Server) CreateRDPAndVNCSession(user *model.User, asset *model.Asset, sy
 		Platform:       &platform,
 		Domain:         assetDomain,
 		TerminalConfig: &terminal,
+		LoginMode:      systemUser.LoginMode,
+
+		DisplaySystemUser: systemUser,
 	}
 	return newSession, nil
 }

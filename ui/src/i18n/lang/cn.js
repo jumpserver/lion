@@ -23,7 +23,13 @@ const message = {
   GuaErrClientUnauthorized: '用户名和密码认证错误，登录失败',
   GuaErrUnSupport: '该操作请求被禁止',
   GuaErrUpStreamTimeout: '远程桌面服务器无响应',
-  OK: '确定'
+  OK: '确定',
+  Submit: '提交',
+  Cancel: '取消',
+  Skip: '跳过',
+  Username: '用户名',
+  Password: '密码',
+  RequireParams: '必填参数'
 }
 
 export default {
