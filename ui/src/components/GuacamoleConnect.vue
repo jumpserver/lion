@@ -482,6 +482,7 @@ export default {
       document.body.focus()
       this.handleMouseState(mouseState)
       this.isMenuCollapse = true
+      this.sink.focus()
     },
 
     onMouseOut(mouseState) {
