@@ -10,3 +10,17 @@ body {
   font-size: 13px;
   line-height: 1.428;
 }
+
+.sidebar-popper {
+  .el-menu--popup {
+    background-color: red;
+    color: red;
+    padding: 0;
+
+    .el-menu-item {
+      line-height: 36px;
+      height: 36px;
+      font-size: 14px;
+    }
+  }
+}
