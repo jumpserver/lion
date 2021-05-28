@@ -12,9 +12,16 @@
       v-if="!loading"
       :collapse="isMenuCollapse"
       class="menu"
-      @mouseover.native="isMenuCollapse = false"
+      menu-trigger="click"
+      @click.native="isMenuCollapse = false"
     >
-      <el-submenu :disabled="menuDisable" index="1">
+      <el-menu-item :disabled="menuDisable" index="2">
+        <i class="el-icon-document-copy" /><span @click="toggleClipboard">{{ $t('Clipboard') }}</span>
+      </el-menu-item>
+      <el-menu-item v-if="hasFileSystem" :disabled="menuDisable" index="3" @click="toggleFileSystem">
+        <i class="el-icon-folder" /><span>{{ $t('Files') }}</span>
+      </el-menu-item>
+      <el-submenu :disabled="menuDisable" menu-trigger="click" index="1">
         <template slot="title">
           <i class="el-icon-position" /><span>{{ $t('Shortcuts') }}</span>
         </template>
@@ -27,12 +34,6 @@
           {{ item.name }}
         </el-menu-item>
       </el-submenu>
-      <el-menu-item :disabled="menuDisable" index="2">
-        <i class="el-icon-document-copy" /><span @click="toggleClipboard">{{ $t('Clipboard') }}</span>
-      </el-menu-item>
-      <el-menu-item v-if="hasFileSystem" :disabled="menuDisable" index="3" @click="toggleFileSystem">
-        <i class="el-icon-folder" /><span>{{ $t('Files') }}</span>
-      </el-menu-item>
     </el-menu>
     <el-dialog :title="$t('RequireParams')" :visible="dialogFormVisible" @close="cancelSubmitParams">
       <el-form label-position="left" label-width="80px" @submit.native.prevent="submitParams">
