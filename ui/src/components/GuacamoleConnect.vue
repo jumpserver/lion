@@ -13,6 +13,7 @@
       :collapse="isMenuCollapse"
       class="menu"
       menu-trigger="click"
+      :collapse-transition="false"
       @click.native="isMenuCollapse = false"
     >
       <el-menu-item :disabled="menuDisable" index="2">
@@ -21,7 +22,7 @@
       <el-menu-item v-if="hasFileSystem" :disabled="menuDisable" index="3" @click="toggleFileSystem">
         <i class="el-icon-folder" /><span>{{ $t('Files') }}</span>
       </el-menu-item>
-      <el-submenu :disabled="menuDisable" menu-trigger="click" index="1">
+      <el-submenu :disabled="menuDisable" @mouseenter="()=>{}" index="1" popper-class="sidebar-popper">
         <template slot="title">
           <i class="el-icon-position" /><span>{{ $t('Shortcuts') }}</span>
         </template>
