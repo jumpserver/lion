@@ -1,7 +1,11 @@
 <template>
   <el-container>
     <el-main>
-      <el-row v-loading="loading" :element-loading-text="loadingText" element-loading-background="#676a6c">
+      <el-row
+        v-loading="loading"
+        :element-loading-text="loadingText"
+        element-loading-background="#1f1b1b"
+      >
         <div :style="divStyle">
           <div id="display" />
         </div>
@@ -22,7 +26,7 @@
       <el-menu-item v-if="hasFileSystem" :disabled="menuDisable" index="3" @click="toggleFileSystem">
         <i class="el-icon-folder" /><span>{{ $t('Files') }}</span>
       </el-menu-item>
-      <el-submenu :disabled="menuDisable" @mouseenter="()=>{}" index="1" popper-class="sidebar-popper">
+      <el-submenu :disabled="menuDisable" index="1" popper-class="sidebar-popper" @mouseenter="()=>{}">
         <template slot="title">
           <i class="el-icon-position" /><span>{{ $t('Shortcuts') }}</span>
         </template>
@@ -98,9 +102,11 @@ import { getCurrentConnectParams } from '@/utils/common'
 import { createSession, deleteSession, updateSession } from '@/api/session'
 import GuacClipboard from './GuacClipboard'
 import GuacFileSystem from './GuacFileSystem'
-import i18n from '@/i18n'
-import { ErrorStatusCodes } from '@/utils/status'
-import { getLanguage } from '../i18n'
+import { default as i18n, getLanguage } from '@/i18n'
+import { ErrorStatusCodes } from '@/utils'
+import { localStorageGet } from '@/utils/common'
+
+const pixelDensity = window.devicePixelRatio || 1
 
 export default {
   name: 'GuacamoleConnect',
@@ -127,6 +133,9 @@ export default {
       clientState: 'Connecting',
       localCursor: false,
       client: null,
+      clientProperties: {
+        autoFit: true
+      },
       tunnel: null,
       displayWidth: 0,
       displayHeight: 0,
@@ -171,14 +180,16 @@ export default {
         username: '',
         password: ''
       },
-      manualDialogVisible: false
+      manualDialogVisible: false,
+      scale: 1
     }
   },
   computed: {
     divStyle: function() {
       return {
         width: this.displayWidth + 'px',
-        height: this.displayHeight + 'px'
+        height: this.displayHeight + 'px',
+        backgroundColor: '#1f1b1b'
       }
     },
     menuDisable: function() {
@@ -210,6 +221,8 @@ export default {
     })
   },
   methods: {
+    initialScale() {
+    },
     checkPasswordInput(name) {
       return name.match('password')
     },
@@ -313,12 +326,33 @@ export default {
       this.clipboardDrawer = !this.clipboardDrawer
     },
 
-    getConnectString(sessionId) {
-      // Calculate optimal width/height for display
-      const pixelDensity = window.devicePixelRatio || 1
-      const optimalDpi = pixelDensity * 96
+    getAutoSize() {
       const optimalWidth = window.innerWidth * pixelDensity - 32
       const optimalHeight = window.innerHeight * pixelDensity
+      return [optimalWidth, optimalHeight]
+    },
+
+    getGuaSize() {
+      const lunaSetting = localStorageGet('LunaSetting') || {}
+      const solution = lunaSetting['rdpResolution']
+      if (!solution || solution.toLowerCase() === 'auto' || solution.indexOf('x') === -1) {
+        this.$log.debug('Solution invalid: ', solution)
+        return this.getAutoSize()
+      }
+      let [width, height] = solution.split('x')
+      width = parseInt(width)
+      height = parseInt(height)
+      if (isNaN(width) || width < 100 || isNaN(height) || height < 100) {
+        this.$log.debug('Solution invalid2: ', solution)
+        return this.getAutoSize()
+      }
+      return [width, height]
+    },
+
+    getConnectString(sessionId) {
+      // Calculate optimal width/height for display
+      const [optimalWidth, optimalHeight] = this.getGuaSize()
+      const optimalDpi = pixelDensity * 96
       return new Promise((resolve, reject) => {
         Promise.all([
           getSupportedMimetypes(),
@@ -331,11 +365,12 @@ export default {
           const supportVideos = values[2]
           this.displayWidth = optimalWidth
           this.displayHeight = optimalHeight
-          var connectString =
+          let connectString =
               'SESSION_ID=' + encodeURIComponent(sessionId) +
               '&GUAC_WIDTH=' + Math.floor(optimalWidth) +
               '&GUAC_HEIGHT=' + Math.floor(optimalHeight) +
               '&GUAC_DPI=' + Math.floor(optimalDpi)
+          this.$log.debug('Connect string: ', connectString)
           supportImages.forEach(function(mimetype) {
             connectString += '&GUAC_IMAGE=' + encodeURIComponent(mimetype)
           })
@@ -417,8 +452,8 @@ export default {
           var AUDIO_INPUT_MIMETYPE = 'audio/L16;rate=44100,channels=2'
           var requestAudioStream = function requestAudioStream(client) {
             // Create new audio stream, associating it with an AudioRecorder
-            var stream = client.createAudioStream(AUDIO_INPUT_MIMETYPE)
-            var recorder = Guacamole.AudioRecorder.getInstance(stream, AUDIO_INPUT_MIMETYPE)
+            const stream = client.createAudioStream(AUDIO_INPUT_MIMETYPE)
+            const recorder = Guacamole.AudioRecorder.getInstance(stream, AUDIO_INPUT_MIMETYPE)
 
             // If creation of the AudioRecorder failed, simply end the stream
             // eslint-disable-next-line brace-style
@@ -475,9 +510,19 @@ export default {
       // or display are not yet available
       if (!this.client || !this.display) { return }
 
+      // Scale event by current scale
+      const scaledState = new Guacamole.Mouse.State(
+        mouseState.x / this.display.getScale(),
+        mouseState.y / this.display.getScale(),
+        mouseState.left,
+        mouseState.middle,
+        mouseState.right,
+        mouseState.up,
+        mouseState.down)
+
       // Send mouse state, show cursor if necessary
       this.display.showCursor(!this.localCursor)
-      this.client.sendMouseState(mouseState, true)
+      this.client.sendMouseState(scaledState)
     },
 
     onMouseDown(mouseState) {
@@ -497,29 +542,57 @@ export default {
       this.sink.focus()
     },
 
+    getPropScale() {
+      const display = this.client.getDisplay()
+      if (!display) {
+        return
+      }
+      // Calculate scale to fit screen
+      const minScale = Math.min(
+        window.innerWidth / Math.max(display.getWidth(), 1),
+        window.innerHeight / Math.max(display.getHeight(), 1)
+      )
+      return minScale
+    },
+
+    updateDisplayScale() {
+      const display = this.client.getDisplay()
+      if (!display) {
+        return
+      }
+
+      const scale = this.getPropScale()
+      if (scale === this.scale) {
+        return
+      }
+      this.scale = scale
+      this.display.scale(scale)
+      this.displayWidth = display.getWidth() * scale
+      this.displayHeight = display.getHeight() * scale
+    },
+
     onWindowResize() {
       // 监听 window display的变化
-      const pixelDensity = window.devicePixelRatio || 1
-      const optimalWidth = window.innerWidth * pixelDensity
-      const optimalHeight = window.innerHeight * pixelDensity
-      const width = optimalWidth - 32
-      const height = optimalHeight
+      const [optimalWidth, optimalHeight] = this.getGuaSize()
       if (this.client !== null) {
         const display = this.client.getDisplay()
         const displayHeight = display.getHeight() * pixelDensity
         const displayWidth = display.getWidth() * pixelDensity
-        if (displayHeight === width && displayWidth === height) {
+        this.updateDisplayScale()
+        if (displayHeight === optimalWidth && displayWidth === optimalHeight) {
           return
         }
-        this.client.sendSize(width, height)
+        this.client.sendSize(optimalWidth, optimalHeight)
       }
     },
 
     displayResize(width, height) {
       // 监听guacamole display的变化
       this.$log.debug('Display resize: ', width, height)
-      this.displayWidth = width
-      this.displayHeight = height
+      const scale = this.getPropScale()
+      this.display.scale(scale)
+      this.displayWidth = width * scale
+      this.displayHeight = height * scale
     },
 
     onWindowFocus() {
