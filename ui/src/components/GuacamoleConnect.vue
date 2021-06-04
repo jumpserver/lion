@@ -327,7 +327,7 @@ export default {
     },
 
     getAutoSize() {
-      const optimalWidth = window.innerWidth * pixelDensity - 32
+      const optimalWidth = (window.innerWidth - 32) * pixelDensity
       const optimalHeight = window.innerHeight * pixelDensity
       return [optimalWidth, optimalHeight]
     },
@@ -549,7 +549,7 @@ export default {
       }
       // Calculate scale to fit screen
       const minScale = Math.min(
-        window.innerWidth / Math.max(display.getWidth(), 1),
+        (window.innerWidth - 32) / Math.max(display.getWidth(), 1),
         window.innerHeight / Math.max(display.getHeight(), 1)
       )
       return minScale
@@ -567,7 +567,7 @@ export default {
       }
       this.scale = scale
       this.display.scale(scale)
-      this.displayWidth = display.getWidth() * scale
+      this.displayWidth = display.getWidth() * scale - 32
       this.displayHeight = display.getHeight() * scale
     },
 
