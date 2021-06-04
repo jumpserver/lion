@@ -1,5 +1,6 @@
 import Vue from 'vue'
 import VueI18n from 'vue-i18n'
+import { getCookie } from '@/utils'
 
 Vue.use(VueI18n)
 
@@ -17,7 +18,7 @@ const messages = LANG_FILES.keys().reduce((messages, path) => {
 }, {})
 
 export const getLanguage = () => {
-  let language = localStorage.getItem('lang')
+  let language = getCookie('django_language')
   if (!language) {
     language = (navigator.language || navigator.browserLanguage).toLowerCase()
   } else {

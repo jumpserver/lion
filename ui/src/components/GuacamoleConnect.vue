@@ -71,25 +71,6 @@
       :show.sync="fileDrawer"
       @closeDrawer="onCloseDrawer"
     />
-
-    <el-dialog
-      :visible.sync="manualDialogVisible"
-      center
-    >
-      <el-form :model="manualForm">
-        <el-form-item :label="$t('Username')">
-          <el-input v-model="manualForm.username" autocomplete="off" />
-        </el-form-item>
-        <el-form-item :label="$t('Password')">
-          <el-input v-model="manualForm.password" show-password autocomplete="off" />
-        </el-form-item>
-      </el-form>
-      <span slot="footer" class="dialog-footer">
-        <el-button @click="manualCancelClick">{{ $t('Cancel') }}</el-button>
-        <el-button type="primary" :disabled="disableSubmit" @click="manualSubmitClick">{{ $t('Submit') }}</el-button>
-        <el-button type="primary" @click="manualSkipClick">{{ $t('Skip') }}</el-button>
-      </span>
-    </el-dialog>
   </el-container>
 </template>
 
@@ -176,11 +157,6 @@ export default {
           name: 'Windows'
         }
       ],
-      manualForm: {
-        username: '',
-        password: ''
-      },
-      manualDialogVisible: false,
       scale: 1
     }
   },
@@ -195,9 +171,6 @@ export default {
     menuDisable: function() {
       return !(this.clientState === 'Connected') || !(this.tunnelState === 'OPEN')
     },
-    disableSubmit: function() {
-      return (this.manualForm.username === '') || (this.manualForm.password === '')
-    }
   },
   mounted: function() {
     const result = getCurrentConnectParams()
@@ -208,13 +181,6 @@ export default {
       window.addEventListener('beforeunload', e => this.beforeunloadFn(e))
       window.addEventListener('unload', e => this.beforeunloadFn(e))
       this.session = res.data
-      if (this.checkIsManualLogin(res.data)) {
-        this.$log.debug('manual login', res.data)
-        this.manualForm.username = res.data.system_user.username
-        this.manualDialogVisible = true
-        this.$log.debug(this.manualForm)
-        return
-      }
       this.startConnect()
     }).catch(err => {
       vm.$log.debug('err ', err.message)
@@ -268,29 +234,6 @@ export default {
     },
     beforeunloadFn(e) {
       this.removeSession()
-    },
-    checkIsManualLogin(session) {
-      return session.login_mode === 'manual'
-    },
-    manualCancelClick() {
-      this.$log.debug('manual cancel click')
-      this.manualDialogVisible = false
-      this.removeSession()
-    },
-    manualSubmitClick() {
-      this.$log.debug('manual submit click')
-      updateSession(this.apiPrefix, this.session.id, this.manualForm).then(data => {
-        this.manualDialogVisible = false
-        this.startConnect()
-      }).catch(err => {
-        this.$log.debug(err)
-        this.removeSession()
-      })
-    },
-    manualSkipClick() {
-      this.$log.debug('manual skip click')
-      this.manualDialogVisible = false
-      this.startConnect()
     },
     startConnect() {
       window.addEventListener('resize', this.onWindowResize)
