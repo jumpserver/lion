@@ -61,6 +61,25 @@ export function getMonitorConnectParams() {
   return result
 }
 
-function getURLParams() {
+export function getURLParams() {
   return new URLSearchParams(window.location.search.slice(1))
+}
+
+export function localStorageGet(key) {
+  let data = localStorage.getItem(key)
+  if (!data) {
+    return data
+  }
+  try {
+    data = JSON.parse(data)
+    return data
+  } catch (e) {
+    //
+  }
+  return data
+}
+
+export function getCookie(name) {
+  const match = document.cookie.match(new RegExp(name + '=([^;]+)'))
+  return match ? match[1] : undefined
 }
