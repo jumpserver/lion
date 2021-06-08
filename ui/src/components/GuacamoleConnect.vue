@@ -40,21 +40,6 @@
         </el-menu-item>
       </el-submenu>
     </el-menu>
-    <el-dialog :title="$t('RequireParams')" :visible="dialogFormVisible" @close="cancelSubmitParams">
-      <el-form label-position="left" label-width="80px" @submit.native.prevent="submitParams">
-        <el-form-item v-for="(item, index) in requireParams" :key="index" :label="item.name">
-          <template v-if="checkPasswordInput(item.name)">
-            <el-input v-model="item.value" show-password />
-          </template>
-          <template v-else>
-            <el-input v-model="item.value" />
-          </template>
-        </el-form-item>
-      </el-form>
-      <div slot="footer" class="dialog-footer">
-        <el-button type="primary" @click="submitParams">{{ $t('OK') }}</el-button>
-      </div>
-    </el-dialog>
     <GuacClipboard
       v-if="clipboardInited"
       ref="clipboard"
@@ -80,7 +65,7 @@ import { getSupportedMimetypes } from '@/utils/image'
 import { getSupportedGuacAudios } from '@/utils/audios'
 import { getSupportedGuacVideos } from '@/utils/video'
 import { getCurrentConnectParams } from '@/utils/common'
-import { createSession, deleteSession, updateSession } from '@/api/session'
+import { createSession, deleteSession } from '@/api/session'
 import GuacClipboard from './GuacClipboard'
 import GuacFileSystem from './GuacFileSystem'
 import { default as i18n, getLanguage } from '@/i18n'
@@ -170,7 +155,7 @@ export default {
     },
     menuDisable: function() {
       return !(this.clientState === 'Connected') || !(this.tunnelState === 'OPEN')
-    },
+    }
   },
   mounted: function() {
     const result = getCurrentConnectParams()
@@ -216,22 +201,6 @@ export default {
     initClipboard() {
       this.clipboardInited = true
     },
-    submitParams() {
-      if (this.client) {
-        for (let i = 0; i < this.requireParams.length; i++) {
-          const stream = this.client.createArgumentValueStream('text/plain', this.requireParams[i].name)
-          const writer = new Guacamole.StringWriter(stream)
-          writer.sendText(this.requireParams[i].value)
-          writer.sendEnd()
-        }
-      }
-      this.dialogFormVisible = false
-      this.requireParams = []
-    },
-    cancelSubmitParams() {
-      this.dialogFormVisible = false
-      this.requireParams = []
-    },
     beforeunloadFn(e) {
       this.removeSession()
     },
@@ -247,21 +216,9 @@ export default {
         this.$log.debug(err)
       })
     },
-    onRequireParams(params) {
-      this.requireParams = []
-      for (let i = 0; i < params.length; i++) {
-        this.requireParams.push({
-          name: params[i],
-          value: ''
-        })
-      }
-      this.dialogFormVisible = true
-    },
-
     menuIndex(index, num) {
       return index + num
     },
-
     toggleClipboard() {
       if (this.menuDisable) {
         return
@@ -581,7 +538,7 @@ export default {
 
     setClientCallback(client) {
       const vm = this
-      client.onrequired = this.onRequireParams
+      // client.onrequired = this.onRequireParams
       client.onstatechange = this.clientStateChanged
       client.onerror = this.clientOnErr
       // 文件挂载
