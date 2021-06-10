@@ -1,7 +1,11 @@
 <template>
   <el-container>
     <el-main>
-      <el-row v-loading="loading" :element-loading-text="loadingText" element-loading-background="#676a6c">
+      <el-row
+        v-loading="loading"
+        :element-loading-text="loadingText"
+        element-loading-background="#1f1b1b"
+      >
         <div :style="divStyle">
           <div id="display" />
         </div>
@@ -12,9 +16,17 @@
       v-if="!loading"
       :collapse="isMenuCollapse"
       class="menu"
-      @mouseover.native="isMenuCollapse = false"
+      menu-trigger="click"
+      :collapse-transition="false"
+      @click.native="isMenuCollapse = false"
     >
-      <el-submenu :disabled="menuDisable" index="1">
+      <el-menu-item :disabled="menuDisable" index="2">
+        <i class="el-icon-document-copy" /><span @click="toggleClipboard">{{ $t('Clipboard') }}</span>
+      </el-menu-item>
+      <el-menu-item v-if="hasFileSystem" :disabled="menuDisable" index="3" @click="toggleFileSystem">
+        <i class="el-icon-folder" /><span>{{ $t('Files') }}</span>
+      </el-menu-item>
+      <el-submenu :disabled="menuDisable" index="1" popper-class="sidebar-popper" @mouseenter="()=>{}">
         <template slot="title">
           <i class="el-icon-position" /><span>{{ $t('Shortcuts') }}</span>
         </template>
@@ -27,28 +39,7 @@
           {{ item.name }}
         </el-menu-item>
       </el-submenu>
-      <el-menu-item :disabled="menuDisable" index="2">
-        <i class="el-icon-document-copy" /><span @click="toggleClipboard">{{ $t('Clipboard') }}</span>
-      </el-menu-item>
-      <el-menu-item v-if="hasFileSystem" :disabled="menuDisable" index="3" @click="toggleFileSystem">
-        <i class="el-icon-folder" /><span>{{ $t('Files') }}</span>
-      </el-menu-item>
     </el-menu>
-    <el-dialog :title="$t('RequireParams')" :visible="dialogFormVisible" @close="cancelSubmitParams">
-      <el-form label-position="left" label-width="80px" @submit.native.prevent="submitParams">
-        <el-form-item v-for="(item, index) in requireParams" :key="index" :label="item.name">
-          <template v-if="checkPasswordInput(item.name)">
-            <el-input v-model="item.value" show-password />
-          </template>
-          <template v-else>
-            <el-input v-model="item.value" />
-          </template>
-        </el-form-item>
-      </el-form>
-      <div slot="footer" class="dialog-footer">
-        <el-button type="primary" @click="submitParams">{{ $t('OK') }}</el-button>
-      </div>
-    </el-dialog>
     <GuacClipboard
       v-if="clipboardInited"
       ref="clipboard"
@@ -65,25 +56,6 @@
       :show.sync="fileDrawer"
       @closeDrawer="onCloseDrawer"
     />
-
-    <el-dialog
-      :visible.sync="manualDialogVisible"
-      center
-    >
-      <el-form :model="manualForm">
-        <el-form-item :label="$t('Username')">
-          <el-input v-model="manualForm.username" autocomplete="off" />
-        </el-form-item>
-        <el-form-item :label="$t('Password')">
-          <el-input v-model="manualForm.password" show-password autocomplete="off" />
-        </el-form-item>
-      </el-form>
-      <span slot="footer" class="dialog-footer">
-        <el-button @click="manualCancelClick">{{ $t('Cancel') }}</el-button>
-        <el-button type="primary" :disabled="disableSubmit" @click="manualSubmitClick">{{ $t('Submit') }}</el-button>
-        <el-button type="primary" @click="manualSkipClick">{{ $t('Skip') }}</el-button>
-      </span>
-    </el-dialog>
   </el-container>
 </template>
 
@@ -93,12 +65,14 @@ import { getSupportedMimetypes } from '@/utils/image'
 import { getSupportedGuacAudios } from '@/utils/audios'
 import { getSupportedGuacVideos } from '@/utils/video'
 import { getCurrentConnectParams } from '@/utils/common'
-import { createSession, deleteSession, updateSession } from '@/api/session'
+import { createSession, deleteSession } from '@/api/session'
 import GuacClipboard from './GuacClipboard'
 import GuacFileSystem from './GuacFileSystem'
-import i18n from '@/i18n'
-import { ErrorStatusCodes } from '@/utils/status'
-import { getLanguage } from '../i18n'
+import { default as i18n, getLanguage } from '@/i18n'
+import { ErrorStatusCodes } from '@/utils'
+import { localStorageGet } from '@/utils/common'
+
+const pixelDensity = window.devicePixelRatio || 1
 
 export default {
   name: 'GuacamoleConnect',
@@ -125,6 +99,9 @@ export default {
       clientState: 'Connecting',
       localCursor: false,
       client: null,
+      clientProperties: {
+        autoFit: true
+      },
       tunnel: null,
       displayWidth: 0,
       displayHeight: 0,
@@ -165,25 +142,19 @@ export default {
           name: 'Windows'
         }
       ],
-      manualForm: {
-        username: '',
-        password: ''
-      },
-      manualDialogVisible: false
+      scale: 1
     }
   },
   computed: {
     divStyle: function() {
       return {
         width: this.displayWidth + 'px',
-        height: this.displayHeight + 'px'
+        height: this.displayHeight + 'px',
+        backgroundColor: '#1f1b1b'
       }
     },
     menuDisable: function() {
       return !(this.clientState === 'Connected') || !(this.tunnelState === 'OPEN')
-    },
-    disableSubmit: function() {
-      return (this.manualForm.username === '') || (this.manualForm.password === '')
     }
   },
   mounted: function() {
@@ -195,19 +166,14 @@ export default {
       window.addEventListener('beforeunload', e => this.beforeunloadFn(e))
       window.addEventListener('unload', e => this.beforeunloadFn(e))
       this.session = res.data
-      if (this.checkIsManualLogin(res.data)) {
-        this.$log.debug('manual login', res.data)
-        this.manualForm.username = res.data.system_user.username
-        this.manualDialogVisible = true
-        this.$log.debug(this.manualForm)
-        return
-      }
       this.startConnect()
     }).catch(err => {
       vm.$log.debug('err ', err.message)
     })
   },
   methods: {
+    initialScale() {
+    },
     checkPasswordInput(name) {
       return name.match('password')
     },
@@ -235,47 +201,8 @@ export default {
     initClipboard() {
       this.clipboardInited = true
     },
-    submitParams() {
-      if (this.client) {
-        for (let i = 0; i < this.requireParams.length; i++) {
-          const stream = this.client.createArgumentValueStream('text/plain', this.requireParams[i].name)
-          const writer = new Guacamole.StringWriter(stream)
-          writer.sendText(this.requireParams[i].value)
-          writer.sendEnd()
-        }
-      }
-      this.dialogFormVisible = false
-      this.requireParams = []
-    },
-    cancelSubmitParams() {
-      this.dialogFormVisible = false
-      this.requireParams = []
-    },
     beforeunloadFn(e) {
       this.removeSession()
-    },
-    checkIsManualLogin(session) {
-      return session.login_mode === 'manual'
-    },
-    manualCancelClick() {
-      this.$log.debug('manual cancel click')
-      this.manualDialogVisible = false
-      this.removeSession()
-    },
-    manualSubmitClick() {
-      this.$log.debug('manual submit click')
-      updateSession(this.apiPrefix, this.session.id, this.manualForm).then(data => {
-        this.manualDialogVisible = false
-        this.startConnect()
-      }).catch(err => {
-        this.$log.debug(err)
-        this.removeSession()
-      })
-    },
-    manualSkipClick() {
-      this.$log.debug('manual skip click')
-      this.manualDialogVisible = false
-      this.startConnect()
     },
     startConnect() {
       window.addEventListener('resize', this.onWindowResize)
@@ -289,21 +216,9 @@ export default {
         this.$log.debug(err)
       })
     },
-    onRequireParams(params) {
-      this.requireParams = []
-      for (let i = 0; i < params.length; i++) {
-        this.requireParams.push({
-          name: params[i],
-          value: ''
-        })
-      }
-      this.dialogFormVisible = true
-    },
-
     menuIndex(index, num) {
       return index + num
     },
-
     toggleClipboard() {
       if (this.menuDisable) {
         return
@@ -311,12 +226,33 @@ export default {
       this.clipboardDrawer = !this.clipboardDrawer
     },
 
+    getAutoSize() {
+      const optimalWidth = (window.innerWidth - 32) * pixelDensity
+      const optimalHeight = window.innerHeight * pixelDensity
+      return [optimalWidth, optimalHeight]
+    },
+
+    getGuaSize() {
+      const lunaSetting = localStorageGet('LunaSetting') || {}
+      const solution = lunaSetting['rdpResolution']
+      if (!solution || solution.toLowerCase() === 'auto' || solution.indexOf('x') === -1) {
+        this.$log.debug('Solution invalid: ', solution)
+        return this.getAutoSize()
+      }
+      let [width, height] = solution.split('x')
+      width = parseInt(width)
+      height = parseInt(height)
+      if (isNaN(width) || width < 100 || isNaN(height) || height < 100) {
+        this.$log.debug('Solution invalid2: ', solution)
+        return this.getAutoSize()
+      }
+      return [width, height]
+    },
+
     getConnectString(sessionId) {
       // Calculate optimal width/height for display
-      const pixelDensity = window.devicePixelRatio || 1
+      const [optimalWidth, optimalHeight] = this.getGuaSize()
       const optimalDpi = pixelDensity * 96
-      const optimalWidth = window.innerWidth * pixelDensity - 32
-      const optimalHeight = window.innerHeight * pixelDensity
       return new Promise((resolve, reject) => {
         Promise.all([
           getSupportedMimetypes(),
@@ -329,11 +265,12 @@ export default {
           const supportVideos = values[2]
           this.displayWidth = optimalWidth
           this.displayHeight = optimalHeight
-          var connectString =
+          let connectString =
               'SESSION_ID=' + encodeURIComponent(sessionId) +
               '&GUAC_WIDTH=' + Math.floor(optimalWidth) +
               '&GUAC_HEIGHT=' + Math.floor(optimalHeight) +
               '&GUAC_DPI=' + Math.floor(optimalDpi)
+          this.$log.debug('Connect string: ', connectString)
           supportImages.forEach(function(mimetype) {
             connectString += '&GUAC_IMAGE=' + encodeURIComponent(mimetype)
           })
@@ -415,8 +352,8 @@ export default {
           var AUDIO_INPUT_MIMETYPE = 'audio/L16;rate=44100,channels=2'
           var requestAudioStream = function requestAudioStream(client) {
             // Create new audio stream, associating it with an AudioRecorder
-            var stream = client.createAudioStream(AUDIO_INPUT_MIMETYPE)
-            var recorder = Guacamole.AudioRecorder.getInstance(stream, AUDIO_INPUT_MIMETYPE)
+            const stream = client.createAudioStream(AUDIO_INPUT_MIMETYPE)
+            const recorder = Guacamole.AudioRecorder.getInstance(stream, AUDIO_INPUT_MIMETYPE)
 
             // If creation of the AudioRecorder failed, simply end the stream
             // eslint-disable-next-line brace-style
@@ -473,15 +410,26 @@ export default {
       // or display are not yet available
       if (!this.client || !this.display) { return }
 
+      // Scale event by current scale
+      const scaledState = new Guacamole.Mouse.State(
+        mouseState.x / this.display.getScale(),
+        mouseState.y / this.display.getScale(),
+        mouseState.left,
+        mouseState.middle,
+        mouseState.right,
+        mouseState.up,
+        mouseState.down)
+
       // Send mouse state, show cursor if necessary
       this.display.showCursor(!this.localCursor)
-      this.client.sendMouseState(mouseState, true)
+      this.client.sendMouseState(scaledState)
     },
 
     onMouseDown(mouseState) {
       document.body.focus()
       this.handleMouseState(mouseState)
       this.isMenuCollapse = true
+      this.sink.focus()
     },
 
     onMouseOut(mouseState) {
@@ -494,29 +442,57 @@ export default {
       this.sink.focus()
     },
 
+    getPropScale() {
+      const display = this.client.getDisplay()
+      if (!display) {
+        return
+      }
+      // Calculate scale to fit screen
+      const minScale = Math.min(
+        (window.innerWidth - 32) / Math.max(display.getWidth(), 1),
+        window.innerHeight / Math.max(display.getHeight(), 1)
+      )
+      return minScale
+    },
+
+    updateDisplayScale() {
+      const display = this.client.getDisplay()
+      if (!display) {
+        return
+      }
+
+      const scale = this.getPropScale()
+      if (scale === this.scale) {
+        return
+      }
+      this.scale = scale
+      this.display.scale(scale)
+      this.displayWidth = display.getWidth() * scale - 32
+      this.displayHeight = display.getHeight() * scale
+    },
+
     onWindowResize() {
       // 监听 window display的变化
-      const pixelDensity = window.devicePixelRatio || 1
-      const optimalWidth = window.innerWidth * pixelDensity
-      const optimalHeight = window.innerHeight * pixelDensity
-      const width = optimalWidth - 32
-      const height = optimalHeight
+      const [optimalWidth, optimalHeight] = this.getGuaSize()
       if (this.client !== null) {
         const display = this.client.getDisplay()
         const displayHeight = display.getHeight() * pixelDensity
         const displayWidth = display.getWidth() * pixelDensity
-        if (displayHeight === width && displayWidth === height) {
+        this.updateDisplayScale()
+        if (displayHeight === optimalWidth && displayWidth === optimalHeight) {
           return
         }
-        this.client.sendSize(width, height)
+        this.client.sendSize(optimalWidth, optimalHeight)
       }
     },
 
     displayResize(width, height) {
       // 监听guacamole display的变化
       this.$log.debug('Display resize: ', width, height)
-      this.displayWidth = width
-      this.displayHeight = height
+      const scale = this.getPropScale()
+      this.display.scale(scale)
+      this.displayWidth = width * scale
+      this.displayHeight = height * scale
     },
 
     onWindowFocus() {
@@ -562,7 +538,7 @@ export default {
 
     setClientCallback(client) {
       const vm = this
-      client.onrequired = this.onRequireParams
+      // client.onrequired = this.onRequireParams
       client.onstatechange = this.clientStateChanged
       client.onerror = this.clientOnErr
       // 文件挂载

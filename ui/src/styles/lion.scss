@@ -3,10 +3,28 @@ body {
   -moz-osx-font-smoothing: grayscale;
   -webkit-font-smoothing: auto;
   //text-rendering: optimizeLegibility;
-  background-color: #676a6c;
+  background-color: #1f1b1b;
   color: #676a6c;
   //font-family: Helvetica Neue, Helvetica, PingFang SC, Hiragino Sans GB, Microsoft YaHei, Arial, sans-serif;
   font-family: "open sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
   font-size: 13px;
   line-height: 1.428;
+}
+
+#app {
+  background-color: #1f1b1b;
+}
+
+.sidebar-popper {
+  .el-menu--popup {
+    background-color: red;
+    color: red;
+    padding: 0;
+
+    .el-menu-item {
+      line-height: 36px;
+      height: 36px;
+      font-size: 14px;
+    }
+  }
 }

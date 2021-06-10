@@ -2,6 +2,7 @@ import Vue from 'vue'
 import VueRouter from 'vue-router'
 import ElementUI from 'element-ui'
 import Guacamole from 'guacamole-common-js'
+import VueCookies from 'vue-cookies'
 import 'element-ui/lib/theme-chalk/index.css'
 import App from './App.vue'
 import i18n from './i18n'
@@ -14,6 +15,7 @@ Vue.use(VueRouter)
 Vue.use(ElementUI)
 Vue.use(Guacamole)
 Vue.use(plugins)
+Vue.use(VueCookies)
 Vue.use(i18n)
 Vue.config.productionTip = false
 
