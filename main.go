@@ -245,7 +245,9 @@ func uploadRemainReplay(jmsService *service.JMService, remainFiles map[string]st
 		}
 		var err error
 		if replayStorage != nil {
-			err = replayStorage.Upload(absGzPath, replayDateDirName)
+			targetName := strings.Join([]string{replayDateDirName,
+				sid + session.ReplayFileNameSuffix}, "/")
+			err = replayStorage.Upload(absGzPath, targetName)
 		} else {
 			err = jmsService.Upload(sid, absGzPath)
 		}
