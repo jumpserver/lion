@@ -30,7 +30,7 @@ darwin-amd64:lion-ui
 	mkdir -p $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(UIDIR)/lion/
 	cp $(BUILDDIR)/$(NAME)-$@ $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(NAME)
 	-cp config_example.yml $(BUILDDIR)/$(NAME)-$(VERSION)-$@/config_example.yml
-	cp -r $(UIDIR)/lion/ $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(UIDIR)/lion/
+	cp -r $(UIDIR)/lion/* $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(UIDIR)/lion/
 	cd $(BUILDDIR) && tar -czvf $(NAME)-$(VERSION)-$@.tar.gz $(NAME)-$(VERSION)-$@
 	rm -rf $(BUILDDIR)/$(NAME)-$(VERSION)-$@ $(BUILDDIR)/$(NAME)-$@
 
@@ -39,7 +39,7 @@ linux-amd64:lion-ui
 	mkdir -p $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(UIDIR)/lion/
 	cp $(BUILDDIR)/$(NAME)-$@ $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(NAME)
 	-cp config_example.yml $(BUILDDIR)/$(NAME)-$(VERSION)-$@/config_example.yml
-	cp -r $(UIDIR)/lion/ $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(UIDIR)/lion/
+	cp -r $(UIDIR)/lion/* $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(UIDIR)/lion/
 	cd $(BUILDDIR) && tar -czvf $(NAME)-$(VERSION)-$@.tar.gz $(NAME)-$(VERSION)-$@
 	rm -rf $(BUILDDIR)/$(NAME)-$(VERSION)-$@ $(BUILDDIR)/$(NAME)-$@
 
@@ -48,7 +48,7 @@ linux-arm64:lion-ui
 	mkdir -p $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(UIDIR)/lion/
 	cp $(BUILDDIR)/$(NAME)-$@ $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(NAME)
 	-cp config_example.yml $(BUILDDIR)/$(NAME)-$(VERSION)-$@/config_example.yml
-	cp -r $(UIDIR)/lion/ $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(UIDIR)/lion/
+	cp -r $(UIDIR)/lion/* $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(UIDIR)/lion/
 	cd $(BUILDDIR) && tar -czvf $(NAME)-$(VERSION)-$@.tar.gz $(NAME)-$(VERSION)-$@
 	rm -rf $(BUILDDIR)/$(NAME)-$(VERSION)-$@ $(BUILDDIR)/$(NAME)-$@
 
@@ -57,7 +57,7 @@ windows-amd64:lion-ui
 	mkdir -p $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(UIDIR)/lion/
 	cp $(BUILDDIR)/$(NAME)-$@.exe $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(NAME).exe
 	-cp config_example.yml $(BUILDDIR)/$(NAME)-$(VERSION)-$@/config_example.yml
-	cp -r $(UIDIR)/lion/ $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(UIDIR)/lion/
+	cp -r $(UIDIR)/lion/* $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(UIDIR)/lion/
 	cd $(BUILDDIR) && tar -czvf $(NAME)-$(VERSION)-$@.tar.gz $(NAME)-$(VERSION)-$@
 	rm -rf $(BUILDDIR)/$(NAME)-$(VERSION)-$@ $(BUILDDIR)/$(NAME)-$@.exe
 
