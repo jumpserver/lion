@@ -2,7 +2,7 @@
   <el-main>
     <el-row v-loading="loading" :element-loading-text="loadingText" element-loading-background="rgba(0, 0, 0, 0.8">
       <div :style="divStyle">
-        <div id="monitor" />
+        <div id="display" />
       </div>
     </el-row>
   </el-main>
@@ -18,6 +18,7 @@ import { getSupportedGuacVideos } from '../utils/video'
 import { getLanguage } from '../i18n'
 import { ErrorStatusCodes } from '@/utils/status'
 
+const pixelDensity = window.devicePixelRatio || 1
 export default {
   name: 'GuacamoleMonitor',
   data() {
@@ -25,7 +26,8 @@ export default {
       displayWidth: 0,
       displayHeight: 0,
       loading: true,
-      loadingText: i18n.t('Connecting') + ' ...'
+      loadingText: i18n.t('Connecting') + ' ...',
+      resizing: false
     }
   },
   computed: {
@@ -47,13 +49,15 @@ export default {
     })
   },
   methods: {
-
+    getAutoSize() {
+      const optimalWidth = window.innerWidth * pixelDensity
+      const optimalHeight = window.innerHeight * pixelDensity
+      return [optimalWidth, optimalHeight]
+    },
     getConnectString(sessionId) {
       // Calculate optimal width/height for display
-      const pixel_density = window.devicePixelRatio || 1
-      const optimal_dpi = pixel_density * 96
-      const optimal_width = window.innerWidth * pixel_density - 64
-      const optimal_height = window.innerHeight * pixel_density
+      const [optimalWidth, optimalHeight] = this.getAutoSize()
+      const optimalDpi = pixelDensity * 96
       return new Promise((resolve, reject) => {
         Promise.all([
           getSupportedMimetypes(),
@@ -64,13 +68,14 @@ export default {
           const supportImages = values[0]
           const supportAudios = values[1]
           const supportVideos = values[2]
-          this.displayWidth = optimal_width
-          this.displayHeight = optimal_height
-          var connectString =
+          this.displayWidth = optimalWidth
+          this.displayHeight = optimalHeight
+          let connectString =
               'SESSION_ID=' + encodeURIComponent(sessionId) +
-              '&GUAC_WIDTH=' + Math.floor(optimal_width) +
-              '&GUAC_HEIGHT=' + Math.floor(optimal_height) +
-              '&GUAC_DPI=' + Math.floor(optimal_dpi)
+              '&GUAC_WIDTH=' + Math.floor(optimalWidth) +
+              '&GUAC_HEIGHT=' + Math.floor(optimalHeight) +
+              '&GUAC_DPI=' + Math.floor(optimalDpi)
+          this.$log.debug('Connect string: ', connectString)
           supportImages.forEach(function(mimetype) {
             connectString += '&GUAC_IMAGE=' + encodeURIComponent(mimetype)
           })
@@ -84,13 +89,72 @@ export default {
         })
       })
     },
+    getPropScale() {
+      const display = this.client.getDisplay()
+      if (!display) {
+        return
+      }
+      // Calculate scale to fit screen
+      const minScale = Math.min(
+        window.innerWidth / Math.max(display.getWidth(), 1),
+        window.innerHeight / Math.max(display.getHeight(), 1)
+      )
+      return minScale
+    },
+
+    updateDisplayScale() {
+      const display = this.client.getDisplay()
+      if (!display) {
+        return
+      }
+
+      const scale = this.getPropScale()
+      if (scale === this.scale) {
+        return
+      }
+      this.scale = scale
+      this.display.scale(scale)
+      this.displayWidth = display.getWidth() * scale
+      this.displayHeight = display.getHeight() * scale
+    },
+
+    debounce(fn, wait) {
+      let timeout = null
+      return function() {
+        if (timeout !== null) {
+          clearTimeout(timeout)
+        }
+        timeout = setTimeout(fn, wait)
+      }
+    },
+
+    onWindowResize() {
+      // 监听 window display的变化
+      const [optimalWidth, optimalHeight] = this.getAutoSize()
+      this.$log.debug('Win size changed: ', optimalWidth, optimalHeight)
+      if (this.client !== null) {
+        this.updateDisplayScale()
+        // 这里不应该发过去，监控方，不能改变
+        // this.client.sendSize(optimalWidth, optimalHeight)
+      }
+    },
+
+    onClientConnected() {
+      this.onWindowResize()
+      setTimeout(() => {
+        window.addEventListener('resize', this.debounce(this.onWindowResize.bind(this), 300))
+      }, 500)
+    },
 
     displayResize(width, height) {
       // 监听guacamole display的变化
-      this.displayWidth = width
-      this.displayHeight = height
-      window.resizeTo(width, height)
+      this.$log.debug('Display resize: ', width, height)
+      const scale = this.getPropScale()
+      this.display.scale(scale)
+      this.displayWidth = width * scale
+      this.displayHeight = height * scale
     },
+
     clientStateChanged(clientState) {
       switch (clientState) {
         // Idle
@@ -102,7 +166,6 @@ export default {
           // Ignore "connecting" state
         case 1: // Connecting
           this.clientState = 'Connecting'
-          this.loadingText = 'Connecting'
           this.$log.debug('clientState, Connecting')
           break
 
@@ -124,23 +187,19 @@ export default {
           // Begin streaming audio input if possible
           var AUDIO_INPUT_MIMETYPE = 'audio/L16;rate=44100,channels=2'
           var requestAudioStream = function requestAudioStream(client) {
-            // Create new audio stream, associating it wit
-            // AudioRecorder
-            var stream = client.createAudioStream(AUDIO_INPUT_MIMETYPE)
-            var recorder = Guacamole.AudioRecorder.getInstance(stream, AUDIO_INPUT_MIMETYPE)
+            // Create new audio stream, associating it with an AudioRecorder
+            const stream = client.createAudioStream(AUDIO_INPUT_MIMETYPE)
+            const recorder = Guacamole.AudioRecorder.getInstance(stream, AUDIO_INPUT_MIMETYPE)
 
             // If creation of the AudioRecorder failed, simply end the stream
             // eslint-disable-next-line brace-style
             if (!recorder) { stream.sendEnd() }
-
             // Otherwise, ensure that another audio stream is created after this
             // audio stream is closed
-            else {
-              recorder.onclose = requestAudioStream.bind(this, client)
-            }
-            this.$log.debug(stream, recorder)
+            else { recorder.onclose = requestAudioStream.bind(this, client) }
           }
           requestAudioStream(this.client)
+          this.onClientConnected()
           break
 
           // Update history when disconnecting
@@ -148,6 +207,9 @@ export default {
         case 5: // Disconnected
           this.clientState = 'Disconnecting'
           this.$log.debug('clientState, Disconnected ')
+          // this.closeDisplay('clientState Disconnecting')
+          var display = document.getElementById('display')
+          display.innerHTML = ''
           break
       }
     },
@@ -174,9 +236,9 @@ export default {
       })
     },
     connectGuacamole(connectionParams, wsURL) {
-      var display = document.getElementById('monitor')
-      var tunnel = new Guacamole.WebSocketTunnel(wsURL)
-      var client = new Guacamole.Client(tunnel)
+      const display = document.getElementById('display')
+      const tunnel = new Guacamole.WebSocketTunnel(wsURL)
+      const client = new Guacamole.Client(tunnel)
       const vm = this
       tunnel.onerror = function tunnelError(status) {
         vm.$log.debug('tunnelError ', status)
