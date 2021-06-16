@@ -172,11 +172,6 @@ export default {
     })
   },
   methods: {
-    initialScale() {
-    },
-    checkPasswordInput(name) {
-      return name.match('password')
-    },
     toggleFileSystem(e) {
       if (this.menuDisable) {
         return
@@ -205,11 +200,14 @@ export default {
       this.removeSession()
     },
     startConnect() {
-      window.addEventListener('resize', this.debounce(this.onWindowResize.bind(this), 300))
-      window.onfocus = this.onWindowFocus
       this.getConnectString(this.session.id).then(connectionParams => {
         this.connectGuacamole(connectionParams, this.wsPrefix)
       })
+    },
+    onClientConnected() {
+      this.onWindowResize()
+      window.addEventListener('resize', this.debounce(this.onWindowResize.bind(this), 300))
+      window.onfocus = this.onWindowFocus
     },
     removeSession() {
       deleteSession(this.apiPrefix, this.session.id).catch(err => {
@@ -363,6 +361,7 @@ export default {
             else { recorder.onclose = requestAudioStream.bind(this, client) }
           }
           requestAudioStream(this.client)
+          this.onClientConnected()
           break
 
           // Update history when disconnecting
