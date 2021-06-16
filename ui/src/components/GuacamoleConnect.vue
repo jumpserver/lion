@@ -205,7 +205,7 @@ export default {
       this.removeSession()
     },
     startConnect() {
-      window.addEventListener('resize', this.onWindowResize)
+      window.addEventListener('resize', this.debounce(this.onWindowResize.bind(this), 300))
       window.onfocus = this.onWindowFocus
       this.getConnectString(this.session.id).then(connectionParams => {
         this.connectGuacamole(connectionParams, this.wsPrefix)
@@ -469,6 +469,16 @@ export default {
       this.display.scale(scale)
       this.displayWidth = display.getWidth() * scale - 32
       this.displayHeight = display.getHeight() * scale
+    },
+
+    debounce(fn, wait) {
+      let timeout = null
+      return function() {
+        if (timeout !== null) {
+          clearTimeout(timeout)
+        }
+        timeout = setTimeout(fn, wait)
+      }
     },
 
     onWindowResize() {
