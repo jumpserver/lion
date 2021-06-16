@@ -2,7 +2,7 @@
   <el-main>
     <el-row v-loading="loading" :element-loading-text="loadingText" element-loading-background="rgba(0, 0, 0, 0.8">
       <div :style="divStyle">
-        <div id="monitor" />
+        <div id="display" />
       </div>
     </el-row>
   </el-main>
@@ -133,15 +133,17 @@ export default {
       const [optimalWidth, optimalHeight] = this.getAutoSize()
       this.$log.debug('Win size changed: ', optimalWidth, optimalHeight)
       if (this.client !== null) {
-        const display = this.client.getDisplay()
-        const displayHeight = display.getHeight() * pixelDensity
-        const displayWidth = display.getWidth() * pixelDensity
         this.updateDisplayScale()
-        if (displayHeight === optimalWidth && displayWidth === optimalHeight) {
-          return
-        }
-        this.client.sendSize(optimalWidth, optimalHeight)
+        // 这里不应该发过去，监控方，不能改变
+        // this.client.sendSize(optimalWidth, optimalHeight)
       }
+    },
+
+    onClientConnected() {
+      this.onWindowResize()
+      setTimeout(() => {
+        window.addEventListener('resize', this.debounce(this.onWindowResize.bind(this), 300))
+      }, 500)
     },
 
     displayResize(width, height) {
@@ -152,6 +154,7 @@ export default {
       this.displayWidth = width * scale
       this.displayHeight = height * scale
     },
+
     clientStateChanged(clientState) {
       switch (clientState) {
         // Idle
@@ -163,7 +166,6 @@ export default {
           // Ignore "connecting" state
         case 1: // Connecting
           this.clientState = 'Connecting'
-          this.loadingText = 'Connecting'
           this.$log.debug('clientState, Connecting')
           break
 
@@ -185,26 +187,19 @@ export default {
           // Begin streaming audio input if possible
           var AUDIO_INPUT_MIMETYPE = 'audio/L16;rate=44100,channels=2'
           var requestAudioStream = function requestAudioStream(client) {
-            // Create new audio stream, associating it wit
-            // AudioRecorder
-            var stream = client.createAudioStream(AUDIO_INPUT_MIMETYPE)
-            var recorder = Guacamole.AudioRecorder.getInstance(stream, AUDIO_INPUT_MIMETYPE)
+            // Create new audio stream, associating it with an AudioRecorder
+            const stream = client.createAudioStream(AUDIO_INPUT_MIMETYPE)
+            const recorder = Guacamole.AudioRecorder.getInstance(stream, AUDIO_INPUT_MIMETYPE)
 
             // If creation of the AudioRecorder failed, simply end the stream
             // eslint-disable-next-line brace-style
             if (!recorder) { stream.sendEnd() }
-
             // Otherwise, ensure that another audio stream is created after this
             // audio stream is closed
-            else {
-              recorder.onclose = requestAudioStream.bind(this, client)
-            }
+            else { recorder.onclose = requestAudioStream.bind(this, client) }
           }
           requestAudioStream(this.client)
-          this.onWindowResize()
-          setTimeout(() => {
-            window.addEventListener('resize', this.debounce(this.onWindowResize.bind(this), 300))
-          }, 500)
+          this.onClientConnected()
           break
 
           // Update history when disconnecting
@@ -212,6 +207,9 @@ export default {
         case 5: // Disconnected
           this.clientState = 'Disconnecting'
           this.$log.debug('clientState, Disconnected ')
+          // this.closeDisplay('clientState Disconnecting')
+          var display = document.getElementById('display')
+          display.innerHTML = ''
           break
       }
     },
@@ -238,7 +236,7 @@ export default {
       })
     },
     connectGuacamole(connectionParams, wsURL) {
-      const display = document.getElementById('monitor')
+      const display = document.getElementById('display')
       const tunnel = new Guacamole.WebSocketTunnel(wsURL)
       const client = new Guacamole.Client(tunnel)
       const vm = this
