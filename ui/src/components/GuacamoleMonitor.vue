@@ -138,7 +138,6 @@ export default {
             else {
               recorder.onclose = requestAudioStream.bind(this, client)
             }
-            this.$log.debug(stream, recorder)
           }
           requestAudioStream(this.client)
           break
