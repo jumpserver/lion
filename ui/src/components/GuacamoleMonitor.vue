@@ -11,11 +11,11 @@
 <script>
 import Guacamole from 'guacamole-common-js'
 import i18n from '@/i18n'
-import { getMonitorConnectParams } from '../utils/common'
-import { getSupportedMimetypes } from '../utils/image'
-import { getSupportedGuacAudios } from '../utils/audios'
-import { getSupportedGuacVideos } from '../utils/video'
-import { getLanguage } from '../i18n'
+import { getMonitorConnectParams } from '@/utils/common'
+import { getSupportedMimetypes } from '@/utils/image'
+import { getSupportedGuacAudios } from '@/utils/audios'
+import { getSupportedGuacVideos } from '@/utils/video'
+import { getLanguage } from '@/i18n'
 import { ErrorStatusCodes } from '@/utils/status'
 
 const pixelDensity = window.devicePixelRatio || 1
@@ -34,7 +34,8 @@ export default {
     divStyle: function() {
       return {
         width: this.displayWidth + 'px',
-        height: this.displayHeight + 'px'
+        height: this.displayHeight + 'px',
+        margin: '0 auto'
       }
     }
   },
@@ -130,8 +131,6 @@ export default {
 
     onWindowResize() {
       // 监听 window display的变化
-      const [optimalWidth, optimalHeight] = this.getAutoSize()
-      this.$log.debug('Win size changed: ', optimalWidth, optimalHeight)
       if (this.client !== null) {
         this.updateDisplayScale()
         // 这里不应该发过去，监控方，不能改变

@@ -150,7 +150,8 @@ export default {
       return {
         width: this.displayWidth + 'px',
         height: this.displayHeight + 'px',
-        backgroundColor: '#1f1b1b'
+        backgroundColor: '#1f1b1b',
+        margin: '0 auto'
       }
     },
     menuDisable: function() {
