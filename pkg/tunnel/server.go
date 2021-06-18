@@ -121,6 +121,12 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 		if err = domainGateway.Start(); err != nil {
 			logger.Errorf("Start domain gateway err: %+v", err)
 			_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrGatewayFailed.String()))
+			if err = tunnelSession.ConnectedFailedCallback(err); err != nil {
+				logger.Errorf("Update session connect status failed %+v", err)
+			}
+			if err = tunnelSession.DisConnectedCallback(); err != nil {
+				logger.Errorf("Session DisConnectedCallback err: %+v", err)
+			}
 			return
 		}
 		defer domainGateway.Stop()
@@ -139,6 +145,9 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrGuacamoleServer.String()))
 		if err = tunnelSession.ConnectedFailedCallback(err); err != nil {
 			logger.Errorf("Update session connect status failed %+v", err)
+		}
+		if err = tunnelSession.DisConnectedCallback(); err != nil {
+			logger.Errorf("Session DisConnectedCallback err: %+v", err)
 		}
 		return
 	}
