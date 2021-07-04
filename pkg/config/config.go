@@ -61,9 +61,9 @@ func getDefaultConfig() Config {
 	rootPath := getPwdDirPath()
 	dataFolderPath := filepath.Join(rootPath, "data")
 	driveFolderPath := filepath.Join(dataFolderPath, "drive")
-	recordFolderPath := filepath.Join(dataFolderPath, "record")
-	LogDirPath := filepath.Join(dataFolderPath, "log")
-	keyFolderPath := filepath.Join(dataFolderPath, "key")
+	recordFolderPath := filepath.Join(dataFolderPath, "replays")
+	LogDirPath := filepath.Join(dataFolderPath, "logs")
+	keyFolderPath := filepath.Join(dataFolderPath, "keys")
 	accessKeyFilePath := filepath.Join(keyFolderPath, ".access_key")
 
 	folders := []string{dataFolderPath, driveFolderPath, recordFolderPath,
@@ -95,11 +95,13 @@ func getDefaultConfig() Config {
 
 }
 
-func getPwdDirPath() string {
-	if rootPath, err := os.Getwd(); err == nil {
-		return rootPath
+func EnsureDirExist(path string) error {
+	if !haveDir(path) {
+		if err := os.MkdirAll(path, os.ModePerm); err != nil {
+			return err
+		}
 	}
-	return ""
+	return nil
 }
 
 func have(path string) bool {
@@ -112,13 +114,20 @@ func haveDir(file string) bool {
 	return err == nil && fi.IsDir()
 }
 
-func EnsureDirExist(path string) error {
-	if !haveDir(path) {
-		if err := os.MkdirAll(path, os.ModePerm); err != nil {
-			return err
+func getPwdDirPath() string {
+	if rootPath, err := os.Getwd(); err == nil {
+		return rootPath
+	}
+	return ""
+}
+
+func loadEnvToViper() {
+	for _, item := range os.Environ() {
+		envItem := strings.SplitN(item, "=", 2)
+		if len(envItem) == 2 {
+			viper.Set(envItem[0], envItem[1])
 		}
 	}
-	return nil
 }
 
 const prefixName = "[Lion]"
@@ -134,13 +143,4 @@ func getDefaultName() string {
 	start := len(hostRune) - 16
 	copy(name[16:], hostRune[start:])
 	return string(name)
-}
-
-func loadEnvToViper() {
-	for _, item := range os.Environ() {
-		envItem := strings.Split(item, "=")
-		if len(envItem) == 2 {
-			viper.Set(envItem[0], envItem[1])
-		}
-	}
 }
