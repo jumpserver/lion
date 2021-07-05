@@ -40,17 +40,9 @@ type Config struct {
 }
 
 func Setup(configPath string) {
-	viper.SetConfigFile(configPath)
-	viper.AutomaticEnv()
-	loadEnvToViper()
-	log.Println("Load config from env")
-	if err := viper.ReadInConfig(); err == nil {
-		log.Printf("Load config from %s success\n", configPath)
-	}
 	var conf = getDefaultConfig()
-	if err := viper.Unmarshal(&conf); err != nil {
-		log.Fatal(err)
-	}
+	loadConfigFromEnv(&conf)
+	loadConfigFromFile(configPath, &conf)
 	GlobalConfig = &conf
 	log.Printf("%+v\n", GlobalConfig)
 
@@ -80,7 +72,7 @@ func getDefaultConfig() Config {
 		LogDirPath:                LogDirPath,
 		DrivePath:                 driveFolderPath,
 		AccessKeyFilePath:         accessKeyFilePath,
-		CoreHost:                  "http://127.0.0.1:8080",
+		CoreHost:                  "http://localhost:8080",
 		BootstrapToken:            "",
 		BindHost:                  "0.0.0.0",
 		HTTPPort:                  "8081",
@@ -121,12 +113,36 @@ func getPwdDirPath() string {
 	return ""
 }
 
-func loadEnvToViper() {
+func loadConfigFromEnv(conf *Config) {
+	viper.AutomaticEnv() // 全局配置，用于其他 pkg 包可以用 viper 获取环境变量的值
+	envViper := viper.New()
 	for _, item := range os.Environ() {
 		envItem := strings.SplitN(item, "=", 2)
 		if len(envItem) == 2 {
-			viper.Set(envItem[0], envItem[1])
+			envViper.Set(envItem[0], viper.Get(envItem[0]))
 		}
+	}
+	if err := envViper.Unmarshal(conf); err == nil {
+		envViper.Debug()
+		log.Println("Load config from env")
+	}
+
+}
+
+func loadConfigFromFile(path string, conf *Config) {
+	var err error
+	if have(path) {
+		fileViper := viper.New()
+		fileViper.SetConfigFile(path)
+		if err = fileViper.ReadInConfig(); err == nil {
+			if err = fileViper.Unmarshal(conf); err == nil {
+				log.Printf("Load config from %s success\n", path)
+				return
+			}
+		}
+	}
+	if err != nil {
+		log.Fatalf("Load config from %s failed: %s\n", path, err)
 	}
 }
 
