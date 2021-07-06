@@ -123,7 +123,6 @@ func loadConfigFromEnv(conf *Config) {
 		}
 	}
 	if err := envViper.Unmarshal(conf); err == nil {
-		envViper.Debug()
 		log.Println("Load config from env")
 	}
 
