@@ -110,8 +110,8 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	}
 	info := g.getClientInfo(ctx)
 	conf := tunnelSession.GuaConfiguration()
-	// 设置网域网关，替换本地
-	if tunnelSession.Domain != nil {
+	// 设置网域网关，替换本地。 兼容云平台同步 配置网域，但网关配置为空的情况
+	if tunnelSession.Domain != nil && len(tunnelSession.Domain.Gateways) != 0 {
 		dstAddr := net.JoinHostPort(conf.GetParameter(guacd.Hostname),
 			conf.GetParameter(guacd.Port))
 		domainGateway := gateway.DomainGateway{
@@ -121,6 +121,12 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 		if err = domainGateway.Start(); err != nil {
 			logger.Errorf("Start domain gateway err: %+v", err)
 			_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrGatewayFailed.String()))
+			if err = tunnelSession.ConnectedFailedCallback(err); err != nil {
+				logger.Errorf("Update session connect status failed %+v", err)
+			}
+			if err = tunnelSession.DisConnectedCallback(); err != nil {
+				logger.Errorf("Session DisConnectedCallback err: %+v", err)
+			}
 			return
 		}
 		defer domainGateway.Stop()
@@ -139,6 +145,9 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrGuacamoleServer.String()))
 		if err = tunnelSession.ConnectedFailedCallback(err); err != nil {
 			logger.Errorf("Update session connect status failed %+v", err)
+		}
+		if err = tunnelSession.DisConnectedCallback(); err != nil {
+			logger.Errorf("Session DisConnectedCallback err: %+v", err)
 		}
 		return
 	}

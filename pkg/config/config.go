@@ -40,17 +40,9 @@ type Config struct {
 }
 
 func Setup(configPath string) {
-	viper.SetConfigFile(configPath)
-	viper.AutomaticEnv()
-	loadEnvToViper()
-	log.Println("Load config from env")
-	if err := viper.ReadInConfig(); err == nil {
-		log.Printf("Load config from %s success\n", configPath)
-	}
 	var conf = getDefaultConfig()
-	if err := viper.Unmarshal(&conf); err != nil {
-		log.Fatal(err)
-	}
+	loadConfigFromEnv(&conf)
+	loadConfigFromFile(configPath, &conf)
 	GlobalConfig = &conf
 	log.Printf("%+v\n", GlobalConfig)
 
@@ -61,9 +53,9 @@ func getDefaultConfig() Config {
 	rootPath := getPwdDirPath()
 	dataFolderPath := filepath.Join(rootPath, "data")
 	driveFolderPath := filepath.Join(dataFolderPath, "drive")
-	recordFolderPath := filepath.Join(dataFolderPath, "record")
-	LogDirPath := filepath.Join(dataFolderPath, "log")
-	keyFolderPath := filepath.Join(dataFolderPath, "key")
+	recordFolderPath := filepath.Join(dataFolderPath, "replays")
+	LogDirPath := filepath.Join(dataFolderPath, "logs")
+	keyFolderPath := filepath.Join(dataFolderPath, "keys")
 	accessKeyFilePath := filepath.Join(keyFolderPath, ".access_key")
 
 	folders := []string{dataFolderPath, driveFolderPath, recordFolderPath,
@@ -80,7 +72,7 @@ func getDefaultConfig() Config {
 		LogDirPath:                LogDirPath,
 		DrivePath:                 driveFolderPath,
 		AccessKeyFilePath:         accessKeyFilePath,
-		CoreHost:                  "http://127.0.0.1:8080",
+		CoreHost:                  "http://localhost:8080",
 		BootstrapToken:            "",
 		BindHost:                  "0.0.0.0",
 		HTTPPort:                  "8081",
@@ -95,11 +87,13 @@ func getDefaultConfig() Config {
 
 }
 
-func getPwdDirPath() string {
-	if rootPath, err := os.Getwd(); err == nil {
-		return rootPath
+func EnsureDirExist(path string) error {
+	if !haveDir(path) {
+		if err := os.MkdirAll(path, os.ModePerm); err != nil {
+			return err
+		}
 	}
-	return ""
+	return nil
 }
 
 func have(path string) bool {
@@ -112,13 +106,43 @@ func haveDir(file string) bool {
 	return err == nil && fi.IsDir()
 }
 
-func EnsureDirExist(path string) error {
-	if !haveDir(path) {
-		if err := os.MkdirAll(path, os.ModePerm); err != nil {
-			return err
+func getPwdDirPath() string {
+	if rootPath, err := os.Getwd(); err == nil {
+		return rootPath
+	}
+	return ""
+}
+
+func loadConfigFromEnv(conf *Config) {
+	viper.AutomaticEnv() // 全局配置，用于其他 pkg 包可以用 viper 获取环境变量的值
+	envViper := viper.New()
+	for _, item := range os.Environ() {
+		envItem := strings.SplitN(item, "=", 2)
+		if len(envItem) == 2 {
+			envViper.Set(envItem[0], viper.Get(envItem[0]))
 		}
 	}
-	return nil
+	if err := envViper.Unmarshal(conf); err == nil {
+		log.Println("Load config from env")
+	}
+
+}
+
+func loadConfigFromFile(path string, conf *Config) {
+	var err error
+	if have(path) {
+		fileViper := viper.New()
+		fileViper.SetConfigFile(path)
+		if err = fileViper.ReadInConfig(); err == nil {
+			if err = fileViper.Unmarshal(conf); err == nil {
+				log.Printf("Load config from %s success\n", path)
+				return
+			}
+		}
+	}
+	if err != nil {
+		log.Fatalf("Load config from %s failed: %s\n", path, err)
+	}
 }
 
 const prefixName = "[Lion]"
@@ -134,13 +158,4 @@ func getDefaultName() string {
 	start := len(hostRune) - 16
 	copy(name[16:], hostRune[start:])
 	return string(name)
-}
-
-func loadEnvToViper() {
-	for _, item := range os.Environ() {
-		envItem := strings.Split(item, "=")
-		if len(envItem) == 2 {
-			viper.Set(envItem[0], envItem[1])
-		}
-	}
 }

@@ -29,7 +29,7 @@ RUN export GOFlAGS="-X 'main.Buildstamp=`date -u '+%Y-%m-%d %I:%M:%S%p'`'" \
 	&& export GOFlAGS="${GOFlAGS} -X 'main.Version=${VERSION}'" \
 	&& go build -trimpath -x -ldflags "$GOFlAGS" -o lion . && ls -al .
 
-FROM guacamole/guacd:1.3.0
+FROM jumpserver/guacd:1.3.0
 USER root
 WORKDIR /opt/lion
 ENV GUACD_LOG_LEVEL=debug
