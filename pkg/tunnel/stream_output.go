@@ -1,7 +1,9 @@
 package tunnel
 
 import (
+	"context"
 	"encoding/base64"
+	"fmt"
 	"net/http"
 	"strconv"
 	"sync"
@@ -64,15 +66,16 @@ func (filter *OutputStreamInterceptingFilter) handleBlob(unfilteredInstruction *
 			logger.Errorf("Base64 decode blob err: %+v", err)
 			return nil
 		}
-		if _, err = stream.writer.Write(blob); err != nil {
-			err =filter.sendAck(index, "FAIL", guacd.StatusServerError)
-		} else {
-			err = filter.sendAck(index, "OK", guacd.StatusSuccess)
-		}
-		if err != nil{
-			logger.Errorf("OutputStream filter sendAck err: %+v", err)
-		}
 
+		_, err = stream.writer.Write(blob)
+		if err != nil {
+			stream.err = err
+			logger.Errorf("OutputStream filter stream %s write err: %+v", stream.streamIndex, err)
+			if err = filter.sendAck(index, "FAIL", guacd.StatusServerError); err != nil {
+				logger.Errorf("OutputStream filter sendAck err: %+v", err)
+			}
+			return nil
+		}
 		if !filter.acknowledgeBlobs {
 			filter.acknowledgeBlobs = true
 			ins := guacd.NewInstruction(guacd.InstructionStreamingBlob, index, "")
@@ -154,9 +157,14 @@ type OutStreamResource struct {
 	writer      http.ResponseWriter
 	done        chan struct{}
 	err         error
+	ctx         context.Context
 }
 
 func (r *OutStreamResource) Wait() error {
-	<-r.done
+	select {
+	case <-r.done:
+	case <-r.ctx.Done():
+		return fmt.Errorf("closed request %s", r.streamIndex)
+	}
 	return r.err
 }
