@@ -267,6 +267,7 @@ func (g *GuacamoleTunnelServer) DownloadFile(ctx *gin.Context) {
 			streamIndex: index,
 			mediaType:   "",
 			writer:      ctx.Writer,
+			ctx:         ctx.Request.Context(),
 			done:        make(chan struct{}),
 		}
 		tun.outputFilter.addOutStream(out)
