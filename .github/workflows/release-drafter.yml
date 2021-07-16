@@ -60,5 +60,5 @@ jobs:
           ACCESS_TOKEN: ${{ secrets.PRIVATE_TOKEN }}
           FILE_PATTERN: build/*.gz
         run:  |
-          wget "https://github.com/LeeEirc/ghaction/releases/download/v0.0.1/ghrcreate-linux-amd64"
+          wget "https://github.com/LeeEirc/ghaction/releases/download/v0.0.2/ghrcreate-linux-amd64"
           chmod +x ghrcreate-linux-amd64 && ./ghrcreate-linux-amd64
