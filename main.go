@@ -119,8 +119,13 @@ func runHeartTask(jmsService *service.JMService, tunnelCache *tunnel.GuaTunnelCa
 }
 
 func runCleanDriverDisk(tunnelCache *tunnel.GuaTunnelCacheManager) {
-	// default 1 hour
-	cleanDriveTicker := time.NewTicker(time.Hour)
+	scheduleTime := config.GlobalConfig.CleanDriveScheduleTime
+	if scheduleTime < 1 {
+		logger.Info("Clean driver folder schedule task stop")
+		return
+	}
+	logger.Info("Clean driver folder schedule task start")
+	cleanDriveTicker := time.NewTicker(time.Duration(scheduleTime) * time.Hour)
 	defer cleanDriveTicker.Stop()
 	drivePath := config.GlobalConfig.DrivePath
 	for range cleanDriveTicker.C {
