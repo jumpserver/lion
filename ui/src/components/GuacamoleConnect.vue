@@ -20,7 +20,7 @@
       :collapse-transition="false"
       @click.native="isMenuCollapse = false"
     >
-      <el-menu-item :disabled="menuDisable" index="2">
+      <el-menu-item :disabled="menuDisable || !clipboardInited" index="2">
         <i class="el-icon-document-copy" /><span @click="toggleClipboard">{{ $t('Clipboard') }}</span>
       </el-menu-item>
       <el-menu-item v-if="hasFileSystem" :disabled="menuDisable" index="3" @click="toggleFileSystem">
@@ -195,7 +195,20 @@ export default {
       }, 300)
     },
     initClipboard() {
-      this.clipboardInited = true
+      if (this.session && this.session.permission) {
+        const actions = this.session.permission.actions
+        let hasClipboardPermission = false
+        const clipboardActions = ['all', 'clipboard_copy',
+          'clipboard_paste', 'clipboard_copy_paste']
+        for (let i = 0; i < actions.length; i++) {
+          if (clipboardActions.includes(actions[i])) {
+            hasClipboardPermission = true
+            break
+          }
+        }
+        this.$log.debug(this.session.permission)
+        this.clipboardInited = hasClipboardPermission
+      }
     },
     beforeunloadFn(e) {
       this.removeSession()
