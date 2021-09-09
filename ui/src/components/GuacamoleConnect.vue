@@ -429,7 +429,12 @@ export default {
       // or display are not yet available
       if (!this.client || !this.display) { return }
 
-      // Scale event by current scale
+      // Send mouse state, show cursor if necessary
+      this.display.showCursor(!this.localCursor)
+      this.sendScaledMouseState(mouseState)
+    },
+
+    sendScaledMouseState(mouseState) {
       const scaledState = new Guacamole.Mouse.State(
         mouseState.x / this.display.getScale(),
         mouseState.y / this.display.getScale(),
@@ -438,10 +443,26 @@ export default {
         mouseState.right,
         mouseState.up,
         mouseState.down)
-
-      // Send mouse state, show cursor if necessary
-      this.display.showCursor(!this.localCursor)
       this.client.sendMouseState(scaledState)
+    },
+
+    handleEmulatedMouseState(mouseState) {
+      // Do not attempt to handle mouse state changes if the client
+      // or display are not yet available
+      if (!this.client || !this.display) { return }
+
+      // Ensure software cursor is shown
+      this.display.showCursor(true)
+      this.$log.debug('handleEmulatedMouseState', mouseState)
+      // Send mouse state, ensure cursor is visible
+      this.sendScaledMouseState(mouseState)
+    },
+
+    handleEmulatedMouseDown(mouseState) {
+      this.handleEmulatedMouseState(mouseState)
+      this.isMenuCollapse = true
+      this.sink.focus()
+      this.$log.debug('handleEmulatedMouseDown', mouseState)
     },
 
     onMouseDown(mouseState) {
@@ -598,7 +619,11 @@ export default {
       // Hide software cursor when mouse leaves display
       mouse.onmouseout = this.onMouseOut
       this.mouse = mouse
-
+      // touch 触屏操作
+      const outDisplay = document.getElementById('display')
+      const touchScreen = new Guacamole.Mouse.Touchscreen(outDisplay)
+      touchScreen.onmousedown = this.handleEmulatedMouseDown
+      touchScreen.onmousemove = touchScreen.onmouseup = this.handleEmulatedMouseState
       // 输入下沉
       const sink = new Guacamole.InputSink()
       sink.focus()
