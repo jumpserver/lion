@@ -73,7 +73,13 @@ import { ErrorStatusCodes } from '@/utils'
 import { localStorageGet } from '@/utils/common'
 
 const pixelDensity = window.devicePixelRatio || 1
-
+const SHIFT_KEYS = { 0xFFE1: true, 0xFFE2: true }
+const ALT_KEYS = {
+  0xFFE9: true, 0xFFEA: true, 0xFE03: true,
+  0xFFE7: true, 0xFFE8: true
+}
+const CTRL_KEYS = { 0xFFE3: true, 0xFFE4: true }
+const MENU_KEYS = Object.assign({}, SHIFT_KEYS, ALT_KEYS, CTRL_KEYS)
 export default {
   name: 'GuacamoleConnect',
   components: {
@@ -632,6 +638,11 @@ export default {
       // Keyboard
       const keyboard = new Guacamole.Keyboard(sink.getElement())
       keyboard.onkeydown = (keysym) => {
+        if (this.isMenuShortcutPressed(keyboard)) {
+          this.$log.debug('isMenuShortcutPressed')
+          this.isMenuCollapse = !this.isMenuCollapse
+          return
+        }
         this.client.sendKeyEvent(1, keysym)
       }
       keyboard.onkeyup = (keysym) => {
@@ -661,6 +672,26 @@ export default {
       window.onunload = function() {
         client.disconnect()
       }
+    },
+
+    isMenuShortcutPressed(keyboard) {
+      const pressedKeys = keyboard.pressed
+      const keys = Object.keys(pressedKeys).filter((value, index) => {
+        return (value in MENU_KEYS)
+      })
+      if (keys.length < 3) {
+        return false
+      }
+      this.$log.debug(keys)
+      return !!(this.findKey(SHIFT_KEYS, pressedKeys) &&
+            this.findKey(ALT_KEYS, pressedKeys) &&
+            this.findKey(CTRL_KEYS, pressedKeys)
+      )
+    },
+    findKey(obj, keys) {
+      return Object.keys(obj).find((name) => {
+        return keys[name]
+      })
     }
   }
 }
