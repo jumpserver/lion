@@ -62,6 +62,7 @@ func (s *Server) Create(ctx *gin.Context, user *model.User, targetType, targetId
 	default:
 		return TunnelSession{}, fmt.Errorf("%w: %s", ErrUnSupportedProtocol, sysUser.Protocol)
 	}
+	var sessionAssetName string
 	switch targetType {
 	case TypeRDP, TypeVNC:
 		asset, err := s.JmsService.GetAssetById(targetId)
@@ -86,6 +87,7 @@ func (s *Server) Create(ctx *gin.Context, user *model.User, targetType, targetId
 		}
 		sess.Permission = &permission
 		sess.ExpireInfo = &permInfo
+		sessionAssetName = sess.Asset.Hostname
 	case TypeRemoteApp:
 		remoteApp, err := s.JmsService.GetRemoteApp(targetId)
 		if err != nil {
@@ -104,13 +106,14 @@ func (s *Server) Create(ctx *gin.Context, user *model.User, targetType, targetId
 			return TunnelSession{}, err
 		}
 		sess.ExpireInfo = &permInfo
+		sessionAssetName = remoteApp.Name
 	default:
 		return TunnelSession{}, fmt.Errorf("%w: %s", ErrUnSupportedType, targetType)
 	}
 	jmsSession := model.Session{
 		ID:           sess.ID,
 		User:         sess.User.String(),
-		Asset:        sess.Asset.Hostname,
+		Asset:        sessionAssetName,
 		SystemUser:   sess.SystemUser.String(),
 		LoginFrom:    loginFrom,
 		RemoteAddr:   ctx.ClientIP(),
