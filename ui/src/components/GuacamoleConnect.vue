@@ -11,7 +11,6 @@
         </div>
       </el-row>
     </el-main>
-    <div />
     <el-menu
       v-if="!loading"
       :collapse="isMenuCollapse"
@@ -109,8 +108,8 @@ export default {
         autoFit: true
       },
       tunnel: null,
-      displayWidth: 0,
-      displayHeight: 0,
+      displayWidth: window.innerWidth - 32,
+      displayHeight: window.innerHeight,
       connected: false,
       clipboardData: {
         type: 'text/plain',
@@ -148,7 +147,8 @@ export default {
           name: 'Windows'
         }
       ],
-      scale: 1
+      scale: 1,
+      timeout: null
     }
   },
   computed: {
@@ -226,7 +226,7 @@ export default {
     },
     onClientConnected() {
       this.onWindowResize()
-      window.addEventListener('resize', this.debounce(this.onWindowResize.bind(this), 300))
+      window.addEventListener('resize', this.debounce)
       window.onfocus = this.onWindowFocus
     },
     removeSession() {
@@ -245,8 +245,8 @@ export default {
     },
 
     getAutoSize() {
-      const optimalWidth = (window.innerWidth - 32) * pixelDensity
-      const optimalHeight = window.innerHeight * pixelDensity
+      const optimalWidth = this.displayWidth * pixelDensity
+      const optimalHeight = this.displayHeight * pixelDensity
       return [optimalWidth, optimalHeight]
     },
 
@@ -494,11 +494,10 @@ export default {
         return
       }
       // Calculate scale to fit screen
-      const minScale = Math.min(
-        (window.innerWidth - 32) / Math.max(display.getWidth(), 1),
-        window.innerHeight / Math.max(display.getHeight(), 1)
+      return Math.min(
+        this.displayWidth / Math.max(display.getWidth(), 1),
+        this.displayHeight / Math.max(display.getHeight(), 1)
       )
-      return minScale
     },
 
     updateDisplayScale() {
@@ -513,18 +512,15 @@ export default {
       }
       this.scale = scale
       this.display.scale(scale)
-      this.displayWidth = display.getWidth() * scale - 32
-      this.displayHeight = display.getHeight() * scale
     },
 
-    debounce(fn, wait) {
-      let timeout = null
-      return function() {
-        if (timeout !== null) {
-          clearTimeout(timeout)
-        }
-        timeout = setTimeout(fn, wait)
+    debounce() {
+      if (this.timeout) {
+        clearTimeout(this.timeout)
       }
+      this.displayWidth = window.innerWidth - 32
+      this.displayHeight = window.innerHeight
+      this.timeout = setTimeout(() => { this.onWindowResize() }, 300)
     },
 
     onWindowResize() {
@@ -546,9 +542,8 @@ export default {
       // 监听guacamole display的变化
       this.$log.debug('Display resize: ', width, height)
       const scale = this.getPropScale()
+      this.scale = scale
       this.display.scale(scale)
-      this.displayWidth = width * scale
-      this.displayHeight = height * scale
     },
 
     onWindowFocus() {
