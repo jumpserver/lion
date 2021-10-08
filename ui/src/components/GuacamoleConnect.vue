@@ -15,9 +15,10 @@
         </div>
       </el-row>
     </el-main>
-    <el-aside width="60px" center>
+    <el-aside width="32px" center>
       <el-menu
         v-if="!loading"
+        id="guacamole-connect-menu"
         :collapse="true"
         background-color="#1f1b1b"
         text-color="#ffffff"
@@ -76,7 +77,7 @@ import { ErrorStatusCodes } from '@/utils'
 import { localStorageGet } from '@/utils/common'
 
 const pixelDensity = window.devicePixelRatio || 1
-const sideWidth = 60
+const sideWidth = 32
 export default {
   name: 'GuacamoleConnect',
   components: {
