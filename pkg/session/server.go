@@ -215,7 +215,8 @@ const ReplayFileNameSuffix = ".replay.gz"
 func (s *Server) RegisterFinishReplayCallback(tunnel TunnelSession) func() error {
 	return func() error {
 		replayConfig := tunnel.TerminalConfig.ReplayStorage
-		if replayConfig["type"] == "null" {
+		storageType := replayConfig["TYPE"]
+		if storageType == "null" {
 			logger.Error("录像存储设置为 null，无存储")
 			return nil
 		}
@@ -241,6 +242,7 @@ func (s *Server) RegisterFinishReplayCallback(tunnel TunnelSession) func() error
 		}
 		// 压缩完成则删除源文件
 		defer os.Remove(originReplayFilePath)
+		logger.Infof("Upload record file: %s, type: %s", dstReplayFilePath, storageType)
 		if replayStorage := storage.NewReplayStorage(replayConfig); replayStorage != nil {
 			targetName := strings.Join([]string{tunnel.Created.Format(recordDirTimeFormat),
 				tunnel.ID + ReplayFileNameSuffix}, "/")

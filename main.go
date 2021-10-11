@@ -249,6 +249,11 @@ func uploadRemainReplay(jmsService *service.JMService, remainFiles map[string]st
 			_ = os.Remove(path)
 		}
 		var err error
+		storageType := terminalConf.ReplayStorage["TYPE"]
+		if storageType == "null" {
+			storageType = "server"
+		}
+		logger.Infof("Upload record file: %s, type: %s", absGzPath, storageType)
 		if replayStorage != nil {
 			targetName := strings.Join([]string{replayDateDirName,
 				sid + session.ReplayFileNameSuffix}, "/")
