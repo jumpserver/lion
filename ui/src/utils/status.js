@@ -14,3 +14,21 @@ export const ErrorStatusCodes = {
   1007: 'JMSErrGatewayFailed',
   1008: 'JMSErrGuacamoleServer'
 }
+
+export function ConvertAPIError(errMsg) {
+  if (typeof errMsg !== 'string') {
+    return errMsg
+  }
+  const errArray = errMsg.split(':')
+  if (errArray.length > 1) {
+    return APIErrorType[errArray[0]] || errMsg
+  }
+  return errMsg
+}
+
+export const APIErrorType = {
+  'connect API core err': 'JMSErrAPIFailed',
+  'unsupported type': 'JMSErrBadParams',
+  'unsupported protocol': 'JMSErrBadParams',
+  'permission deny': 'JMSErrPermission'
+}

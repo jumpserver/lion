@@ -8,6 +8,7 @@ const message = {
   ClearDone: 'Clear done',
   Connecting: 'Connecting',
   ErrTitle: 'Connect Error',
+  JMSErrPermission: 'Permission deny',
   JMSErrNoSession: 'Not found session',
   JMSErrAuthUser: 'Not auth user',
   JMSErrBadParams: 'Bad request params',
