@@ -1,5 +1,4 @@
 import axios from 'axios'
-import { $error } from './message'
 import { BaseURL } from '@/utils/common'
 
 const instance = axios.create({
@@ -11,15 +10,14 @@ const instance = axios.create({
 instance.interceptors.response.use(response => {
   return response
 }, error => {
-  let msg
+  let data
   if (error.response) {
-    msg = error.response.data.message || error.response.data
+    data = error.response.data
   } else {
-    console.log('error: ' + error) // for debug
-    msg = error.message
+    data = error.message
   }
-  $error(msg)
-  return Promise.reject(error)
+  console.log('error: ', data) // for debug
+  return Promise.reject(data)
 })
 
 export const request = instance

@@ -73,7 +73,7 @@ import { createSession, deleteSession } from '@/api/session'
 import GuacClipboard from './GuacClipboard'
 import GuacFileSystem from './GuacFileSystem'
 import { default as i18n, getLanguage } from '@/i18n'
-import { ErrorStatusCodes } from '@/utils'
+import { ErrorStatusCodes, ConvertAPIError } from '@/utils'
 import { localStorageGet } from '@/utils/common'
 
 const pixelDensity = window.devicePixelRatio || 1
@@ -172,7 +172,10 @@ export default {
       this.session = res.data
       this.startConnect()
     }).catch(err => {
-      vm.$log.debug('err ', err.message)
+      const message = err.message || err
+      vm.$log.debug('err ', message)
+      vm.$error(vm.$t(ConvertAPIError(message)))
+      vm.loading = false
     })
   },
   methods: {
