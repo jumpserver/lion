@@ -411,8 +411,15 @@ export default {
       this.$log.debug(status, i18n.locale)
       const code = status.code
       let msg = status.message
-      if (getLanguage() === 'cn') {
-        msg = ErrorStatusCodes[code] ? this.$t(ErrorStatusCodes[code]) : status.message
+      const currentLang = getLanguage()
+      msg = ErrorStatusCodes[code] ? this.$t(ErrorStatusCodes[code]) : status.message
+      // 管理员终断会话，特殊处理
+      if (code === 1005) {
+        if (currentLang === 'cn') {
+          msg = status.message + ' ' + msg
+        } else {
+          msg = msg + ' ' + status.message
+        }
       }
       this.$alert(msg, this.$t('ErrTitle'), {
         confirmButtonText: this.$t('OK'),

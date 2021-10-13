@@ -107,7 +107,7 @@ func runHeartTask(jmsService *service.JMService, tunnelCache *tunnel.GuaTunnelCa
 			switch task.Name {
 			case model.TaskKillSession:
 				if connection := tunnelCache.GetBySessionId(task.Args); connection != nil {
-					connection.Terminate()
+					connection.Terminate(task.Kwargs.TerminatedBy)
 					if err = jmsService.FinishTask(task.ID); err != nil {
 						logger.Error(err)
 					}
