@@ -2,6 +2,7 @@ package tunnel
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"strconv"
@@ -9,9 +10,11 @@ import (
 	ginSessions "github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	uuid "github.com/satori/go.uuid"
 
 	"lion/pkg/common"
 	"lion/pkg/config"
+	"lion/pkg/ftplogutil"
 	"lion/pkg/gateway"
 	"lion/pkg/guacd"
 	"lion/pkg/jms-sdk-go/model"
@@ -253,6 +256,7 @@ func (g *GuacamoleTunnelServer) DownloadFile(ctx *gin.Context) {
 	user := userItem.(*model.User)
 	if tun := g.Cache.Get(tid); tun != nil && tun.Sess.User.ID == user.ID {
 		fileLog := model.FTPLog{
+			Id:         uuid.NewV4().String(),
 			User:       tun.Sess.User.String(),
 			Hostname:   tun.Sess.Asset.Hostname,
 			OrgID:      tun.Sess.Asset.OrgID,
@@ -270,6 +274,7 @@ func (g *GuacamoleTunnelServer) DownloadFile(ctx *gin.Context) {
 			ctx:         ctx.Request.Context(),
 			done:        make(chan struct{}),
 		}
+		tun.outputFilter.ftpLog = &fileLog
 		tun.outputFilter.addOutStream(out)
 		if err := out.Wait(); err != nil {
 			logger.Errorf("Session[%s] download file %s err: %s", tun, filename, err)
@@ -280,6 +285,7 @@ func (g *GuacamoleTunnelServer) DownloadFile(ctx *gin.Context) {
 		fileLog.IsSuccess = true
 		g.SessionService.AuditFileOperation(fileLog)
 		logger.Infof("Session[%s] download file %s success", tun, filename)
+		go ftplogutil.SendNotifyFtpLog(fileLog)
 		return
 	}
 	ctx.AbortWithStatus(http.StatusNotFound)
@@ -305,6 +311,7 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 	if tun := g.Cache.Get(tid); tun != nil && tun.Sess.User.ID == user.ID {
 		logger.Infof("User %s upload file %s", user, filename)
 		fileLog := model.FTPLog{
+			Id:         uuid.NewV4().String(),
 			User:       tun.Sess.User.String(),
 			Hostname:   tun.Sess.Asset.Hostname,
 			OrgID:      tun.Sess.Asset.OrgID,
@@ -320,6 +327,19 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 			if err != nil {
 				return
 			}
+			// 判断用户上传文件是否为空，空则不上传
+			if file.Size == 0 {
+				err := fmt.Sprintf("Upload file %s is empty", file.Filename)
+				logger.Errorf(err)
+				ctx.JSON(http.StatusBadRequest, ErrorResponse(fmt.Errorf(err)))
+				return
+			}
+			localPath, err := ftplogutil.CacheFileLocally(&fileLog, fdReader)
+			if err != nil {
+				logger.Errorf("Upload file %s err: %s", localPath, err)
+				return
+			}
+			fdReader.Seek(0, io.SeekStart)
 			stream := InputStreamResource{
 				streamIndex: index,
 				reader:      fdReader,
@@ -336,6 +356,7 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 			logger.Infof("Session[%s] upload file %s success", tun, filename)
 			fileLog.IsSuccess = true
 			g.SessionService.AuditFileOperation(fileLog)
+			ftplogutil.SendNotifyFtpLog(fileLog)
 		}
 		return
 	}

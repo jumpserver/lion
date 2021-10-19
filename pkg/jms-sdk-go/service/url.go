@@ -21,6 +21,8 @@ const (
 	SessionDetailURL    = "/api/v1/terminal/sessions/%s/"        // finish session的时候发送
 	SessionReplayURL    = "/api/v1/terminal/sessions/%s/replay/" //上传录像
 	SessionCommandURL   = "/api/v1/terminal/commands/"           //上传批量命令
+	FTPLogFileURL       = "/api/v1/audits/ftp-logs/%s/file/"     // 上传 ftp日志
+	FTPLogUpdateURL     = "/api/v1/audits/ftp-logs/%s/"
 	FinishTaskURL       = "/api/v1/terminal/tasks/%s/"
 	JoinRoomValidateURL = "/api/v1/terminal/sessions/join/validate/"
 	FTPLogListURL       = "/api/v1/audits/ftp-logs/" // 上传 ftp日志

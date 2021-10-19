@@ -19,6 +19,7 @@ import (
 
 	"lion/pkg/common"
 	"lion/pkg/config"
+	"lion/pkg/ftplogutil"
 	"lion/pkg/jms-sdk-go/model"
 	"lion/pkg/jms-sdk-go/service"
 	"lion/pkg/logger"
@@ -225,8 +226,11 @@ func registerRouter(jmsService *service.JMService, tunnelService *tunnel.Guacamo
 
 func bootstrap(jmsService *service.JMService) {
 	replayDir := config.GlobalConfig.RecordPath
+	logFileDir := ftplogutil.GetFileCacheRootPath()
 	allRemainFiles := scanRemainReplay(jmsService, replayDir)
 	go uploadRemainReplay(jmsService, allRemainFiles)
+	go uploadRemainFtpLogFile(jmsService, logFileDir)
+    go ftplogutil.Initial(jmsService)
 }
 
 func uploadRemainReplay(jmsService *service.JMService, remainFiles map[string]string) {
@@ -272,6 +276,36 @@ func uploadRemainReplay(jmsService *service.JMService, remainFiles map[string]st
 			logger.Errorf("Finish reply to core api failed: %s", err)
 		}
 	}
+}
+
+// uploadRemainLogFile 上传遗留的文件记录
+func uploadRemainFtpLogFile(jmsService *service.JMService, fileStoreDir string) {
+	err := config.EnsureDirExist(fileStoreDir)
+	if err != nil {
+		logger.Debugf("upload failed ftpFile err: %s", err.Error())
+		return
+	}
+	allRemainFiles := make(map[string]string)
+	_ = filepath.Walk(fileStoreDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return nil
+		}
+		var sid string
+		filename := info.Name()
+		if len(filename) == 36 {
+			sid = filename
+		}
+		if sid != "" {
+			allRemainFiles[sid] = path
+		}
+		return nil
+	})
+
+	for sid, path := range allRemainFiles {
+		target, _ := filepath.Rel(fileStoreDir, path)
+		ftplogutil.UploadFtpLogFile(path, target, sid, jmsService)
+	}
+	logger.Debug("Upload remain replay done")
 }
 
 func scanRemainReplay(jmsService *service.JMService, replayDir string) map[string]string {

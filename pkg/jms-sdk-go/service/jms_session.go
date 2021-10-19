@@ -4,12 +4,31 @@ import (
 	"fmt"
 	"lion/pkg/common"
 	"lion/pkg/jms-sdk-go/model"
+	"lion/pkg/logger"
 )
 
 func (s *JMService) Upload(sessionID, gZipFile string) error {
 	var res map[string]interface{}
 	Url := fmt.Sprintf(SessionReplayURL, sessionID)
 	return s.authClient.UploadFile(Url, gZipFile, &res)
+}
+
+func (s *JMService) UploadFTPFile(FTPLogId, gZipFile string) error {
+	var res map[string]interface{}
+	Url := fmt.Sprintf(FTPLogFileURL, FTPLogId)
+	return s.authClient.UploadFile(Url, gZipFile, &res)
+}
+
+func (s *JMService) FinishFTPLogFileUpload(sid string) bool {
+	var res map[string]interface{}
+	data := map[string]bool{"has_file_record": true}
+	Url := fmt.Sprintf(FTPLogUpdateURL, sid)
+	_, err := s.authClient.Patch(Url, data, &res)
+	if err != nil {
+		logger.Error(err)
+		return false
+	}
+	return true
 }
 
 func (s *JMService) FinishReply(sid string) error {

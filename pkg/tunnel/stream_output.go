@@ -1,6 +1,7 @@
 package tunnel
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"fmt"
@@ -8,7 +9,9 @@ import (
 	"strconv"
 	"sync"
 
+	"lion/pkg/ftplogutil"
 	"lion/pkg/guacd"
+	"lion/pkg/jms-sdk-go/model"
 	"lion/pkg/logger"
 )
 
@@ -17,6 +20,7 @@ type OutputStreamInterceptingFilter struct {
 	streams map[string]OutStreamResource
 	sync.Mutex
 	acknowledgeBlobs bool
+	ftpLog           *model.FTPLog
 }
 
 func (filter *OutputStreamInterceptingFilter) Filter(unfilteredInstruction *guacd.Instruction) *guacd.Instruction {
@@ -76,6 +80,13 @@ func (filter *OutputStreamInterceptingFilter) handleBlob(unfilteredInstruction *
 			}
 			return nil
 		}
+
+		reader := bytes.NewBuffer(blob)
+		localPath, err := ftplogutil.CacheFileLocally(filter.ftpLog, reader)
+		if err != nil {
+			logger.Errorf("Upload file %s err: %s", localPath, err)
+		}
+
 		if !filter.acknowledgeBlobs {
 			filter.acknowledgeBlobs = true
 			ins := guacd.NewInstruction(guacd.InstructionStreamingBlob, index, "")

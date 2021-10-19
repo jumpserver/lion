@@ -12,7 +12,8 @@ require (
 	github.com/go-redis/redis/v8 v8.8.2
 	github.com/gofrs/uuid v4.0.0+incompatible
 	github.com/gorilla/websocket v1.4.2
-	github.com/satori/go.uuid v1.2.0 // indirect
+	github.com/huaweicloud/huaweicloud-sdk-go-obs v3.21.8+incompatible
+	github.com/satori/go.uuid v1.2.0
 	github.com/shirou/gopsutil/v3 v3.21.3
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/spf13/viper v1.7.1
