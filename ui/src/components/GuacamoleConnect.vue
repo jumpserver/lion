@@ -6,56 +6,60 @@
         :element-loading-text="loadingText"
         element-loading-background="#1f1b1b"
       >
-        <div :style="divStyle">
-          <div id="display" />
+        <div :style="containerStyle">
+          <div id="displayOuter">
+            <div id="displayMiddle">
+              <div id="display" />
+            </div>
+          </div>
         </div>
       </el-row>
     </el-main>
-    <div />
-    <el-menu
-      v-if="!loading"
-      :collapse="isMenuCollapse"
-      class="menu"
-      menu-trigger="click"
-      :collapse-transition="false"
-      @click.native="isMenuCollapse = false"
-    >
-      <el-menu-item :disabled="menuDisable || !clipboardInited" index="2">
-        <i class="el-icon-document-copy" /><span @click="toggleClipboard">{{ $t('Clipboard') }}</span>
-      </el-menu-item>
-      <el-menu-item v-if="hasFileSystem" :disabled="menuDisable" index="3" @click="toggleFileSystem">
-        <i class="el-icon-folder" /><span>{{ $t('Files') }}</span>
-      </el-menu-item>
-      <el-submenu :disabled="menuDisable" index="1" popper-class="sidebar-popper" @mouseenter="()=>{}">
-        <template slot="title">
-          <i class="el-icon-position" /><span>{{ $t('Shortcuts') }}</span>
-        </template>
-        <el-menu-item
-          v-for="(item, i) in combinationKeys"
-          :key="i"
-          :index="menuIndex('1-',i)"
-          @click="handleKeys(item.keys)"
-        >
-          {{ item.name }}
+    <el-aside width="32px" center>
+      <el-menu
+        v-if="!loading"
+        id="guacamole-connect-menu"
+        :collapse="true"
+        background-color="#1f1b1b"
+        text-color="#ffffff"
+      >
+        <el-menu-item :disabled="menuDisable || !clipboardInited" index="1" @click="toggleClipboard">
+          <i class="el-icon-document-copy" /><span slot="title">{{ $t('Clipboard') }}</span>
         </el-menu-item>
-      </el-submenu>
-    </el-menu>
-    <GuacClipboard
-      v-if="clipboardInited"
-      ref="clipboard"
-      :visible.sync="clipboardDrawer"
-      :client="client"
-      :tunnel="tunnel"
-      @closeDrawer="onCloseDrawer"
-    />
-    <GuacFileSystem
-      v-if="fileSystemInited"
-      ref="fileSystem"
-      :client="client"
-      :tunnel="tunnel"
-      :show.sync="fileDrawer"
-      @closeDrawer="onCloseDrawer"
-    />
+        <el-menu-item v-if="hasFileSystem" :disabled="menuDisable" index="2" @click="toggleFileSystem">
+          <i class="el-icon-folder" /><span slot="title">{{ $t('Files') }}</span>
+        </el-menu-item>
+        <el-submenu :disabled="menuDisable" index="1" popper-class="sidebar-popper" @mouseenter="()=>{}">
+          <template slot="title">
+            <i class="el-icon-position" /><span slot="title">{{ $t('Shortcuts') }}</span>
+          </template>
+          <el-menu-item
+            v-for="(item, i) in combinationKeys"
+            :key="i"
+            :index="menuIndex('3-',i)"
+            @click="handleKeys(item.keys)"
+          >
+            {{ item.name }}
+          </el-menu-item>
+        </el-submenu>
+      </el-menu>
+      <GuacClipboard
+        v-if="clipboardInited"
+        ref="clipboard"
+        :visible.sync="clipboardDrawer"
+        :client="client"
+        :tunnel="tunnel"
+        @closeDrawer="onCloseDrawer"
+      />
+      <GuacFileSystem
+        v-if="fileSystemInited"
+        ref="fileSystem"
+        :client="client"
+        :tunnel="tunnel"
+        :show.sync="fileDrawer"
+        @closeDrawer="onCloseDrawer"
+      />
+    </el-aside>
   </el-container>
 </template>
 
@@ -69,17 +73,11 @@ import { createSession, deleteSession } from '@/api/session'
 import GuacClipboard from './GuacClipboard'
 import GuacFileSystem from './GuacFileSystem'
 import { default as i18n, getLanguage } from '@/i18n'
-import { ErrorStatusCodes } from '@/utils'
+import { ErrorStatusCodes, ConvertAPIError } from '@/utils'
 import { localStorageGet } from '@/utils/common'
 
 const pixelDensity = window.devicePixelRatio || 1
-const SHIFT_KEYS = { 0xFFE1: true, 0xFFE2: true }
-const ALT_KEYS = {
-  0xFFE9: true, 0xFFEA: true, 0xFE03: true,
-  0xFFE7: true, 0xFFE8: true
-}
-const CTRL_KEYS = { 0xFFE3: true, 0xFFE4: true }
-const MENU_KEYS = Object.assign({}, SHIFT_KEYS, ALT_KEYS, CTRL_KEYS)
+const sideWidth = 32
 export default {
   name: 'GuacamoleConnect',
   components: {
@@ -109,8 +107,8 @@ export default {
         autoFit: true
       },
       tunnel: null,
-      displayWidth: 0,
-      displayHeight: 0,
+      displayWidth: window.innerWidth - sideWidth,
+      displayHeight: window.innerHeight,
       connected: false,
       clipboardData: {
         type: 'text/plain',
@@ -148,16 +146,15 @@ export default {
           name: 'Windows'
         }
       ],
-      scale: 1
+      scale: 1,
+      timeout: null
     }
   },
   computed: {
-    divStyle: function() {
+    containerStyle() {
       return {
-        width: this.displayWidth + 'px',
         height: this.displayHeight + 'px',
-        backgroundColor: '#1f1b1b',
-        margin: '0 auto'
+        width: this.displayWidth + 'px'
       }
     },
     menuDisable: function() {
@@ -175,7 +172,10 @@ export default {
       this.session = res.data
       this.startConnect()
     }).catch(err => {
-      vm.$log.debug('err ', err.message)
+      const message = err.message || err
+      vm.$log.debug('err ', message)
+      vm.$error(vm.$t(ConvertAPIError(message)))
+      vm.loading = false
     })
   },
   methods: {
@@ -226,7 +226,7 @@ export default {
     },
     onClientConnected() {
       this.onWindowResize()
-      window.addEventListener('resize', this.debounce(this.onWindowResize.bind(this), 300))
+      window.addEventListener('resize', this.debounceWindowResize)
       window.onfocus = this.onWindowFocus
     },
     removeSession() {
@@ -245,9 +245,10 @@ export default {
     },
 
     getAutoSize() {
-      const optimalWidth = (window.innerWidth - 32) * pixelDensity
-      const optimalHeight = window.innerHeight * pixelDensity
-      return [optimalWidth, optimalHeight]
+      const width = this.displayWidth
+      const height = this.displayHeight
+      this.$log.debug('auto size:', width, height)
+      return [width, height]
     },
 
     getGuaSize() {
@@ -281,8 +282,6 @@ export default {
           const supportImages = values[0]
           const supportAudios = values[1]
           const supportVideos = values[2]
-          this.displayWidth = optimalWidth
-          this.displayHeight = optimalHeight
           let connectString =
               'SESSION_ID=' + encodeURIComponent(sessionId) +
               '&GUAC_WIDTH=' + Math.floor(optimalWidth) +
@@ -412,8 +411,15 @@ export default {
       this.$log.debug(status, i18n.locale)
       const code = status.code
       let msg = status.message
-      if (getLanguage() === 'cn') {
-        msg = ErrorStatusCodes[code] ? this.$t(ErrorStatusCodes[code]) : status.message
+      const currentLang = getLanguage()
+      msg = ErrorStatusCodes[code] ? this.$t(ErrorStatusCodes[code]) : status.message
+      // 管理员终断会话，特殊处理
+      if (code === 1005) {
+        if (currentLang === 'cn') {
+          msg = status.message + ' ' + msg
+        } else {
+          msg = msg + ' ' + status.message
+        }
       }
       this.$alert(msg, this.$t('ErrTitle'), {
         confirmButtonText: this.$t('OK'),
@@ -493,12 +499,12 @@ export default {
       if (!display) {
         return
       }
+      const [width, height] = this.getAutoSize()
       // Calculate scale to fit screen
-      const minScale = Math.min(
-        (window.innerWidth - 32) / Math.max(display.getWidth(), 1),
-        window.innerHeight / Math.max(display.getHeight(), 1)
+      return Math.min(
+        width / Math.max(display.getWidth(), 1),
+        height / Math.max(display.getHeight(), 1)
       )
-      return minScale
     },
 
     updateDisplayScale() {
@@ -512,23 +518,21 @@ export default {
         return
       }
       this.scale = scale
+      this.$log.debug('this scale', scale)
       this.display.scale(scale)
-      this.displayWidth = display.getWidth() * scale - 32
-      this.displayHeight = display.getHeight() * scale
     },
 
-    debounce(fn, wait) {
-      let timeout = null
-      return function() {
-        if (timeout !== null) {
-          clearTimeout(timeout)
-        }
-        timeout = setTimeout(fn, wait)
+    debounceWindowResize() {
+      if (this.timeout) {
+        clearTimeout(this.timeout)
       }
+      this.timeout = setTimeout(() => this.onWindowResize(), 300)
     },
 
     onWindowResize() {
       // 监听 window display的变化
+      this.displayWidth = window.innerWidth - sideWidth
+      this.displayHeight = window.innerHeight
       const [optimalWidth, optimalHeight] = this.getGuaSize()
       if (this.client !== null) {
         const display = this.client.getDisplay()
@@ -547,8 +551,6 @@ export default {
       this.$log.debug('Display resize: ', width, height)
       const scale = this.getPropScale()
       this.display.scale(scale)
-      this.displayWidth = width * scale
-      this.displayHeight = height * scale
     },
 
     onWindowFocus() {
@@ -638,11 +640,6 @@ export default {
       // Keyboard
       const keyboard = new Guacamole.Keyboard(sink.getElement())
       keyboard.onkeydown = (keysym) => {
-        if (this.isMenuShortcutPressed(keyboard)) {
-          this.$log.debug('isMenuShortcutPressed')
-          this.isMenuCollapse = !this.isMenuCollapse
-          return
-        }
         this.client.sendKeyEvent(1, keysym)
       }
       keyboard.onkeyup = (keysym) => {
@@ -672,26 +669,6 @@ export default {
       window.onunload = function() {
         client.disconnect()
       }
-    },
-
-    isMenuShortcutPressed(keyboard) {
-      const pressedKeys = keyboard.pressed
-      const keys = Object.keys(pressedKeys).filter((value, index) => {
-        return (value in MENU_KEYS)
-      })
-      if (keys.length < 3) {
-        return false
-      }
-      this.$log.debug(keys)
-      return !!(this.findKey(SHIFT_KEYS, pressedKeys) &&
-            this.findKey(ALT_KEYS, pressedKeys) &&
-            this.findKey(CTRL_KEYS, pressedKeys)
-      )
-    },
-    findKey(obj, keys) {
-      return Object.keys(obj).find((name) => {
-        return keys[name]
-      })
     }
   }
 }
@@ -705,6 +682,16 @@ export default {
 .el-main {
   padding: 0;
   overflow: hidden;
+  width: 100%;
+  height: 100%;
+}
+.el-row {
+  height: 100%;
+}
+
+.el-aside {
+  height: 100%;
+  overflow: hidden;
 }
 
 .el-dropdown-link {
@@ -714,51 +701,45 @@ export default {
 .el-icon-arrow-down {
   font-size: 12px;
 }
-
 .el-menu {
-  background-color: rgb(60, 56, 56);
-  border: solid 1px rgb(60, 56, 56);
-
-  /deep/ .el-submenu {
-    background-color: rgb(60, 56, 56);
-
-    .el-submenu__title {
-      color: white;
-    }
-    .el-menu-item {
-      line-height: 36px;
-      height: 36px;
-    }
-    .el-submenu__title:hover {
-      background-color: #463e3e;
-    }
-  }
-
-  /deep/ .el-submenu:hover {
-    background-color: #463e3e;
-  }
+  height: 100%;
 }
 
 .el-menu-item {
   color: white;
   background-color: rgb(60, 56, 56);
-  padding-left: 20px;
 }
 
 .el-menu-item:hover {
   background-color: #463e3e;
 }
 
-.el-menu--collapse {
-  width: 32px;
-
-  .el-menu-item {
-    padding-left: 5px !important;
-  }
-
-  /deep/ .el-submenu__title {
-    padding-left: 5px !important;
-  }
+#displayOuter {
+  height: 100%;
+  width: 100%;
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: table;
 }
 
+#displayMiddle {
+  width: 100%;
+  height: 100%;
+  display: table-cell;
+  vertical-align: middle;
+  text-align: center;
+}
+
+#display{
+  display: inline-block;
+}
+#display * {
+  position: relative;
+}
+
+#display > * {
+  margin-left: auto;
+  margin-right: auto;
+}
 </style>

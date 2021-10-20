@@ -212,9 +212,10 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 
 }
 
-func (t *Connection) Terminate() {
-	_ = t.SendWsMessage(ErrTerminatedByAdmin.Instruction())
-	logger.Errorf("Session[%s] terminated by Admin", t)
+func (t *Connection) Terminate(username string) {
+	ins := NewJMSGuacamoleError(1005, username)
+	_ = t.SendWsMessage(ins.Instruction())
+	logger.Errorf("Session[%s] terminated by Admin %s", t, username)
 }
 
 func (t *Connection) String() string {

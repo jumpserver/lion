@@ -9,6 +9,7 @@ const message = {
   ClearDone: '清理已完成',
   Connecting: '连接中',
   ErrTitle: '连接异常',
+  JMSErrPermission: '无连接权限',
   JMSErrNoSession: '未能找到会话',
   JMSErrAuthUser: '用户未认证',
   JMSErrBadParams: '请求参数错误',

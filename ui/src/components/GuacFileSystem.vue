@@ -286,7 +286,7 @@ export default {
       this.$log.debug('File is: ', file)
       const onprogress = function progress(e) {
         if (e.total > 0) {
-          e.percent = e.loaded / e.total * 99
+          e.percent = e.loaded / e.total * 50
         }
         fileObj.onProgress(e)
       }

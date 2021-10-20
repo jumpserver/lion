@@ -107,7 +107,7 @@ func runHeartTask(jmsService *service.JMService, tunnelCache *tunnel.GuaTunnelCa
 			switch task.Name {
 			case model.TaskKillSession:
 				if connection := tunnelCache.GetBySessionId(task.Args); connection != nil {
-					connection.Terminate()
+					connection.Terminate(task.Kwargs.TerminatedBy)
 					if err = jmsService.FinishTask(task.ID); err != nil {
 						logger.Error(err)
 					}
@@ -249,6 +249,11 @@ func uploadRemainReplay(jmsService *service.JMService, remainFiles map[string]st
 			_ = os.Remove(path)
 		}
 		var err error
+		storageType := terminalConf.ReplayStorage["TYPE"]
+		if storageType == "null" {
+			storageType = "server"
+		}
+		logger.Infof("Upload record file: %s, type: %s", absGzPath, storageType)
 		if replayStorage != nil {
 			targetName := strings.Join([]string{replayDateDirName,
 				sid + session.ReplayFileNameSuffix}, "/")
