@@ -125,6 +125,11 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 			case guacd.InstructionServerDisconnect,
 				guacd.InstructionServerError:
 				logger.Infof("Session[%s] receive guacamole server disconnect opcode", t)
+			case guacd.InstructionStreamingAck:
+				select {
+				case activeChan <- struct{}{}:
+				default:
+				}
 			}
 
 			if err = t.writeWsMessage([]byte(instruction.String())); err != nil {
@@ -158,7 +163,6 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 				case guacd.InstructionClientSync,
 					guacd.InstructionClientNop,
 					guacd.InstructionStreamingAck:
-
 				case guacd.InstructionClientDisconnect:
 					logger.Errorf("Session[%s] receive web client disconnect opcode", t)
 				default:
