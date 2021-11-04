@@ -101,6 +101,32 @@ func NewReplayStorage(cf map[string]interface{}) ReplayStorage {
 			SecretKey: secretKey,
 			Endpoint:  endpoint,
 		}
+	case "obs":
+		var (
+			endpoint  string
+			bucket    string
+			accessKey string
+			secretKey string
+		)
+
+		if value, ok := cf["ENDPOINT"].(string); ok {
+			endpoint = value
+		}
+		if value, ok := cf["BUCKET"].(string); ok {
+			bucket = value
+		}
+		if value, ok := cf["ACCESS_KEY"].(string); ok {
+			accessKey = value
+		}
+		if value, ok := cf["SECRET_KEY"].(string); ok {
+			secretKey = value
+		}
+		return OBSReplayStorage{
+			Endpoint:  endpoint,
+			Bucket:    bucket,
+			AccessKey: accessKey,
+			SecretKey: secretKey,
+		}
 	default:
 		return nil
 	}
