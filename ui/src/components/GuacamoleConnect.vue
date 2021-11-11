@@ -144,6 +144,14 @@ export default {
         {
           keys: ['65515'],
           name: 'Windows'
+        },
+        {
+          keys: ['65307'],
+          name: 'Esc'
+        },
+        {
+          keys: ['65480'],
+          name: 'F11'
         }
       ],
       scale: 1,
