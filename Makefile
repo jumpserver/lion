@@ -61,6 +61,10 @@ windows-amd64:lion-ui
 	cd $(BUILDDIR) && tar -czvf $(NAME)-$(VERSION)-$@.tar.gz $(NAME)-$(VERSION)-$@
 	rm -rf $(BUILDDIR)/$(NAME)-$(VERSION)-$@ $(BUILDDIR)/$(NAME)-$@.exe
 
+.PHONY: docker
+docker:
+	docker build --build-arg VERSION=$(VERSION) -t jumpserver/lion:$(VERSION) .
+
 lion-ui:
 	@echo "build ui"
 	@cd $(UIDIR) && $(NPMINSTALL) && $(NPMBUILD)
