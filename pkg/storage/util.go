@@ -1,11 +1,22 @@
 package storage
 
 import (
+	"lion/pkg/jms-sdk-go/model"
+	"lion/pkg/jms-sdk-go/service"
 	"strings"
 )
 
+type StorageType interface {
+	TypeName() string
+}
+
 type ReplayStorage interface {
 	Upload(gZipFile, target string) error
+}
+
+type CommandStorage interface {
+	BulkSave(commands []*model.Command) error
+	StorageType
 }
 
 func NewReplayStorage(cf map[string]interface{}) ReplayStorage {
@@ -129,5 +140,53 @@ func NewReplayStorage(cf map[string]interface{}) ReplayStorage {
 		}
 	default:
 		return nil
+	}
+}
+
+func NewCommandStorage(jmsService *service.JMService, conf *model.TerminalConfig) CommandStorage {
+	cf := conf.CommandStorage
+	tp, ok := cf["TYPE"]
+	if !ok {
+		tp = "server"
+	}
+	/*
+		{
+		'DOC_TYPE': 'command',
+		  'HOSTS': ['http://172.16.10.122:9200'],
+		  'INDEX': 'jumpserver',
+		  'OTHER': {'IGNORE_VERIFY_CERTS': True},
+		  'TYPE': 'es'
+		}
+	*/
+	switch tp {
+	case "es", "elasticsearch":
+		var hosts = make([]string, len(cf["HOSTS"].([]interface{})))
+		for i, item := range cf["HOSTS"].([]interface{}) {
+			hosts[i] = item.(string)
+		}
+		var skipVerify bool
+		index := cf["INDEX"].(string)
+		docType := cf["DOC_TYPE"].(string)
+		if otherMap, ok := cf["OTHER"].(map[string]interface{}); ok {
+			if insecureSkipVerify, ok := otherMap["IGNORE_VERIFY_CERTS"]; ok {
+				skipVerify = insecureSkipVerify.(bool)
+			}
+		}
+		if index == "" {
+			index = "jumpserver"
+		}
+		if docType == "" {
+			docType = "_doc"
+		}
+		return ESCommandStorage{
+			Hosts:              hosts,
+			Index:              index,
+			DocType:            docType,
+			InsecureSkipVerify: skipVerify,
+		}
+	case "null":
+		return NewNullStorage()
+	default:
+		return ServerStorage{StorageType: "server", JmsService: jmsService}
 	}
 }

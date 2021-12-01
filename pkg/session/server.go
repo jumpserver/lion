@@ -263,6 +263,52 @@ func (s *Server) RegisterFinishReplayCallback(tunnel TunnelSession) func() error
 	}
 }
 
+func (s *Server) GetFilterParser(tunnel *TunnelSession) ParseEngine {
+	winParser := Parser{
+		id:         tunnel.ID,
+		jmsService: s.JmsService,
+	}
+	winParser.initial()
+	return &winParser
+}
+
+func (s *Server) GetCommandRecorder(tunnel *TunnelSession) *CommandRecorder {
+	cmdR := CommandRecorder{
+		sessionID:  tunnel.ID,
+		storage:    storage.NewCommandStorage(s.JmsService, tunnel.TerminalConfig),
+		queue:      make(chan *model.Command, 10),
+		closed:     make(chan struct{}),
+		jmsService: s.JmsService,
+	}
+	go cmdR.record()
+	return &cmdR
+}
+
+func (s *Server) GenerateCommandItem(tunnel *TunnelSession, user, input, output string,
+	riskLevel int64, createdDate time.Time) *model.Command {
+	var (
+		server string
+	)
+	if tunnel.RemoteApp != nil {
+		server = tunnel.RemoteApp.Name
+	} else {
+		server = tunnel.Asset.Hostname
+	}
+	return &model.Command{
+		SessionID:   tunnel.ID,
+		OrgID:       tunnel.SystemUser.OrgId,
+		Server:      server,
+		User:        user,
+		SystemUser:  tunnel.SystemUser.String(),
+		Input:       input,
+		Output:      output,
+		Timestamp:   createdDate.Unix(),
+		RiskLevel:   riskLevel,
+		Protocol:    tunnel.SystemUser.Protocol,
+		DateCreated: createdDate.UTC(),
+	}
+}
+
 func (s *Server) AuditFileOperation(fileLog model.FTPLog) {
 	if err := s.JmsService.CreateFileOperationLog(fileLog); err != nil {
 		logger.Errorf("Audit file operation err: %s", err)

@@ -2,13 +2,12 @@ package tunnel
 
 import (
 	"fmt"
-	"net"
-	"net/http"
-	"strconv"
-
 	ginSessions "github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"net"
+	"net/http"
+	"strconv"
 
 	"lion/pkg/common"
 	"lion/pkg/config"
@@ -158,6 +157,7 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	conn := Connection{
 		Sess:        tunnelSession,
 		guacdTunnel: tunnel,
+		Service:     g.SessionService,
 		ws:          ws,
 		done:        make(chan struct{}),
 	}
