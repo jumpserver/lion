@@ -6,8 +6,6 @@ require (
 	github.com/Azure/azure-storage-blob-go v0.13.0
 	github.com/aliyun/aliyun-oss-go-sdk v2.1.7+incompatible
 	github.com/aws/aws-sdk-go v1.38.15
-
-
 	github.com/elastic/go-elasticsearch/v6 v6.8.10 // indirect
 	github.com/gin-contrib/sessions v0.0.3
 	github.com/gin-gonic/gin v1.7.4
