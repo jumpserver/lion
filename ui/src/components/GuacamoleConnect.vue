@@ -29,7 +29,7 @@
         <el-menu-item v-if="hasFileSystem" :disabled="menuDisable" index="2" @click="toggleFileSystem">
           <i class="el-icon-folder" /><span slot="title">{{ $t('Files') }}</span>
         </el-menu-item>
-        <el-submenu :disabled="menuDisable" index="1" popper-class="sidebar-popper" @mouseenter="()=>{}">
+        <el-submenu v-if="!isRemoteApp" :disabled="menuDisable" index="3" popper-class="sidebar-popper" @mouseenter="()=>{}">
           <template slot="title">
             <i class="el-icon-position" /><span slot="title">{{ $t('Shortcuts') }}</span>
           </template>
@@ -167,7 +167,11 @@ export default {
     },
     menuDisable: function() {
       return !(this.clientState === 'Connected') || !(this.tunnelState === 'OPEN')
+    },
+    isRemoteApp: function() {
+      return this.session?.remote_app
     }
+
   },
   mounted: function() {
     const result = getCurrentConnectParams()
