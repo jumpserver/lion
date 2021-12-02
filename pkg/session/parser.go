@@ -2,8 +2,10 @@ package session
 
 import (
 	"bytes"
+	"fmt"
 	"lion/pkg/guacd"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -13,7 +15,7 @@ import (
 )
 
 var (
-	charEnter = []byte("Enter")
+	charEnter = []byte("\r")
 )
 
 var _ ParseEngine = (*Parser)(nil)
@@ -25,7 +27,6 @@ type Parser struct {
 
 	buf bytes.Buffer
 
-	inputInitial  bool
 	inputPreState bool
 	inputState    bool
 	once          *sync.Once
@@ -67,18 +68,32 @@ func (p *Parser) ParseStream(userInChan chan *Message) {
 				var b []byte
 				switch msg.Opcode {
 				case guacd.InstructionMouse:
+					s := msg.Body
+					var cmd string
+					switch s[2] {
+					case guacd.MouseLeft:
+						cmd = "Left Button"
+					case guacd.MouseRight:
+						cmd = "Right Button"
+					case guacd.MouseMiddle:
+						cmd = "Middle Button"
+					default:
+						continue
+					}
+					p.ParseUserInput(charEnter) //手动结算一次命令
+					cmd = fmt.Sprintf("Mouse Position[%s,%s] %s\r", s[0], s[1], cmd)
+					b = append(b, []byte(cmd)...)
 				case guacd.InstructionKey:
 					s := msg.Body
 					if s[1] == guacd.KeyPress {
 						keyCode, err := strconv.Atoi(s[0])
 						if err == nil {
-							sb := []byte(guacd.KeysymToCharacter(keyCode))
-							if len(sb) == 0 {
+							cb := []byte(guacd.KeysymToCharacter(keyCode))
+							if len(cb) == 0 {
 								b = append(b, byte(keyCode))
 							} else {
-								b = append(b, sb...)
+								b = append(b, cb...)
 							}
-							logger.Error(b)
 						} else {
 							b = append(b, []byte(guacd.KeyCodeUnknown)...)
 						}
@@ -87,28 +102,24 @@ func (p *Parser) ParseStream(userInChan chan *Message) {
 				if len(b) == 0 {
 					continue
 				}
-				b = p.ParseUserInput(b)
 				_, _ = p.WriteData(b)
+				p.ParseUserInput(b)
 			}
 		}
 	}()
 }
 
 // ParseUserInput 解析用户的输入
-func (p *Parser) ParseUserInput(b []byte) []byte {
+func (p *Parser) ParseUserInput(b []byte) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	p.once.Do(func() {
-		p.inputInitial = true
-	})
-	nb := p.parseInputState(b)
-	return nb
+	_ = p.parseInputState(b)
 }
 
 // parseInputState 切换用户输入状态, 并结算命令和结果
 func (p *Parser) parseInputState(b []byte) []byte {
 	p.inputPreState = p.inputState
-	if bytes.LastIndex(b, charEnter) == 0 {
+	if bytes.LastIndex(b, charEnter) >= 0 {
 		// 连续输入enter key, 结算上一条可能存在的命令结果
 		p.sendCommandRecord()
 		p.inputState = false
@@ -138,16 +149,20 @@ func (p *Parser) parseCmdInput() {
 func (p *Parser) WriteData(b []byte) (int, error) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	if p.buf.Len() >= 1024 {
+	if p.buf.Len() >= 2048 {
 		return 0, nil
 	}
-	b = append(b, byte(' '))
+	if len(b) > 1 {
+		p.buf.WriteByte(byte(' '))
+	}
 	return p.buf.Write(b)
 }
 
 func (p *Parser) Parse() []string {
 	lines := make([]string, 0, 100)
 	line := string(p.buf.Bytes())
+	line = strings.TrimPrefix(line, string(charEnter))
+	logger.Errorf("Parse:%s", line)
 	if line != "" {
 		lines = append(lines, line)
 	}

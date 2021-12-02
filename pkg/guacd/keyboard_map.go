@@ -24,7 +24,7 @@ var keyidentifierKeysym = map[int]string{
 	0xFF67: "ContextMenu",
 	0xFFFF: "Delete",
 	0xFF57: "End",
-	0xFF0D: "Enter",
+	0xFF0D: "Enter\r",
 	0xFD06: "EraseEof",
 	0xFF1B: "Escape",
 	0xFF62: "Execute",
@@ -99,15 +99,15 @@ var keyidentifierKeysym = map[int]string{
 
 const (
 	KeyPress   = "1"
-	keyRelease = "0"
+	KeyRelease = "0"
 )
 
 const (
-	mouseLeft   = "1"
-	mouseMiddle = "2"
-	mouseRight  = "4"
-	mouseUp     = "8"
-	mouseDown   = "16"
+	MouseLeft   = "1"
+	MouseMiddle = "2"
+	MouseRight  = "4"
+	MouseUp     = "8"
+	MouseDown   = "16"
 )
 
 const (
