@@ -1,6 +1,7 @@
 package model
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -20,7 +21,7 @@ type Asset struct {
 }
 
 func (a *Asset) String() string {
-	return a.Hostname
+	return fmt.Sprintf("%s(%s)", a.Hostname, a.IP)
 }
 func (a *Asset) ProtocolPort(protocol string) int {
 	for _, item := range a.Protocols {

@@ -24,7 +24,7 @@ ui/dist/
 ui/guacamole/
 ui/lion/
 config.yml
-
+vendor/
 
 # local env files
 .env.local

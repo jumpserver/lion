@@ -254,7 +254,7 @@ func (g *GuacamoleTunnelServer) DownloadFile(ctx *gin.Context) {
 	if tun := g.Cache.Get(tid); tun != nil && tun.Sess.User.ID == user.ID {
 		fileLog := model.FTPLog{
 			User:       tun.Sess.User.String(),
-			Hostname:   tun.Sess.Asset.Hostname,
+			Hostname:   tun.Sess.Asset.String(),
 			OrgID:      tun.Sess.Asset.OrgID,
 			SystemUser: tun.Sess.SystemUser.Name,
 			RemoteAddr: ctx.ClientIP(),
@@ -306,7 +306,7 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 		logger.Infof("User %s upload file %s", user, filename)
 		fileLog := model.FTPLog{
 			User:       tun.Sess.User.String(),
-			Hostname:   tun.Sess.Asset.Hostname,
+			Hostname:   tun.Sess.Asset.String(),
 			OrgID:      tun.Sess.Asset.OrgID,
 			SystemUser: tun.Sess.SystemUser.Name,
 			RemoteAddr: ctx.ClientIP(),
