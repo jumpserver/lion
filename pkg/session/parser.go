@@ -65,10 +65,10 @@ func (p *Parser) ParseStream(userInChan chan *Message) {
 					return
 				}
 				p.UpdateActiveUser(msg)
+				s := msg.Body
 				var b []byte
 				switch msg.Opcode {
 				case guacd.InstructionMouse:
-					s := msg.Body
 					var cmd string
 					switch s[2] {
 					case guacd.MouseLeft:
@@ -84,8 +84,8 @@ func (p *Parser) ParseStream(userInChan chan *Message) {
 					cmd = fmt.Sprintf("Mouse Position[%s,%s] %s\r", s[0], s[1], cmd)
 					b = append(b, []byte(cmd)...)
 				case guacd.InstructionKey:
-					s := msg.Body
-					if s[1] == guacd.KeyPress {
+					switch s[1] {
+					case guacd.KeyPress:
 						keyCode, err := strconv.Atoi(s[0])
 						if err == nil {
 							cb := []byte(guacd.KeysymToCharacter(keyCode))
@@ -97,6 +97,8 @@ func (p *Parser) ParseStream(userInChan chan *Message) {
 						} else {
 							b = append(b, []byte(guacd.KeyCodeUnknown)...)
 						}
+					default:
+						continue
 					}
 				}
 				if len(b) == 0 {
@@ -111,8 +113,6 @@ func (p *Parser) ParseStream(userInChan chan *Message) {
 
 // ParseUserInput 解析用户的输入
 func (p *Parser) ParseUserInput(b []byte) {
-	p.lock.Lock()
-	defer p.lock.Unlock()
 	_ = p.parseInputState(b)
 }
 
@@ -137,11 +137,11 @@ func (p *Parser) parseInputState(b []byte) []byte {
 
 // parseCmdInput 解析命令的输入
 func (p *Parser) parseCmdInput() {
-	commands := p.Parse()
-	if len(commands) <= 0 {
+	command := p.Parse()
+	if len(command) <= 0 {
 		p.command = ""
 	} else {
-		p.command = commands[len(commands)-1]
+		p.command = command
 	}
 	p.cmdCreateDate = time.Now()
 }
@@ -158,16 +158,11 @@ func (p *Parser) WriteData(b []byte) (int, error) {
 	return p.buf.Write(b)
 }
 
-func (p *Parser) Parse() []string {
-	lines := make([]string, 0, 100)
+func (p *Parser) Parse() string {
 	line := string(p.buf.Bytes())
 	line = strings.TrimPrefix(line, string(charEnter))
-	logger.Errorf("Parse:%s", line)
-	if line != "" {
-		lines = append(lines, line)
-	}
 	p.buf.Reset()
-	return lines
+	return line
 }
 
 // Close 关闭parser
