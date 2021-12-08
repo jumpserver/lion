@@ -1,9 +1,10 @@
 package storage
 
 import (
+	"strings"
+
 	"lion/pkg/jms-sdk-go/model"
 	"lion/pkg/jms-sdk-go/service"
-	"strings"
 )
 
 type StorageType interface {

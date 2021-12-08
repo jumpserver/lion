@@ -3,12 +3,12 @@ package session
 import (
 	"bytes"
 	"fmt"
-	"lion/pkg/guacd"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"lion/pkg/guacd"
 	"lion/pkg/jms-sdk-go/model"
 	"lion/pkg/jms-sdk-go/service"
 	"lion/pkg/logger"

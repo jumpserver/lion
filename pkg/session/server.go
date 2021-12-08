@@ -292,7 +292,7 @@ func (s *Server) GenerateCommandItem(tunnel *TunnelSession, user, input, output 
 	if tunnel.RemoteApp != nil {
 		server = tunnel.RemoteApp.Name
 	} else {
-		server = tunnel.Asset.Hostname
+		server = tunnel.Asset.String()
 	}
 	return &model.Command{
 		SessionID:   tunnel.ID,

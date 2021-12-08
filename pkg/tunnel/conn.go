@@ -1,8 +1,6 @@
 package tunnel
 
 import (
-	"lion/pkg/common"
-	"lion/pkg/jms-sdk-go/model"
 	"net"
 	"sort"
 	"sync"
@@ -11,8 +9,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 
+	"lion/pkg/common"
 	"lion/pkg/config"
 	"lion/pkg/guacd"
+	"lion/pkg/jms-sdk-go/model"
 	"lion/pkg/logger"
 	"lion/pkg/session"
 )
