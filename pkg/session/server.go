@@ -87,7 +87,7 @@ func (s *Server) Create(ctx *gin.Context, user *model.User, targetType, targetId
 		}
 		sess.Permission = &permission
 		sess.ExpireInfo = &permInfo
-		sessionAssetName = sess.Asset.Hostname
+		sessionAssetName = sess.Asset.String()
 	case TypeRemoteApp:
 		remoteApp, err := s.JmsService.GetRemoteApp(targetId)
 		if err != nil {
