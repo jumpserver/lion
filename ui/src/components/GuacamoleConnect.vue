@@ -76,7 +76,7 @@ import { default as i18n, getLanguage } from '@/i18n'
 import { ErrorStatusCodes, ConvertAPIError } from '@/utils'
 import { localStorageGet } from '@/utils/common'
 
-const pixelDensity = window.devicePixelRatio || 1
+const pixelDensity = 1
 const sideWidth = 32
 export default {
   name: 'GuacamoleConnect',
