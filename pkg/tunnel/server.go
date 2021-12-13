@@ -158,6 +158,7 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	conn := Connection{
 		Sess:        tunnelSession,
 		guacdTunnel: tunnel,
+		Service:     g.SessionService,
 		ws:          ws,
 		done:        make(chan struct{}),
 	}

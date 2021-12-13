@@ -9,8 +9,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 
+	"lion/pkg/common"
 	"lion/pkg/config"
 	"lion/pkg/guacd"
+	"lion/pkg/jms-sdk-go/model"
 	"lion/pkg/logger"
 	"lion/pkg/session"
 )
@@ -40,6 +42,7 @@ func (c Connections) Swap(i, j int) {
 type Connection struct {
 	Sess        *session.TunnelSession
 	guacdTunnel *guacd.Tunnel
+	Service     *session.Server
 
 	ws *websocket.Conn
 
@@ -110,6 +113,23 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 		logger.Error("Run err: ", err)
 		return err
 	}
+
+	parser := t.Service.GetFilterParser(t.Sess)
+	userInputMessageChan := make(chan *session.Message, 1)
+	defer func() {
+		parser.Close()
+	}()
+	// 处理数据流
+	parser.ParseStream(userInputMessageChan)
+	// 记录命令
+	cmdChan := parser.CommandRecordChan()
+	go t.recordCommand(cmdChan)
+
+	meta := session.MetaMessage{
+		UserId:  t.Sess.User.ID,
+		User:    t.Sess.User.String(),
+		Created: common.NewNowUTCTime().String(),
+	}
 	exit := make(chan error, 2)
 	activeChan := make(chan struct{})
 	go func(t *Connection) {
@@ -165,6 +185,12 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 					guacd.InstructionStreamingAck:
 				case guacd.InstructionClientDisconnect:
 					logger.Errorf("Session[%s] receive web client disconnect opcode", t)
+				case guacd.InstructionKey,
+					guacd.InstructionMouse:
+					userInputMessageChan <- &session.Message{
+						Opcode: ret.Opcode, Body: ret.Args,
+						Meta: meta}
+					fallthrough
 				default:
 					select {
 					case activeChan <- struct{}{}:
@@ -262,7 +288,6 @@ func (t *Connection) releaseMonitorTunnel() {
 	for tunneler := range t.traceMap {
 		_ = tunneler.Close()
 	}
-
 }
 
 func (t *Connection) unTraceMonitorTunnel(monitorTunnel *guacd.Tunnel) {
@@ -272,4 +297,41 @@ func (t *Connection) unTraceMonitorTunnel(monitorTunnel *guacd.Tunnel) {
 		return
 	}
 	delete(t.traceMap, monitorTunnel)
+}
+
+func (t *Connection) recordCommand(cmdRecordChan chan *session.ExecutedCommand) {
+	// 命令记录
+	cmdRecorder := t.Service.GetCommandRecorder(t.Sess)
+	for item := range cmdRecordChan {
+		if item.Command == "" {
+			continue
+		}
+		cmd := t.generateCommandResult(item)
+		cmdRecorder.Record(cmd)
+	}
+	// 关闭命令记录
+	cmdRecorder.End()
+}
+
+// generateCommandResult 生成命令结果
+func (t *Connection) generateCommandResult(item *session.ExecutedCommand) *model.Command {
+	var (
+		input     string
+		output    string
+		riskLevel int64
+		user      string
+	)
+	user = item.User.User
+	if len(item.Command) > 128 {
+		input = item.Command[:128]
+	} else {
+		input = item.Command
+	}
+	switch item.RiskLevel {
+	case model.HighRiskFlag:
+		riskLevel = model.DangerLevel
+	default:
+		riskLevel = model.NormalLevel
+	}
+	return t.Service.GenerateCommandItem(t.Sess, user, input, output, riskLevel, item.CreatedDate)
 }
