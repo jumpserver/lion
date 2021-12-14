@@ -30,16 +30,27 @@ func (s *JMService) GetSystemUserById(systemUserId string) (sysUser model.System
 	return
 }
 
-func (s *JMService) GetSystemUserAuthById(systemUserId, assetId, userId,
-	username string) (sysUser model.SystemUserAuthInfo, err error) {
-	url := fmt.Sprintf(SystemUserAuthURL, systemUserId)
-	if assetId != "" {
-		url = fmt.Sprintf(SystemUserAssetAuthURL, systemUserId, assetId)
+func (s *JMService) GetApplicationSysUserAuthInfo(sysId, appId, userId,
+	username string) (info model.SystemUserAuthInfo, err error) {
+	reqURL := fmt.Sprintf(SystemUserAppAuthURL, sysId, appId)
+	return s.getSysUserAuthInfo(reqURL, userId, username)
+}
+
+func (s *JMService) GetAssetSysUserAuthInfo(sysId, assetId, userId,
+	username string) (info model.SystemUserAuthInfo, err error) {
+	reqURL := fmt.Sprintf(SystemUserAssetAuthURL, sysId, assetId)
+	return s.getSysUserAuthInfo(reqURL, userId, username)
+}
+
+func (s *JMService) getSysUserAuthInfo(authURL, userId,
+	username string) (info model.SystemUserAuthInfo, err error) {
+	params := make(map[string]string)
+	if username != "" {
+		params["username"] = username
 	}
-	params := map[string]string{
-		"username": username,
-		"user_id":  userId,
+	if userId != "" {
+		params["user_id"] = userId
 	}
-	_, err = s.authClient.Get(url, &sysUser, params)
+	_, err = s.authClient.Get(authURL, &info, params)
 	return
 }

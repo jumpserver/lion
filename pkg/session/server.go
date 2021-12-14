@@ -81,12 +81,17 @@ func (s *Server) Create(ctx *gin.Context, user *model.User, targetType, targetId
 		if err != nil {
 			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
 		}
+		sysUserAuth, err := s.JmsService.GetAssetSysUserAuthInfo(sysUser.ID, asset.ID, user.ID, user.Username)
+		if err != nil {
+			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
+		}
 		sess, err = s.CreateRDPAndVNCSession(user, &asset, &sysUser)
 		if err != nil {
 			return TunnelSession{}, err
 		}
 		sess.Permission = &permission
 		sess.ExpireInfo = &permInfo
+		sess.SystemUser = &sysUserAuth
 		sessionAssetName = sess.Asset.String()
 	case TypeRemoteApp:
 		remoteApp, err := s.JmsService.GetRemoteApp(targetId)
@@ -101,11 +106,16 @@ func (s *Server) Create(ctx *gin.Context, user *model.User, targetType, targetId
 		if !permInfo.HasPermission {
 			return TunnelSession{}, fmt.Errorf("%w: connect deny", ErrPermissionDeny)
 		}
+		sysUserAuth, err := s.JmsService.GetApplicationSysUserAuthInfo(sysUser.ID, remoteApp.ID, user.ID, user.Username)
+		if err != nil {
+			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
+		}
 		sess, err = s.CreateRemoteSession(user, &remoteApp, &sysUser)
 		if err != nil {
 			return TunnelSession{}, err
 		}
 		sess.ExpireInfo = &permInfo
+		sess.SystemUser = &sysUserAuth
 		sessionAssetName = remoteApp.Name
 	default:
 		return TunnelSession{}, fmt.Errorf("%w: %s", ErrUnSupportedType, targetType)
@@ -137,10 +147,6 @@ func (s *Server) CreateRDPAndVNCSession(user *model.User, asset *model.Asset, sy
 	if err != nil {
 		return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
 	}
-	sysUserAuth, err := s.JmsService.GetSystemUserAuthById(systemUser.ID, asset.ID, user.ID, user.Username)
-	if err != nil {
-		return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
-	}
 	terminal, err := s.JmsService.GetTerminalConfig()
 	if err != nil {
 		return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
@@ -160,7 +166,6 @@ func (s *Server) CreateRDPAndVNCSession(user *model.User, asset *model.Asset, sy
 		Created:        common.NewNowUTCTime(),
 		User:           user,
 		Asset:          asset,
-		SystemUser:     &sysUserAuth,
 		Platform:       &platform,
 		Domain:         assetDomain,
 		TerminalConfig: &terminal,
