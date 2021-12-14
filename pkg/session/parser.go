@@ -159,7 +159,7 @@ func (p *Parser) WriteData(b []byte) (int, error) {
 }
 
 func (p *Parser) Parse() string {
-	line := string(p.buf.Bytes())
+	line := p.buf.String()
 	line = strings.TrimPrefix(line, string(charEnter))
 	p.buf.Reset()
 	return line
