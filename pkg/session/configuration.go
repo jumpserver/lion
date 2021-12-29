@@ -25,8 +25,8 @@ type RDPConfiguration struct {
 	Asset          *model.Asset
 	SystemUser     *model.SystemUserAuthInfo
 	Platform       *model.Platform
-	Permission     *model.Permission
 	TerminalConfig *model.TerminalConfig
+	ActionsPerm    *ActionPermission
 }
 
 func (r RDPConfiguration) GetGuacdConfiguration() guacd.Configuration {
@@ -77,12 +77,10 @@ func (r RDPConfiguration) GetGuacdConfiguration() guacd.Configuration {
 
 	// 设置 挂载目录 上传下载
 	{
-
-		disableAllUpDownload := config.GlobalConfig.DisableAllUpDownload
 		drivePath := filepath.Join(config.GlobalConfig.DrivePath, r.User.ID)
-		enableDrive := ConvertBoolToString(r.Permission.EnableDrive() && !disableAllUpDownload)
-		disableDownload := ConvertBoolToString(!r.Permission.EnableDownload())
-		disableUpload := ConvertBoolToString(!r.Permission.EnableUpload())
+		enableDrive := ConvertBoolToString(r.ActionsPerm.EnableDownload || r.ActionsPerm.EnableUpload)
+		disableDownload := ConvertBoolToString(!r.ActionsPerm.EnableDownload)
+		disableUpload := ConvertBoolToString(!r.ActionsPerm.EnableUpload)
 		conf.SetParameter(guacd.RDPDrivePath, drivePath)
 		conf.SetParameter(guacd.RDPCreateDrivePath, BoolTrue)
 		conf.SetParameter(guacd.RDPEnableDrive, enableDrive)
@@ -93,10 +91,8 @@ func (r RDPConfiguration) GetGuacdConfiguration() guacd.Configuration {
 
 	// 粘贴复制
 	{
-		disableAllCopyPaste := config.GlobalConfig.DisableAllCopyPaste
-
-		disableCopy := ConvertBoolToString(!r.Permission.EnableCopy() || disableAllCopyPaste)
-		disablePaste := ConvertBoolToString(!r.Permission.EnablePaste() || disableAllCopyPaste)
+		disableCopy := ConvertBoolToString(!r.ActionsPerm.EnableCopy)
+		disablePaste := ConvertBoolToString(!r.ActionsPerm.EnablePaste)
 		conf.SetParameter(guacd.DisableCopy, disableCopy)
 		conf.SetParameter(guacd.DisablePaste, disablePaste)
 	}
@@ -118,8 +114,8 @@ type VNCConfiguration struct {
 	Asset          *model.Asset              `json:"asset"`
 	SystemUser     *model.SystemUserAuthInfo `json:"system_user"`
 	Platform       *model.Platform           `json:"platform"`
-	Permission     *model.Permission         `json:"permission"`
 	TerminalConfig *model.TerminalConfig     `json:"terminal_config"`
+	ActionsPerm    *ActionPermission
 }
 
 const recordDirTimeFormat = "2006-01-02"
@@ -160,8 +156,8 @@ func (r VNCConfiguration) GetGuacdConfiguration() guacd.Configuration {
 
 	// 粘贴复制
 	{
-		disableCopy := ConvertBoolToString(!r.Permission.EnableCopy())
-		disablePaste := ConvertBoolToString(!r.Permission.EnablePaste())
+		disableCopy := ConvertBoolToString(!r.ActionsPerm.EnableCopy)
+		disablePaste := ConvertBoolToString(!r.ActionsPerm.EnablePaste)
 		conf.SetParameter(guacd.DisableCopy, disableCopy)
 		conf.SetParameter(guacd.DisablePaste, disablePaste)
 	}
