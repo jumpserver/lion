@@ -30,8 +30,6 @@ type DomainGateway struct {
 	ln              net.Listener
 
 	once sync.Once
-
-	err error
 }
 
 func (d *DomainGateway) run() {

@@ -26,6 +26,7 @@ func (s *JMService) ValidateRemoteAppPermission(userId, remoteAppId, systemUserI
 
 const actionConnect = "connect"
 
+// Todo: asset 和 application 校验的返回结果，API 需要一致
 func (s *JMService) ValidateAssetConnectPermission(userId, assetId, systemUserId string) (info model.ExpireInfo, err error) {
 	params := map[string]string{
 		"user_id":        userId,
