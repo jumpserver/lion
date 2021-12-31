@@ -76,7 +76,7 @@ func (s *Server) Create(ctx *gin.Context, user *model.User, targetType, targetId
 		if err != nil {
 			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
 		}
-		permInfo, err := s.JmsService.ValidateAssetConnectPermission(user.ID, asset.ID, sysUser.ID)
+		permInfo, err := s.JmsService.ValidateAssetPermission(user.ID, asset.ID, sysUser.ID)
 		if err != nil {
 			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
 		}
@@ -232,7 +232,7 @@ func (s *Server) RegisterFinishReplayCallback(tunnel TunnelSession) func() error
 		// 压缩文件
 		err = common.CompressToGzipFile(originReplayFilePath, dstReplayFilePath)
 		if err != nil {
-			logger.Error("压缩文件失败：", err)
+			logger.Error("压缩文件失败: ", err)
 			return err
 		}
 		// 压缩完成则删除源文件
