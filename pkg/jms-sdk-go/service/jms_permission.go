@@ -26,7 +26,7 @@ func (s *JMService) ValidateRemoteAppPermission(userId, remoteAppId, systemUserI
 
 const actionConnect = "connect"
 
-func (s *JMService) ValidateAssetConnectPermission(userId, assetId, systemUserId string) (info model.ExpireInfo, err error) {
+func (s *JMService) ValidateAssetPermission(userId, assetId, systemUserId string) (info model.ExpireInfo, err error) {
 	params := map[string]string{
 		"user_id":        userId,
 		"asset_id":       assetId,

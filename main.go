@@ -175,7 +175,6 @@ func registerRouter(jmsService *service.JMService, tunnelService *tunnel.Guacamo
 	tokenGroup := lionGroup.Group("/token")
 	{
 		tokenGroup.POST("/session", tunnelService.TokenSession)
-		tokenGroup.POST("/sessions/:sid/", tunnelService.UpdateSession)
 		tokenGroup.DELETE("/sessions/:sid/", tunnelService.DeleteSession)
 		tokenTunnels := tokenGroup.Group("/tunnels")
 		tokenTunnels.Use(middleware.SessionAuth(jmsService))
@@ -199,7 +198,6 @@ func registerRouter(jmsService *service.JMService, tunnelService *tunnel.Guacamo
 	apiGroup.Use(middleware.JmsCookieAuth(jmsService))
 	{
 		apiGroup.POST("/session", tunnelService.CreateSession)
-		apiGroup.POST("/sessions/:sid/", tunnelService.UpdateSession)
 		apiGroup.DELETE("/sessions/:sid/", tunnelService.DeleteSession)
 		apiGroup.GET("/tunnels/:tid/streams/:index/:filename", tunnelService.DownloadFile)
 		apiGroup.POST("/tunnels/:tid/streams/:index/:filename", tunnelService.UploadFile)

@@ -20,7 +20,7 @@ type TunnelSession struct {
 	Domain         *model.Domain             `json:"-"`
 	TerminalConfig *model.TerminalConfig     `json:"-"`
 	ExpireInfo     *model.ExpireInfo         `json:"expire_info"`
-	LoginMode      string                    `json:"login_mode"`
+	ActionPerm     *ActionPermission         `json:"action_permission"`
 
 	DisplaySystemUser *model.SystemUser `json:"system_user"`
 
@@ -53,8 +53,8 @@ func (s TunnelSession) configurationVNC() guacd.Configuration {
 		Asset:          s.Asset,
 		SystemUser:     s.SystemUser,
 		Platform:       s.Platform,
-		Permission:     s.Permission,
 		TerminalConfig: s.TerminalConfig,
+		ActionsPerm:    s.ActionPerm,
 	}
 	return conf.GetGuacdConfiguration()
 }
@@ -67,8 +67,8 @@ func (s TunnelSession) configurationRDP() guacd.Configuration {
 		Asset:          s.Asset,
 		SystemUser:     s.SystemUser,
 		Platform:       s.Platform,
-		Permission:     s.Permission,
 		TerminalConfig: s.TerminalConfig,
+		ActionsPerm:    s.ActionPerm,
 	}
 	if s.RemoteApp != nil {
 		remoteConf := RemoteAPPConfiguration{
@@ -78,15 +78,6 @@ func (s TunnelSession) configurationRDP() guacd.Configuration {
 		return remoteConf.GetGuacdConfiguration()
 	}
 	return rdpConf.GetGuacdConfiguration()
-}
-
-func (s *TunnelSession) UpdateManualFields(username, password string) {
-	if username != "" {
-		s.SystemUser.Username = username
-	}
-	if password != "" {
-		s.SystemUser.Password = password
-	}
 }
 
 const (

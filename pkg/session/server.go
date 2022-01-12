@@ -62,39 +62,38 @@ func (s *Server) Create(ctx *gin.Context, user *model.User, targetType, targetId
 	default:
 		return TunnelSession{}, fmt.Errorf("%w: %s", ErrUnSupportedProtocol, sysUser.Protocol)
 	}
-	var sessionAssetName string
+	var (
+		sessionAssetName string
+		assetInfo        *model.Asset
+		appInfo          *model.RemoteAPP
+
+		expireInfo     *model.ExpireInfo
+		systemUserAuth *model.SystemUserAuthInfo
+	)
 	switch targetType {
 	case TypeRDP, TypeVNC:
 		asset, err := s.JmsService.GetAssetById(targetId)
 		if err != nil {
 			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
 		}
-		// 获取权限校验
-		permission, err := s.JmsService.GetPermission(user.ID, asset.ID, sysUser.ID)
+		permInfo, err := s.JmsService.ValidateAssetPermission(user.ID, asset.ID, sysUser.ID)
 		if err != nil {
 			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
 		}
-		if !permission.EnableConnect() {
-			return TunnelSession{}, fmt.Errorf("%w: connect deny", ErrPermissionDeny)
-		}
-		permInfo, err := s.JmsService.ValidateAssetConnectPermission(user.ID, asset.ID, sysUser.ID)
+		sysUserAuthInfo, err := s.JmsService.GetAssetSysUserAuthInfo(sysUser.ID, asset.ID, user.ID, user.Username)
 		if err != nil {
 			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
 		}
-		sysUserAuth, err := s.JmsService.GetAssetSysUserAuthInfo(sysUser.ID, asset.ID, user.ID, user.Username)
-		if err != nil {
-			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
-		}
-		sess, err = s.CreateRDPAndVNCSession(user, &asset, &sysUser)
-		if err != nil {
-			return TunnelSession{}, err
-		}
-		sess.Permission = &permission
-		sess.ExpireInfo = &permInfo
-		sess.SystemUser = &sysUserAuth
-		sessionAssetName = sess.Asset.String()
+		assetInfo = &asset
+		expireInfo = &permInfo
+		systemUserAuth = &sysUserAuthInfo
+		sessionAssetName = asset.String()
 	case TypeRemoteApp:
 		remoteApp, err := s.JmsService.GetRemoteApp(targetId)
+		if err != nil {
+			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
+		}
+		asset, err := s.JmsService.GetAssetById(remoteApp.AssetId)
 		if err != nil {
 			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
 		}
@@ -103,23 +102,30 @@ func (s *Server) Create(ctx *gin.Context, user *model.User, targetType, targetId
 		if err != nil {
 			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
 		}
-		if !permInfo.HasPermission {
-			return TunnelSession{}, fmt.Errorf("%w: connect deny", ErrPermissionDeny)
-		}
-		sysUserAuth, err := s.JmsService.GetApplicationSysUserAuthInfo(sysUser.ID, remoteApp.ID, user.ID, user.Username)
+		sysUserAuthInfo, err := s.JmsService.GetApplicationSysUserAuthInfo(sysUser.ID, remoteApp.ID, user.ID, user.Username)
 		if err != nil {
 			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
 		}
-		sess, err = s.CreateRemoteSession(user, &remoteApp, &sysUser)
-		if err != nil {
-			return TunnelSession{}, err
-		}
-		sess.ExpireInfo = &permInfo
-		sess.SystemUser = &sysUserAuth
+		appInfo = &remoteApp
+		assetInfo = &asset
+		expireInfo = &permInfo
+		systemUserAuth = &sysUserAuthInfo
 		sessionAssetName = remoteApp.Name
 	default:
 		return TunnelSession{}, fmt.Errorf("%w: %s", ErrUnSupportedType, targetType)
 	}
+	if !expireInfo.EnableConnect() {
+		return TunnelSession{}, fmt.Errorf("%w: connect deny", ErrPermissionDeny)
+	}
+	sess, err = s.CreateRDPAndVNCSession(user, assetInfo, &sysUser)
+	if err != nil {
+		return TunnelSession{}, err
+	}
+	sess.RemoteApp = appInfo
+	sess.ExpireInfo = expireInfo
+	sess.Permission = &expireInfo.Permission
+	sess.SystemUser = systemUserAuth
+	sess.ActionPerm = NewActionPermission(&expireInfo.Permission, targetType)
 	jmsSession := model.Session{
 		ID:           sess.ID,
 		User:         sess.User.String(),
@@ -169,26 +175,10 @@ func (s *Server) CreateRDPAndVNCSession(user *model.User, asset *model.Asset, sy
 		Platform:       &platform,
 		Domain:         assetDomain,
 		TerminalConfig: &terminal,
-		LoginMode:      systemUser.LoginMode,
 
 		DisplaySystemUser: systemUser,
 	}
 	return newSession, nil
-}
-
-func (s *Server) CreateRemoteSession(user *model.User, remoteApp *model.RemoteAPP,
-	systemUser *model.SystemUser) (TunnelSession, error) {
-	asset, err := s.JmsService.GetAssetById(remoteApp.AssetId)
-	if err != nil {
-		return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
-	}
-	sess, err := s.CreateRDPAndVNCSession(user, &asset, systemUser)
-	if err != nil {
-		return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
-	}
-	sess.RemoteApp = remoteApp
-	sess.Permission = RemoteAppPermission()
-	return sess, nil
 }
 
 func (s *Server) RegisterConnectedCallback(sess model.Session) func() error {
@@ -242,7 +232,7 @@ func (s *Server) RegisterFinishReplayCallback(tunnel TunnelSession) func() error
 		// 压缩文件
 		err = common.CompressToGzipFile(originReplayFilePath, dstReplayFilePath)
 		if err != nil {
-			logger.Error("压缩文件失败：", err)
+			logger.Error("压缩文件失败: ", err)
 			return err
 		}
 		// 压缩完成则删除源文件

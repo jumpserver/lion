@@ -5,16 +5,44 @@ import (
 	"lion/pkg/jms-sdk-go/model"
 )
 
-func RemoteAppPermission() *model.Permission {
-	actions := make([]string, 0, 4)
+type ActionPermission struct {
+	EnableConnect bool `json:"enable_connect"`
+
+	EnableCopy  bool `json:"enable_copy"`
+	EnablePaste bool `json:"enable_paste"`
+
+	EnableUpload   bool `json:"enable_upload"`
+	EnableDownload bool `json:"enable_download"`
+}
+
+func NewActionPermission(perm *model.Permission, connectType string) *ActionPermission {
+	action := ActionPermission{
+		EnableConnect:  perm.EnableConnect(),
+		EnableCopy:     perm.EnableCopy(),
+		EnablePaste:    perm.EnablePaste(),
+		EnableUpload:   perm.EnableUpload(),
+		EnableDownload: perm.EnableDownload(),
+	}
 	globConfig := config.GlobalConfig
-	if !globConfig.DisableAllUpDownload && globConfig.EnableRemoteAppUpDownLoad {
-		actions = append(actions, model.ActionDownload)
-		actions = append(actions, model.ActionUpload)
+	switch connectType {
+	case TypeRemoteApp:
+		if globConfig.EnableRemoteAppUpDownLoad {
+			action.EnableDownload = true
+			action.EnableUpload = true
+		}
+		if globConfig.EnableRemoteAPPCopyPaste {
+			action.EnablePaste = true
+			action.EnableCopy = true
+		}
+	case TypeRDP, TypeVNC:
 	}
-	if !globConfig.DisableAllCopyPaste && globConfig.EnableRemoteAPPCopyPaste {
-		actions = append(actions, model.ActionCopy)
-		actions = append(actions, model.ActionPaste)
+	if globConfig.DisableAllUpDownload {
+		action.EnableDownload = false
+		action.EnableUpload = false
 	}
-	return &model.Permission{Actions: actions}
+	if globConfig.DisableAllCopyPaste {
+		action.EnablePaste = false
+		action.EnableCopy = false
+	}
+	return &action
 }
