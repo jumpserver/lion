@@ -185,8 +185,7 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 					guacd.InstructionStreamingAck:
 				case guacd.InstructionClientDisconnect:
 					logger.Errorf("Session[%s] receive web client disconnect opcode", t)
-				case guacd.InstructionKey,
-					guacd.InstructionMouse:
+				case guacd.InstructionKey:
 					userInputMessageChan <- &session.Message{
 						Opcode: ret.Opcode, Body: ret.Args,
 						Meta: meta}
