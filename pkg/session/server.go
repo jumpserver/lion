@@ -67,8 +67,9 @@ func (s *Server) Create(ctx *gin.Context, user *model.User, targetType, targetId
 		assetInfo        *model.Asset
 		appInfo          *model.RemoteAPP
 
-		expireInfo     *model.ExpireInfo
 		systemUserAuth *model.SystemUserAuthInfo
+
+		validatePermission func() (model.ExpireInfo, error)
 	)
 	switch targetType {
 	case TypeRDP, TypeVNC:
@@ -76,16 +77,14 @@ func (s *Server) Create(ctx *gin.Context, user *model.User, targetType, targetId
 		if err != nil {
 			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
 		}
-		permInfo, err := s.JmsService.ValidateAssetPermission(user.ID, asset.ID, sysUser.ID)
-		if err != nil {
-			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
+		validatePermission = func() (model.ExpireInfo, error) {
+			return s.JmsService.ValidateAssetPermission(user.ID, asset.ID, sysUser.ID)
 		}
 		sysUserAuthInfo, err := s.JmsService.GetAssetSysUserAuthInfo(sysUser.ID, asset.ID, user.ID, user.Username)
 		if err != nil {
 			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
 		}
 		assetInfo = &asset
-		expireInfo = &permInfo
 		systemUserAuth = &sysUserAuthInfo
 		sessionAssetName = asset.String()
 	case TypeRemoteApp:
@@ -97,10 +96,8 @@ func (s *Server) Create(ctx *gin.Context, user *model.User, targetType, targetId
 		if err != nil {
 			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
 		}
-		// 校验权限
-		permInfo, err := s.JmsService.ValidateRemoteAppPermission(user.ID, remoteApp.ID, sysUser.ID)
-		if err != nil {
-			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
+		validatePermission = func() (model.ExpireInfo, error) {
+			return s.JmsService.ValidateRemoteAppPermission(user.ID, remoteApp.ID, sysUser.ID)
 		}
 		sysUserAuthInfo, err := s.JmsService.GetApplicationSysUserAuthInfo(sysUser.ID, remoteApp.ID, user.ID, user.Username)
 		if err != nil {
@@ -108,11 +105,14 @@ func (s *Server) Create(ctx *gin.Context, user *model.User, targetType, targetId
 		}
 		appInfo = &remoteApp
 		assetInfo = &asset
-		expireInfo = &permInfo
 		systemUserAuth = &sysUserAuthInfo
 		sessionAssetName = remoteApp.Name
 	default:
 		return TunnelSession{}, fmt.Errorf("%w: %s", ErrUnSupportedType, targetType)
+	}
+	expireInfo, err := validatePermission()
+	if err != nil {
+		logger.Error(err)
 	}
 	if !expireInfo.EnableConnect() {
 		return TunnelSession{}, fmt.Errorf("%w: connect deny", ErrPermissionDeny)
@@ -122,7 +122,7 @@ func (s *Server) Create(ctx *gin.Context, user *model.User, targetType, targetId
 		return TunnelSession{}, err
 	}
 	sess.RemoteApp = appInfo
-	sess.ExpireInfo = expireInfo
+	sess.ExpireInfo = &expireInfo
 	sess.Permission = &expireInfo.Permission
 	sess.SystemUser = systemUserAuth
 	sess.ActionPerm = NewActionPermission(&expireInfo.Permission, targetType)
