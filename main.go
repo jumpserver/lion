@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"net/http/pprof"
@@ -152,6 +153,10 @@ func registerRouter(jmsService *service.JMService, tunnelService *tunnel.Guacamo
 		gin.SetMode(gin.ReleaseMode)
 	}
 	eng := gin.New()
+	trustedProxies := []string{"0.0.0.0/0", "::/0"}
+	if err := eng.SetTrustedProxies(trustedProxies); err != nil {
+		log.Fatal(err)
+	}
 	eng.Use(gin.Recovery())
 	eng.Use(gin.Logger())
 
