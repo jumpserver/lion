@@ -40,5 +40,7 @@ RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list \
 COPY --from=ui-build /opt/lion/ui/lion ui/lion/
 COPY --from=go-build /opt/lion/lion .
 COPY --from=go-build /opt/lion/config_example.yml .
+COPY --from=go-build /opt/lion/entrypoint.sh .
 COPY --from=go-build /opt/lion/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-CMD ["/usr/bin/supervisord"]
+RUN chmod +x entrypoint.sh
+CMD ["./entrypoint.sh"]
