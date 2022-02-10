@@ -8,7 +8,7 @@ require (
 	github.com/aws/aws-sdk-go v1.38.15
 	github.com/elastic/go-elasticsearch/v6 v6.8.10
 	github.com/gin-contrib/sessions v0.0.3
-	github.com/gin-gonic/gin v1.7.4
+	github.com/gin-gonic/gin v1.7.7
 	github.com/go-redis/redis/v8 v8.8.2
 	github.com/gofrs/uuid v4.0.0+incompatible
 	github.com/gorilla/websocket v1.4.2
