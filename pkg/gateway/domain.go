@@ -96,6 +96,12 @@ func (d *DomainGateway) getAvailableGateway() bool {
 			if gateway.PrivateKey != "" {
 				if signer, err := gossh.ParsePrivateKey([]byte(gateway.PrivateKey)); err == nil {
 					auths = append(auths, gossh.PublicKeys(signer))
+				} else {
+					// 做一层兼容, 把密码当作私钥的 passphere
+					if signer, err = gossh.ParsePrivateKeyWithPassphrase([]byte(gateway.PrivateKey),
+						[]byte(gateway.Password)); err == nil {
+						auths = append(auths, gossh.PublicKeys(signer))
+					}
 				}
 			}
 			sshConfig := gossh.ClientConfig{
