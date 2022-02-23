@@ -257,11 +257,11 @@ func (g *GuacamoleTunnelServer) DownloadFile(ctx *gin.Context) {
 			User:       tun.Sess.User.String(),
 			Hostname:   tun.Sess.Asset.String(),
 			OrgID:      tun.Sess.Asset.OrgID,
-			SystemUser: tun.Sess.SystemUser.Name,
+			SystemUser: tun.Sess.SystemUser.String(),
 			RemoteAddr: ctx.ClientIP(),
 			Operate:    model.OperateDownload,
 			Path:       filename,
-			DataStart:  common.NewNowUTCTime(),
+			DateStart:  common.NewNowUTCTime(),
 		}
 		ctx.Writer.Header().Set("content-disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
 		out := OutStreamResource{
@@ -309,11 +309,11 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 			User:       tun.Sess.User.String(),
 			Hostname:   tun.Sess.Asset.String(),
 			OrgID:      tun.Sess.Asset.OrgID,
-			SystemUser: tun.Sess.SystemUser.Name,
+			SystemUser: tun.Sess.SystemUser.String(),
 			RemoteAddr: ctx.ClientIP(),
 			Operate:    model.OperateUpload,
 			Path:       filename,
-			DataStart:  common.NewNowUTCTime(),
+			DateStart:  common.NewNowUTCTime(),
 		}
 		files := form.File["file"]
 		for _, file := range files {
