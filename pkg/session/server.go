@@ -210,7 +210,7 @@ const ReplayFileNameSuffix = ".replay.gz"
 func (s *Server) RegisterFinishReplayCallback(tunnel TunnelSession) func() error {
 	return func() error {
 		replayConfig := tunnel.TerminalConfig.ReplayStorage
-		storageType := replayConfig["TYPE"]
+		storageType := replayConfig.TypeName
 		if storageType == "null" {
 			logger.Error("录像存储设置为 null，无存储")
 			return nil
