@@ -252,7 +252,8 @@ func uploadRemainReplay(jmsService *service.JMService, remainFiles map[string]st
 			_ = os.Remove(path)
 		}
 		var err error
-		storageType := terminalConf.ReplayStorage["TYPE"]
+		replayCfg := terminalConf.ReplayStorage
+		storageType := replayCfg.TypeName
 		if storageType == "null" {
 			storageType = "server"
 		}
