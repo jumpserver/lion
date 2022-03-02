@@ -56,7 +56,7 @@ func (r RDPConfiguration) GetGuacdConfiguration() guacd.Configuration {
 	conf.SetParameter(guacd.RDPIgnoreCert, BoolTrue)
 
 	// 设置 录像路径
-	if r.TerminalConfig.ReplayStorage["type"] != "null" {
+	if r.TerminalConfig.ReplayStorage.TypeName != "null" {
 		recordDirPath := filepath.Join(config.GlobalConfig.RecordPath, r.Created.Format(recordDirTimeFormat))
 		conf.SetParameter(guacd.RecordingPath, recordDirPath)
 		conf.SetParameter(guacd.CreateRecordingPath, BoolTrue)
@@ -142,7 +142,8 @@ func (r VNCConfiguration) GetGuacdConfiguration() guacd.Configuration {
 		conf.SetParameter(guacd.VNCAutoretry, "3")
 	}
 	// 设置存储
-	if r.TerminalConfig.ReplayStorage["type"] != "null" {
+	replayCfg := r.TerminalConfig.ReplayStorage
+	if replayCfg.TypeName != "null" {
 		recordDirPath := filepath.Join(config.GlobalConfig.RecordPath, r.Created.Format(recordDirTimeFormat))
 		conf.SetParameter(guacd.RecordingPath, recordDirPath)
 		conf.SetParameter(guacd.CreateRecordingPath, BoolTrue)
