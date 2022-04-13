@@ -25,10 +25,10 @@ import loggerOptions from './utils/logger'
 Vue.use(VueLogger, loggerOptions)
 
 // 同源策略，方便与父组件事件通信
-const domain = document.domain.split('.').slice(-2).join('.');
-let isDomain = /^(\w+)\.([A-Za-z]+)$/.test(domain);
+const domain = document.domain.split('.').slice(-2).join('.')
+const isDomain = /^(\w+)\.([A-Za-z]+)$/.test(domain)
 if (isDomain) {
-  document.domain = domain;
+  document.domain = domain
 }
 
 new Vue({
