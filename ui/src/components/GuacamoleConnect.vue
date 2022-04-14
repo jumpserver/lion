@@ -155,7 +155,10 @@ export default {
         }
       ],
       scale: 1,
-      timeout: null
+      timeout: null,
+      parentWindow: null,
+      origin: null,
+      lunaId: null
     }
   },
   computed: {
@@ -240,7 +243,31 @@ export default {
       this.onWindowResize()
       window.addEventListener('resize', this.debounceWindowResize)
       window.onfocus = this.onWindowFocus
+      window.addEventListener('message', this.handleEventFromLuna, false)
     },
+
+    handleEventFromLuna(evt) {
+      const msg = evt.data
+      switch (msg.name) {
+        case 'PING':
+          if (this.lunaId != null) {
+            return
+          }
+          this.lunaId = msg.id
+          this.parentWindow = evt.source
+          this.origin = evt.origin
+          this.sendEventToLuna('PONG', null)
+          break
+      }
+      console.log('Got msg ', msg)
+    },
+
+    sendEventToLuna(name, data) {
+      if (this.parentWindow) {
+        this.parentWindow.postMessage({ name: name, id: this.lunaId, data: data }, this.origin)
+      }
+    },
+
     removeSession() {
       deleteSession(this.apiPrefix, this.session.id).catch(err => {
         this.$log.debug(err)
@@ -409,6 +436,7 @@ export default {
           // this.closeDisplay('clientState Disconnecting')
           var display = document.getElementById('display')
           display.innerHTML = ''
+          this.sendEventToLuna('CLOSE', null)
           break
       }
     },
