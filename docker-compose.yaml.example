@@ -1,0 +1,20 @@
+version: "3.0"
+
+networks:
+  guacd:
+    driver: bridge
+
+services:
+  guacd:
+    image: jumpserver/guacd:1.4.0
+    container_name: guacd
+    ports:
+      - "4822:4822"
+    environment:
+      GUACD_LOG_LEVEL: debug
+    networks:
+      - guacd
+    restart: always
+    volumes:
+      - ./data/drive:/opt/lion/data/drive:rw # /opt/lion/-> 本地项目路径
+      - ./data/record:/opt/lion/data/record:rw # /opt/lion/-> 本地项目路径
