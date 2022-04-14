@@ -156,7 +156,6 @@ export default {
       ],
       scale: 1,
       timeout: null,
-      parentWindow: null,
       origin: null,
       lunaId: null
     }
@@ -254,17 +253,16 @@ export default {
             return
           }
           this.lunaId = msg.id
-          this.parentWindow = evt.source
           this.origin = evt.origin
           this.sendEventToLuna('PONG', null)
           break
       }
-      console.log('Got msg ', msg)
+      console.log('Lion got post msg: ', msg)
     },
 
     sendEventToLuna(name, data) {
-      if (this.parentWindow) {
-        this.parentWindow.postMessage({ name: name, id: this.lunaId, data: data }, this.origin)
+      if (this.lunaId != null) {
+        window.parent.postMessage({ name: name, id: this.lunaId, data: data }, this.origin)
       }
     },
 
