@@ -191,6 +191,7 @@ export default {
       vm.$error(vm.$t(ConvertAPIError(message)))
       vm.loading = false
     })
+    window.addEventListener('message', this.handleEventFromLuna, false)
   },
   methods: {
     toggleFileSystem(e) {
@@ -242,7 +243,6 @@ export default {
       this.onWindowResize()
       window.addEventListener('resize', this.debounceWindowResize)
       window.onfocus = this.onWindowFocus
-      window.addEventListener('message', this.handleEventFromLuna, false)
     },
 
     handleEventFromLuna(evt) {
