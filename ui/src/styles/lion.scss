@@ -29,13 +29,12 @@ body {
   }
 }
 
-// 右侧栏去掉padding left，让图标居中
 #guacamole-connect-menu {
-	.el-menu-item .el-tooltip {
-	  padding: 0 5px!important;
-	}
-	 .el-submenu .el-submenu__title {
-	  padding: 0 5px!important;
-	 }
+    text-align:left;
+}
 
+.rightPanel-items {
+    height: 100%;
+    min-width: 100%;
+    text-align: center;
 }
