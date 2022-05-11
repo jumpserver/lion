@@ -15,7 +15,7 @@
         </div>
       </el-row>
     </el-main>
-    <el-aside width="32px" center>
+    <RightPanel>
       <el-menu
         v-if="!loading"
         id="guacamole-connect-menu"
@@ -24,14 +24,14 @@
         text-color="#ffffff"
       >
         <el-menu-item :disabled="menuDisable || !clipboardInited" index="1" @click="toggleClipboard">
-          <i class="el-icon-document-copy" /><span slot="title">{{ $t('Clipboard') }}</span>
+          <i class="el-icon-document-copy" />{{ $t('Clipboard') }}
         </el-menu-item>
         <el-menu-item v-if="hasFileSystem" :disabled="menuDisable" index="2" @click="toggleFileSystem">
-          <i class="el-icon-folder" /><span slot="title">{{ $t('Files') }}</span>
+          <i class="el-icon-folder" />{{ $t('Files') }}
         </el-menu-item>
         <el-submenu v-if="!isRemoteApp" :disabled="menuDisable" index="3" popper-class="sidebar-popper" @mouseenter="()=>{}">
           <template slot="title">
-            <i class="el-icon-position" /><span slot="title">{{ $t('Shortcuts') }}</span>
+            <i class="el-icon-position" />{{ $t('Shortcuts') }}
           </template>
           <el-menu-item
             v-for="(item, i) in combinationKeys"
@@ -43,23 +43,23 @@
           </el-menu-item>
         </el-submenu>
       </el-menu>
-      <GuacClipboard
-        v-if="clipboardInited"
-        ref="clipboard"
-        :visible.sync="clipboardDrawer"
-        :client="client"
-        :tunnel="tunnel"
-        @closeDrawer="onCloseDrawer"
-      />
-      <GuacFileSystem
-        v-if="fileSystemInited"
-        ref="fileSystem"
-        :client="client"
-        :tunnel="tunnel"
-        :show.sync="fileDrawer"
-        @closeDrawer="onCloseDrawer"
-      />
-    </el-aside>
+    </RightPanel>
+    <GuacClipboard
+      v-if="clipboardInited"
+      ref="clipboard"
+      :visible.sync="clipboardDrawer"
+      :client="client"
+      :tunnel="tunnel"
+      @closeDrawer="onCloseDrawer"
+    />
+    <GuacFileSystem
+      v-if="fileSystemInited"
+      ref="fileSystem"
+      :client="client"
+      :tunnel="tunnel"
+      :show.sync="fileDrawer"
+      @closeDrawer="onCloseDrawer"
+    />
   </el-container>
 </template>
 
@@ -72,17 +72,19 @@ import { getCurrentConnectParams } from '@/utils/common'
 import { createSession, deleteSession } from '@/api/session'
 import GuacClipboard from './GuacClipboard'
 import GuacFileSystem from './GuacFileSystem'
+import RightPanel from './RightPanel'
 import { default as i18n, getLanguage } from '@/i18n'
 import { ErrorStatusCodes, ConvertAPIError } from '@/utils'
 import { localStorageGet } from '@/utils/common'
 
 const pixelDensity = 1
-const sideWidth = 32
+const sideWidth = 0
 export default {
   name: 'GuacamoleConnect',
   components: {
     GuacClipboard,
-    GuacFileSystem
+    GuacFileSystem,
+    RightPanel
   },
   data() {
     return {
@@ -172,6 +174,12 @@ export default {
     },
     isRemoteApp: function() {
       return this.session?.remote_app
+    },
+    title: function() {
+      if (this.isRemoteApp) {
+        return this.session.remote_app.name
+      }
+      return this.session.asset.hostname
     }
 
   },
@@ -741,6 +749,8 @@ export default {
 }
 .el-menu {
   height: 100%;
+  min-width: 100%;
+  border-right: 0 none;
 }
 
 .el-menu-item {
@@ -779,5 +789,10 @@ export default {
 #display > * {
   margin-left: auto;
   margin-right: auto;
+}
+
+RightPanel .rightPanel-items {
+  height: 100%;
+  min-width: 100%;
 }
 </style>
