@@ -32,7 +32,6 @@ RUN export GOFlAGS="-X 'main.Buildstamp=`date -u '+%Y-%m-%d %I:%M:%S%p'`'" \
 FROM jumpserver/guacd:1.4.0
 USER root
 WORKDIR /opt/lion
-ENV GUACD_LOG_LEVEL=debug
 RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list \
 	&& sed -i 's/security.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list \
   && apt-get update && apt-get install -y supervisor curl telnet iproute2 \
