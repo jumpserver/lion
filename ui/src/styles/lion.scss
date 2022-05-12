@@ -17,25 +17,20 @@ body {
 
 .sidebar-popper {
   .el-menu--popup {
-    background-color: red;
-    color: red;
-    padding: 0;
-
     .el-menu-item {
       line-height: 36px;
       height: 36px;
       font-size: 14px;
     }
+
   }
 }
 
-// 右侧栏去掉padding left，让图标居中
-#guacamole-connect-menu {
-	.el-menu-item .el-tooltip {
-	  padding: 0 5px!important;
-	}
-	 .el-submenu .el-submenu__title {
-	  padding: 0 5px!important;
-	 }
+.el-submenu__title:hover {
+	color: white;
+	background: rgba(0, 0, 0, .3);
+}
 
+#guacamole-connect-menu {
+    text-align:left;
 }

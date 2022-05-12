@@ -241,13 +241,17 @@ func (s *Server) RegisterFinishReplayCallback(tunnel TunnelSession) func() error
 		if replayStorage := storage.NewReplayStorage(replayConfig); replayStorage != nil {
 			targetName := strings.Join([]string{tunnel.Created.Format(recordDirTimeFormat),
 				tunnel.ID + ReplayFileNameSuffix}, "/")
-			err = replayStorage.Upload(dstReplayFilePath, targetName)
+			if err = replayStorage.Upload(dstReplayFilePath, targetName); err != nil {
+				logger.Errorf("Upload replay failed: %s", err)
+				logger.Errorf("Upload replay by type %s failed, try use default", storageType)
+				err = s.JmsService.Upload(tunnel.ID, dstReplayFilePath)
+			}
 		} else {
 			err = s.JmsService.Upload(tunnel.ID, dstReplayFilePath)
 		}
 		// 上传文件
 		if err != nil {
-			logger.Error("Upload replay failed: ", err.Error())
+			logger.Errorf("Upload replay failed: %s", err.Error())
 			return err
 		}
 		// 上传成功，删除压缩文件

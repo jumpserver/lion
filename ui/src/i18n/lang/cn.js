@@ -30,7 +30,8 @@ const message = {
   Skip: '跳过',
   Username: '用户名',
   Password: '密码',
-  RequireParams: '必填参数'
+  RequireParams: '必填参数',
+  Settings: '设置'
 }
 
 export default {

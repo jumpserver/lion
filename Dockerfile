@@ -12,7 +12,6 @@ RUN ls . && cd ui/ && npm install -i && yarn build && ls -al .
 FROM golang:1.17-alpine as go-build
 WORKDIR /opt/lion
 ARG GOPROXY=https://goproxy.cn
-ARG VERSION=Unknown
 ENV CGO_ENABLED=0
 ENV GO111MODULE=on
 ENV GOOS=linux
@@ -23,6 +22,7 @@ COPY go.mod  .
 COPY go.sum  .
 RUN go mod download -x
 COPY . .
+ARG VERSION=Unknown
 RUN export GOFlAGS="-X 'main.Buildstamp=`date -u '+%Y-%m-%d %I:%M:%S%p'`'" \
 	&& export GOFlAGS="${GOFlAGS} -X 'main.Githash=`git rev-parse HEAD`'" \
 	&& export GOFlAGS="${GOFlAGS} -X 'main.Goversion=`go version`'" \
@@ -32,7 +32,6 @@ RUN export GOFlAGS="-X 'main.Buildstamp=`date -u '+%Y-%m-%d %I:%M:%S%p'`'" \
 FROM jumpserver/guacd:1.4.0
 USER root
 WORKDIR /opt/lion
-ENV GUACD_LOG_LEVEL=debug
 RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list \
 	&& sed -i 's/security.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list \
   && apt-get update && apt-get install -y supervisor curl telnet iproute2 \

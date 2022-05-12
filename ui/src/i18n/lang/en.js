@@ -29,7 +29,8 @@ const message = {
   Skip: 'Skip',
   Username: 'Username',
   Password: 'Password',
-  RequireParams: 'Require Params'
+  RequireParams: 'Require Params',
+  Settings: 'Settings'
 }
 
 export default {
