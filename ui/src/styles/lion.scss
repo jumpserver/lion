@@ -17,24 +17,20 @@ body {
 
 .sidebar-popper {
   .el-menu--popup {
-    background-color: red;
-    color: red;
-    padding: 0;
-
     .el-menu-item {
       line-height: 36px;
       height: 36px;
       font-size: 14px;
     }
+
   }
+}
+
+.el-submenu__title:hover {
+	color: white;
+	background: rgba(0, 0, 0, .3);
 }
 
 #guacamole-connect-menu {
     text-align:left;
-}
-
-.right-panel-items {
-    height: 100%;
-    min-width: 100%;
-    text-align: center;
 }

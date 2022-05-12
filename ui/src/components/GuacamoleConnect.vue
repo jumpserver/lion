@@ -16,12 +16,11 @@
       </el-row>
     </el-main>
     <RightPanel>
+      <h3 class="h3title">{{ $t('Settings') }}</h3>
       <el-menu
         v-if="!loading"
         id="guacamole-connect-menu"
         :collapse="true"
-        background-color="#1f1b1b"
-        text-color="#ffffff"
       >
         <el-menu-item :disabled="menuDisable || !clipboardInited" index="1" @click="toggleClipboard">
           <i class="el-icon-document-copy" />{{ $t('Clipboard') }}
@@ -754,12 +753,17 @@ export default {
 }
 
 .el-menu-item {
-  color: white;
-  background-color: rgb(60, 56, 56);
+  color: rgba(0, 0, 0, 0.65);
+  font-size: 14px;
+  list-style-type: none;
+  cursor: pointer;
+  border-radius: 2px;
+  padding: 0;
 }
 
-.el-menu-item:hover {
-  background-color: #463e3e;
+.el-menu-item:hover,.el-menu-item:focus{
+  color: white;
+  background: rgba(0, 0, 0, .3);
 }
 
 #displayOuter {
@@ -791,8 +795,13 @@ export default {
   margin-right: auto;
 }
 
-RightPanel .rightPanel-items {
-  height: 100%;
-  min-width: 100%;
+.sidebar-popper .el-menu--popup{
+  background-color: white;
+  color: #1f1b1b;
+  padding: 0;
+}
+
+.h3title{
+  padding-left: 25px;
 }
 </style>
