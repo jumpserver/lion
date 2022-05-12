@@ -45,3 +45,4 @@ ui/pnpm-debug.log*
 *.sw?
 ui/yarn.lock
 build
+package-lock.json
