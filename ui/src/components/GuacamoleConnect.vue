@@ -16,32 +16,7 @@
       </el-row>
     </el-main>
     <RightPanel>
-      <h3 class="h3title">{{ $t('Settings') }}</h3>
-      <el-menu
-        v-if="!loading"
-        id="guacamole-connect-menu"
-        :collapse="true"
-      >
-        <el-menu-item :disabled="menuDisable || !clipboardInited" index="1" @click="toggleClipboard">
-          <i class="el-icon-document-copy" />{{ $t('Clipboard') }}
-        </el-menu-item>
-        <el-menu-item v-if="hasFileSystem" :disabled="menuDisable" index="2" @click="toggleFileSystem">
-          <i class="el-icon-folder" />{{ $t('Files') }}
-        </el-menu-item>
-        <el-submenu v-if="!isRemoteApp" :disabled="menuDisable" index="3" popper-class="sidebar-popper" @mouseenter="()=>{}">
-          <template slot="title">
-            <i class="el-icon-position" />{{ $t('Shortcuts') }}
-          </template>
-          <el-menu-item
-            v-for="(item, i) in combinationKeys"
-            :key="i"
-            :index="menuIndex('3-',i)"
-            @click="handleKeys(item.keys)"
-          >
-            {{ item.name }}
-          </el-menu-item>
-        </el-submenu>
-      </el-menu>
+      <Settings :settings="settings" />
     </RightPanel>
     <GuacClipboard
       v-if="clipboardInited"
@@ -72,6 +47,7 @@ import { createSession, deleteSession } from '@/api/session'
 import GuacClipboard from './GuacClipboard'
 import GuacFileSystem from './GuacFileSystem'
 import RightPanel from './RightPanel'
+import Settings from './Settings'
 import { default as i18n, getLanguage } from '@/i18n'
 import { ErrorStatusCodes, ConvertAPIError } from '@/utils'
 import { localStorageGet } from '@/utils/common'
@@ -83,7 +59,8 @@ export default {
   components: {
     GuacClipboard,
     GuacFileSystem,
-    RightPanel
+    RightPanel,
+    Settings
   },
   data() {
     return {
@@ -179,8 +156,31 @@ export default {
         return this.session.remote_app.name
       }
       return this.session.asset.hostname
+    },
+    settings() {
+      const settings = [
+        {
+          title: this.$t('Clipboard'),
+          icon: 'el-icon-document-copy',
+          disabled: () => (this.menuDisable || !this.clipboardInited),
+          click: () => (this.toggleClipboard)
+        },
+        {
+          title: this.$t('Files'),
+          icon: 'el-icon-folder',
+          disabled: () => (this.hasFileSystem && this.menuDisable),
+          click: () => (this.toggleFileSystem)
+        },
+        {
+          title: this.$t('Shortcuts'),
+          icon: 'el-icon-position',
+          disabled: () => (!this.isRemoteApp && this.menuDisable),
+          content: this.combinationKeys,
+          itemClick: (keys) => (this.handleKeys(keys))
+        }
+      ]
+      return settings
     }
-
   },
   mounted: function() {
     const result = getCurrentConnectParams()
