@@ -16,7 +16,7 @@
       </el-row>
     </el-main>
     <RightPanel>
-      <Settings :settings="settings" />
+      <Settings :settings="settings" :title="$t('Settings')" />
     </RightPanel>
     <GuacClipboard
       v-if="clipboardInited"
@@ -96,6 +96,14 @@ export default {
       keyboard: null,
       combinationKeys: [
         {
+          keys: ['65307'],
+          name: 'Esc'
+        },
+        {
+          keys: ['65480'],
+          name: 'F11'
+        },
+        {
           keys: ['65507', '65513', '65535'],
           name: 'Ctrl+Alt+Delete'
         },
@@ -122,14 +130,6 @@ export default {
         {
           keys: ['65515'],
           name: 'Windows'
-        },
-        {
-          keys: ['65307'],
-          name: 'Esc'
-        },
-        {
-          keys: ['65480'],
-          name: 'F11'
         }
       ],
       scale: 1,
