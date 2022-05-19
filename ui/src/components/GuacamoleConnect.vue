@@ -163,13 +163,13 @@ export default {
           title: this.$t('Clipboard'),
           icon: 'el-icon-document-copy',
           disabled: () => (this.menuDisable || !this.clipboardInited),
-          click: () => (this.toggleClipboard)
+          click: () => (this.toggleClipboard())
         },
         {
           title: this.$t('Files'),
           icon: 'el-icon-folder',
-          disabled: () => (this.hasFileSystem && this.menuDisable),
-          click: () => (this.toggleFileSystem)
+          disabled: () => ((!this.hasFileSystem) || this.menuDisable),
+          click: () => (this.toggleFileSystem())
         },
         {
           title: this.$t('Shortcuts'),
