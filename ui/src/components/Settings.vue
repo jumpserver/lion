@@ -4,27 +4,29 @@
     <ul style="padding: 0">
       <li
         v-for="(i, index) in settings"
-        class="item"
         :key="index"
+        class="item"
       >
         <el-button
           type="text"
           class="item-button"
-          :disabled="!i.disabled()"
+          :disabled="i.disabled()"
           :class="'icon ' + i.icon"
           @click.stop="i.click && i.click()"
         >
           {{ i.title }}
         </el-button>
         <div v-if="i.content" class="content">
-          <div
+          <el-button
             v-for="(item, key) of i.content"
             :key="key"
             class="content-item"
+            type="text"
+            :disabled="i.disabled()"
             @click="i.itemClick && i.itemClick(item.keys)"
           >
             {{ item.name }}
-          </div>
+          </el-button>
         </div>
       </li>
     </ul>
@@ -78,11 +80,19 @@ export default {
 }
 
 .content-item {
+  display: block;
+  width: 100%;
+  margin-left: 0;
+  padding: 4px 0;
+  overflow: hidden;
+  text-align: left;
   white-space: nowrap;
   text-overflow: ellipsis;
-  overflow: hidden;
-  padding: 4px 0;
   color: black;
+}
+
+.content-item.is-disabled {
+  color: #C0C4CC;
 }
 
 .content-item:hover {
