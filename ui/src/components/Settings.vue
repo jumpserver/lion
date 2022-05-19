@@ -10,7 +10,7 @@
         <el-button
           type="text"
           class="item-button"
-          :disabled="i.disabled()"
+          :disabled="!i.disabled()"
           :class="'icon ' + i.icon"
           @click.stop="i.click && i.click()"
         >
@@ -69,10 +69,16 @@ export default {
 .item-button {
   width: 100%;
   text-align: left;
+  color: #303133;
 }
 
 .item-button:hover {
+  color: #fff;
   background: rgba(0, 0, 0, .3);
+}
+
+.item-button.is-disabled {
+  color: #C0C4CC;
 }
 
 .content {
