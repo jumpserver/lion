@@ -30,7 +30,8 @@ const message = {
   Username: 'Username',
   Password: 'Password',
   RequireParams: 'Require Params',
-  Settings: 'Settings'
+  Settings: 'Settings',
+  UploadSuccess: 'Upload success'
 }
 
 export default {
