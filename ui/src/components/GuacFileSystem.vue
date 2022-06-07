@@ -414,21 +414,19 @@ export default {
 }
 </script>
 
-<style lang="scss" scoped>
-.fileUploaderDraw {
-  /deep/ .el-drawer__header {
-    line-height: 30px;
-    margin-bottom: 20px;
-  }
+<style scoped>
+.fileUploaderDraw ::v-deep .el-drawer__header {
+  line-height: 30px;
+  margin-bottom: 20px;
 }
 
 .upload-file {
   padding: 20px;
   border: 1px solid #ebebeb;
+}
 
-  /deep/ .el-upload-list__item .el-icon-upload-success {
-    color: #67C23A !important;
-  }
+.upload-file ::v-deep .el-upload-list__item .el-icon-upload-success {
+  color: #67C23A !important;
 }
 
 .fileZone {
