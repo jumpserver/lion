@@ -9,7 +9,7 @@ import i18n from './i18n'
 import plugins from './plugins'
 import router from './router'
 
-import '@/styles/index.scss'
+import '@/styles/index.css'
 
 Vue.use(VueRouter)
 Vue.use(ElementUI)
