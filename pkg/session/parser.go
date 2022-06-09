@@ -2,6 +2,8 @@ package session
 
 import (
 	"bytes"
+	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"strconv"
 	"strings"
@@ -90,7 +92,21 @@ func (p *Parser) ParseStream(userInChan chan *Message) {
 						if err == nil {
 							cb := []byte(guacd.KeysymToCharacter(keyCode))
 							if len(cb) == 0 {
-								b = append(b, byte(keyCode))
+								// guacamole-common.js unicode计算方法
+								// if (codepoint >= 0x0100 && codepoint <= 0x10FFFF)
+								//      return 0x01000000 | codepoint;
+								if keyCode > 0x01000000 {
+									var to string
+									unicode := strconv.FormatInt(int64(keyCode), 16)
+									bs, _ := hex.DecodeString(unicode[3:])
+									for i, bl, br, r := 0, len(bs), bytes.NewReader(bs), uint16(0); i < bl; i += 2 {
+										binary.Read(br, binary.BigEndian, &r)
+										to += string(r)
+									}
+									b = append(b, []byte(to)...)
+								} else {
+									b = append(b, byte(keyCode))
+								}
 							} else {
 								b = append(b, cb...)
 							}
