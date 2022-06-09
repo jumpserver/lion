@@ -719,7 +719,7 @@ export default {
 }
 </script>
 
-<style lang="scss" scoped>
+<style scoped>
 .el-container {
   margin: 0 auto;
 }

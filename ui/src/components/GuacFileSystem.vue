@@ -189,7 +189,9 @@ export default {
       e.preventDefault()
       const dt = e.dataTransfer
       const files = dt.files
-      this.handleFiles(files[0]).catch(status => {
+      this.handleFiles(files[0]).then(() => {
+        this.$message(files[0].name + ' ' + this.$t('UploadSuccess'))
+      }).catch(status => {
         let msg = status.message
         if (getLanguage() === 'cn') {
           msg = this.$t(ErrorStatusCodes[status.code]) || status.message
@@ -293,6 +295,7 @@ export default {
       this.handleFiles(file, this.currentFilesystem.object, streamName, onprogress).then((xhr) => {
         fileObj.onSuccess('Ok')
         this.refresh()
+        this.$message(file.name + ' ' + this.$t('UploadSuccess'))
       }).catch(err => {
         fileObj.onError(err)
         this.$log.debug('Upload error: ', err)
@@ -411,21 +414,19 @@ export default {
 }
 </script>
 
-<style lang="scss" scoped>
-.fileUploaderDraw {
-  /deep/ .el-drawer__header {
-    line-height: 30px;
-    margin-bottom: 20px;
-  }
+<style scoped>
+.fileUploaderDraw ::v-deep .el-drawer__header {
+  line-height: 30px;
+  margin-bottom: 20px;
 }
 
 .upload-file {
   padding: 20px;
   border: 1px solid #ebebeb;
+}
 
-  /deep/ .el-upload-list__item .el-icon-upload-success {
-    color: #67C23A !important;
-  }
+.upload-file ::v-deep .el-upload-list__item .el-icon-upload-success {
+  color: #67C23A !important;
 }
 
 .fileZone {

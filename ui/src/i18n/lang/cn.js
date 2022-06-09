@@ -31,7 +31,8 @@ const message = {
   Username: '用户名',
   Password: '密码',
   RequireParams: '必填参数',
-  Settings: '设置'
+  Settings: '设置',
+  UploadSuccess: '上传成功'
 }
 
 export default {
