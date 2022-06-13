@@ -4,12 +4,15 @@ VERSION ?=Unknown
 BuildTime:=$(shell date -u '+%Y-%m-%d %I:%M:%S%p')
 COMMIT:=$(shell git rev-parse HEAD)
 GOVERSION:=$(shell go version)
+
+LDFLAGS=-w -s
+
 GOLDFLAGS=-X 'main.Version=$(VERSION)'
 GOLDFLAGS+=-X 'main.Buildstamp=$(BuildTime)'
 GOLDFLAGS+=-X 'main.Githash=$(COMMIT)'
 GOLDFLAGS+=-X 'main.Goversion=$(GOVERSION)'
 
-GOBUILD=CGO_ENABLED=0 go build -trimpath -ldflags "$(GOLDFLAGS)"
+GOBUILD=CGO_ENABLED=0 go build -trimpath -ldflags "$(GOLDFLAGS) ${LDFLAGS}"
 
 UIDIR=ui
 NPMINSTALL=npm i
@@ -45,6 +48,15 @@ linux-amd64:lion-ui
 
 linux-arm64:lion-ui
 	GOARCH=arm64 GOOS=linux $(GOBUILD) -o $(BUILDDIR)/$(NAME)-$@
+	mkdir -p $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(UIDIR)/lion/
+	cp $(BUILDDIR)/$(NAME)-$@ $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(NAME)
+	-cp config_example.yml $(BUILDDIR)/$(NAME)-$(VERSION)-$@/config_example.yml
+	cp -r $(UIDIR)/lion/* $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(UIDIR)/lion/
+	cd $(BUILDDIR) && tar -czvf $(NAME)-$(VERSION)-$@.tar.gz $(NAME)-$(VERSION)-$@
+	rm -rf $(BUILDDIR)/$(NAME)-$(VERSION)-$@ $(BUILDDIR)/$(NAME)-$@
+
+linux-loong64:lion-ui
+	GOARCH=loong64 GOOS=linux $(GOBUILD) -o $(BUILDDIR)/$(NAME)-$@
 	mkdir -p $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(UIDIR)/lion/
 	cp $(BUILDDIR)/$(NAME)-$@ $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(NAME)
 	-cp config_example.yml $(BUILDDIR)/$(NAME)-$(VERSION)-$@/config_example.yml
