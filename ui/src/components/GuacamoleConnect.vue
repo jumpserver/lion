@@ -174,7 +174,7 @@ export default {
         {
           title: this.$t('Shortcuts'),
           icon: 'el-icon-position',
-          disabled: () => (!this.isRemoteApp && this.menuDisable),
+          disabled: () => (this.menuDisable || this.isRemoteApp),
           content: this.combinationKeys,
           itemClick: (keys) => (this.handleKeys(keys))
         }
