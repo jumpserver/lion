@@ -12,3 +12,10 @@ type RemoteAppParameter struct {
 	Program          string `json:"program"`
 	WorkingDirectory string `json:"working_directory"`
 }
+
+type ConnectType string
+
+const (
+	ConnectApplication ConnectType = "application"
+	ConnectAsset       ConnectType = "asset"
+)
