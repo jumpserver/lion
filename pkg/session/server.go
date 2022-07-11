@@ -48,6 +48,12 @@ func (s *Server) CreatByToken(ctx *gin.Context, token string) (TunnelSession, er
 	}
 	targetType := TypeRDP
 	targetId := tokenUser.AssetID
+	switch tokenUser.Type {
+	case model.ConnectApplication:
+		targetType = TypeRemoteApp
+		targetId = tokenUser.ApplicationID
+	case model.ConnectAsset:
+	}
 	systemUserId := tokenUser.SystemUserID
 	return s.Create(ctx, user, targetType, targetId, systemUserId)
 }
