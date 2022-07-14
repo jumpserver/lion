@@ -286,15 +286,38 @@ export default {
         streamName = this.currentFolder.streamName + '/' + file.name
       }
       this.$log.debug('File is: ', file)
+      let finished = false
+      const step = fileObj.file.size > 1024 * 1024 * 1024 ? 0.2 : 0.4
+      const fakeProcess = function fakeProcess(count) {
+        if (finished) {
+          return
+        }
+        const fakeE = {
+          percent: 50 + step * count
+        }
+        if (fakeE.percent >= 100) {
+          return
+        }
+        fileObj.onProgress(fakeE)
+        setTimeout(function() {
+          fakeProcess(count + 1)
+        }, 1000 * 5)
+      }
       const onprogress = function progress(e) {
         if (e.total > 0) {
           e.percent = e.loaded / e.total * 50
         }
         fileObj.onProgress(e)
+        if (e.loaded === e.total) {
+          setTimeout(function() {
+            fakeProcess(1)
+          }, 1000 * 5)
+        }
       }
       this.handleFiles(file, this.currentFilesystem.object, streamName, onprogress).then((xhr) => {
         fileObj.onSuccess('Ok')
         this.refresh()
+        finished = true
         this.$message(file.name + ' ' + this.$t('UploadSuccess'))
       }).catch(err => {
         fileObj.onError(err)

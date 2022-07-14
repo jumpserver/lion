@@ -149,7 +149,7 @@ export default {
       return !(this.clientState === 'Connected') || !(this.tunnelState === 'OPEN')
     },
     isRemoteApp: function() {
-      return this.session?.remote_app
+      return this.session ? this.session.remote_app : false
     },
     title: function() {
       if (this.isRemoteApp) {
@@ -174,7 +174,7 @@ export default {
         {
           title: this.$t('Shortcuts'),
           icon: 'el-icon-position',
-          disabled: () => (!this.isRemoteApp && this.menuDisable),
+          disabled: () => (this.menuDisable || this.isRemoteApp),
           content: this.combinationKeys,
           itemClick: (keys) => (this.handleKeys(keys))
         }
