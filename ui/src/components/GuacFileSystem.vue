@@ -318,7 +318,8 @@ export default {
         fileObj.onSuccess('Ok')
         this.refresh()
         finished = true
-        this.$message(file.name + ' ' + this.$t('UploadSuccess'))
+        const fileName = file.name.length > 20 ? file.name.substring(0, 20) + '...' : file.name
+        this.$message(fileName + ' ' + this.$t('UploadSuccess'))
       }).catch(err => {
         fileObj.onError(err)
         this.$log.debug('Upload error: ', err)
