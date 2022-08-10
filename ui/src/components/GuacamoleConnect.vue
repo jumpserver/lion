@@ -170,15 +170,17 @@ export default {
           icon: 'el-icon-folder',
           disabled: () => ((!this.hasFileSystem) || this.menuDisable),
           click: () => (this.toggleFileSystem())
-        },
-        {
+        }
+      ]
+      if (!this.isRemoteApp) {
+        settings.push({
           title: this.$t('Shortcuts'),
           icon: 'el-icon-position',
           disabled: () => (this.menuDisable || this.isRemoteApp),
           content: this.combinationKeys,
           itemClick: (keys) => (this.handleKeys(keys))
-        }
-      ]
+        })
+      }
       return settings
     }
   },
