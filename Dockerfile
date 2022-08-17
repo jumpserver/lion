@@ -15,10 +15,10 @@ ARG GOPROXY=https://goproxy.cn
 ENV CGO_ENABLED=0
 ENV GO111MODULE=on
 ENV GOOS=linux
-RUN  sed -i 's/dl-cdn.alpinelinux.org/repo.huaweicloud.com/g' /etc/apk/repositories \
+RUN  sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories \
      && apk update \
      && apk add git
-     
+
 COPY go.mod  .
 COPY go.sum  .
 RUN go mod download -x
@@ -33,7 +33,7 @@ RUN export GOFlAGS="-X 'main.Buildstamp=`date -u '+%Y-%m-%d %I:%M:%S%p'`'" \
 FROM jumpserver/guacd:1.4.0
 USER root
 WORKDIR /opt/lion
-RUN sed -i 's@http://.*.debian.org@http://repo.huaweicloud.com@g' /etc/apt/sources.list \
+RUN sed -i 's@http://.*.debian.org@http://mirrors.ustc.edu.cn@g' /etc/apt/sources.list \
     && apt-get update \
     && apt-get install -y --no-install-recommends supervisor curl telnet iproute2 \
     && rm -rf /var/lib/apt/lists/*
