@@ -15,9 +15,10 @@ ARG GOPROXY=https://goproxy.cn
 ENV CGO_ENABLED=0
 ENV GO111MODULE=on
 ENV GOOS=linux
-RUN  sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories \
+RUN  sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories \
      && apk update \
      && apk add git
+
 COPY go.mod  .
 COPY go.sum  .
 RUN go mod download -x
@@ -32,10 +33,11 @@ RUN export GOFlAGS="-X 'main.Buildstamp=`date -u '+%Y-%m-%d %I:%M:%S%p'`'" \
 FROM jumpserver/guacd:1.4.0
 USER root
 WORKDIR /opt/lion
-RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list \
-	&& sed -i 's/security.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list \
-  && apt-get update && apt-get install -y supervisor curl telnet iproute2 \
-  && rm -rf /var/lib/apt/lists/*
+RUN sed -i 's@http://.*.debian.org@http://mirrors.ustc.edu.cn@g' /etc/apt/sources.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends supervisor curl telnet iproute2 \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY --from=ui-build /opt/lion/ui/lion ui/lion/
 COPY --from=go-build /opt/lion/lion .
 COPY --from=go-build /opt/lion/config_example.yml .
