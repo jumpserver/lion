@@ -116,6 +116,10 @@ func NewReplayStorage(cfg model.ReplayConfig) ReplayStorage {
 	}
 }
 
+func GetDefaultCommandStorage(jmsService *service.JMService) CommandStorage {
+	return ServerStorage{StorageType: "server", JmsService: jmsService}
+}
+
 func NewCommandStorage(jmsService *service.JMService, conf *model.TerminalConfig) CommandStorage {
 	cf := conf.CommandStorage
 	tp, ok := cf["TYPE"]
@@ -160,6 +164,6 @@ func NewCommandStorage(jmsService *service.JMService, conf *model.TerminalConfig
 	case "null":
 		return NewNullStorage()
 	default:
-		return ServerStorage{StorageType: "server", JmsService: jmsService}
+		return GetDefaultCommandStorage(jmsService)
 	}
 }
