@@ -7,7 +7,7 @@ RUN npm config set registry ${NPM_REGISTRY}
 RUN yarn config set registry ${NPM_REGISTRY}
 
 COPY ui  ui/
-RUN ls . && cd ui/ && npm install -i && yarn build && ls -al .
+RUN ls . && cd ui/ && yarn install && yarn build && ls -al .
 
 FROM golang:1.18-bullseye as go-build
 LABEL stage=go-build
@@ -24,6 +24,7 @@ COPY go.sum  .
 RUN go mod download -x
 COPY . .
 ARG VERSION
+ENV VERSION=$VERSION
 RUN export GOFlAGS="-X 'main.Buildstamp=`date -u '+%Y-%m-%d %I:%M:%S%p'`'" \
 	&& export GOFlAGS="${GOFlAGS} -X 'main.Githash=`git rev-parse HEAD`'" \
 	&& export GOFlAGS="${GOFlAGS} -X 'main.Goversion=`go version`'" \
