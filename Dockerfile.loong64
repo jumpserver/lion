@@ -9,8 +9,8 @@ RUN yarn config set registry ${NPM_REGISTRY}
 COPY ui  ui/
 RUN ls . && cd ui/ && yarn install && yarn build && ls -al .
 
-FROM golang:1.18-loongnix as go-build
-LABEL stage=go-build
+FROM golang:1.18-loongnix as stage-build
+LABEL stage=stage-build
 WORKDIR /opt/lion
 
 ARG TARGETARCH
@@ -52,10 +52,10 @@ RUN set -ex \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=ui-build /opt/lion/ui/lion ui/lion/
-COPY --from=go-build /opt/lion/lion .
-COPY --from=go-build /opt/lion/config_example.yml .
-COPY --from=go-build /opt/lion/entrypoint.sh .
-COPY --from=go-build /opt/lion/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY --from=stage-build /opt/lion/lion .
+COPY --from=stage-build /opt/lion/config_example.yml .
+COPY --from=stage-build /opt/lion/entrypoint.sh .
+COPY --from=stage-build /opt/lion/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 RUN chmod +x entrypoint.sh
 
