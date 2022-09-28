@@ -7,9 +7,9 @@ RUN npm config set registry ${NPM_REGISTRY}
 RUN yarn config set registry ${NPM_REGISTRY}
 
 COPY ui  ui/
-RUN ls . && cd ui/ && npm install -i && yarn build && ls -al .
+RUN ls . && cd ui/ && yarn install && yarn build && ls -al .
 
-FROM golang:1.18-bullseye as go-build
+FROM golang:1.18-loongnix as go-build
 LABEL stage=go-build
 WORKDIR /opt/lion
 
@@ -43,7 +43,7 @@ ARG DEPENDENCIES="                    \
         supervisor                    \
         telnet"
 
-RUN sed -i 's@http://.*.debian.org@http://mirrors.ustc.edu.cn@g' /etc/apt/sources.list \
+RUN set -ex \
     && apt-get update \
     && apt-get install -y --no-install-recommends ${DEPENDENCIES} \
     && echo "zh_CN.UTF-8" | dpkg-reconfigure locales \
