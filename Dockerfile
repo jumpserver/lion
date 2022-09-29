@@ -51,6 +51,7 @@ RUN sed -i 's@http://.*.debian.org@http://mirrors.ustc.edu.cn@g' /etc/apt/source
     && apt-get update \
     && apt-get install -y --no-install-recommends ${DEPENDENCIES} \
     && echo "zh_CN.UTF-8" | dpkg-reconfigure locales \
+    && apt-get clean all \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=ui-build /opt/lion/ui/lion ui/lion/
