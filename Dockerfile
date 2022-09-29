@@ -47,9 +47,7 @@ ARG DEPENDENCIES="                    \
         supervisor                    \
         telnet"
 
-RUN --mount=type=cache,target=/var/cache/apt \
-    sed -i 's@http://.*.debian.org@http://mirrors.ustc.edu.cn@g' /etc/apt/sources.list \
-    && rm -f /etc/apt/apt.conf.d/docker-clean \
+RUN sed -i 's@http://.*.debian.org@http://mirrors.ustc.edu.cn@g' /etc/apt/sources.list \
     && apt-get update \
     && apt-get install -y --no-install-recommends ${DEPENDENCIES} \
     && echo "zh_CN.UTF-8" | dpkg-reconfigure locales \

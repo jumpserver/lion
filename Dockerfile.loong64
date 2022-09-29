@@ -47,8 +47,7 @@ ARG DEPENDENCIES="                    \
         supervisor                    \
         telnet"
 
-RUN --mount=type=cache,target=/var/cache/apt \
-    set -ex \
+RUN set -ex \
     && apt-get update \
     && apt-get install -y --no-install-recommends ${DEPENDENCIES} \
     && echo "zh_CN.UTF-8" | dpkg-reconfigure locales \
