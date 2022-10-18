@@ -252,6 +252,11 @@ export default {
       this.onWindowResize()
       window.addEventListener('resize', this.debounceWindowResize)
       window.onfocus = this.onWindowFocus
+      window.onblur = () => {
+        if (this.keyboard !== null) {
+          this.keyboard.reset()
+        }
+      }
     },
 
     handleEventFromLuna(evt) {
