@@ -49,12 +49,12 @@ ARG DEPENDENCIES="                    \
 
 ARG APT_MIRROR=http://mirrors.ustc.edu.cn
 
-RUN sed -i "s@http://.*.debian.org@${APT_MIRROR}@g" /etc/apt/sources.list \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=lion \
+    sed -i "s@http://.*.debian.org@${APT_MIRROR}@g" /etc/apt/sources.list \
     && ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
     && apt-get update \
     && apt-get install -y --no-install-recommends ${DEPENDENCIES} \
     && echo "zh_CN.UTF-8" | dpkg-reconfigure locales \
-    && apt-get clean all \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=ui-build /opt/lion/ui/lion ui/lion/
