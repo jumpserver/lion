@@ -15,8 +15,8 @@ GOLDFLAGS+=-X 'main.Goversion=$(GOVERSION)'
 GOBUILD=CGO_ENABLED=0 go build -trimpath -ldflags "$(GOLDFLAGS) ${LDFLAGS}"
 
 UIDIR=ui
-NPMINSTALL=npm i
-NPMBUILD=npm run-script build
+NPMINSTALL=yarn
+NPMBUILD=yarn build
 
 PLATFORM_LIST = \
 	darwin-amd64 \
