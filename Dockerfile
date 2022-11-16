@@ -47,7 +47,9 @@ ARG DEPENDENCIES="                    \
         supervisor                    \
         telnet"
 
-RUN sed -i 's@http://.*.debian.org@http://mirrors.ustc.edu.cn@g' /etc/apt/sources.list \
+ARG APT_MIRROR=http://mirrors.ustc.edu.cn
+
+RUN sed -i "s@http://.*.debian.org@${APT_MIRROR}@g" /etc/apt/sources.list \
     && ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
     && apt-get update \
     && apt-get install -y --no-install-recommends ${DEPENDENCIES} \
