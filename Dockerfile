@@ -2,37 +2,47 @@ FROM node:14.16 as ui-build
 ARG NPM_REGISTRY="https://registry.npmmirror.com"
 ENV NPM_REGISTY=$NPM_REGISTRY
 
-WORKDIR /opt/lion
 RUN set -ex \
     && npm config set registry ${NPM_REGISTRY} \
-    && yarn config set registry ${NPM_REGISTRY} \
-    && yarn config set cache-folder /root/.cache/yarn/lion
+    && yarn config set registry ${NPM_REGISTRY}
 
-COPY ui  ui/
-RUN --mount=type=cache,target=/root/.cache/yarn \
-    ls . && cd ui/ && yarn install && yarn build && ls -al .
+WORKDIR /opt/lion/ui
+ADD ui/package.json .
+RUN --mount=type=cache,target=/usr/local/share/.cache/yarn,sharing=locked,id=lion \
+    yarn install
+
+ADD ui .
+RUN --mount=type=cache,target=/usr/local/share/.cache/yarn,sharing=locked,id=lion \
+    yarn build
 
 FROM golang:1.18-bullseye as stage-build
 LABEL stage=stage-build
+ARG TARGETARCH
+
 WORKDIR /opt/lion
 
-ARG TARGETARCH
+ADD go.mod go.sum .
+
 ARG GOPROXY=https://goproxy.io
 ENV CGO_ENABLED=0
 ENV GO111MODULE=on
 ENV GOOS=linux
 
+RUN --mount=type=cache,target=/root/.cache \
+    --mount=type=cache,target=/go/pkg/mod \
+    go mod download -x
+
 COPY . .
 ARG VERSION
 ENV VERSION=$VERSION
+
 RUN --mount=type=cache,target=/root/.cache \
     --mount=type=cache,target=/go/pkg/mod \
-    go mod download -x \
-    && export GOFlAGS="-X 'main.Buildstamp=`date -u '+%Y-%m-%d %I:%M:%S%p'`'" \
+    export GOFlAGS="-X 'main.Buildstamp=`date -u '+%Y-%m-%d %I:%M:%S%p'`'" \
     && export GOFlAGS="${GOFlAGS} -X 'main.Githash=`git rev-parse HEAD`'" \
     && export GOFlAGS="${GOFlAGS} -X 'main.Goversion=`go version`'" \
     && export GOFlAGS="${GOFlAGS} -X 'main.Version=${VERSION}'" \
-    && go build -trimpath -x -ldflags "$GOFlAGS" -o lion . && ls -al .
+    && go build -trimpath -x -ldflags "$GOFlAGS" -o lion .
 
 FROM jumpserver/guacd:1.4.0
 ARG TARGETARCH
