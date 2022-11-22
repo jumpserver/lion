@@ -44,6 +44,8 @@ RUN --mount=type=cache,target=/root/.cache \
     && export GOFlAGS="${GOFlAGS} -X 'main.Version=${VERSION}'" \
     && go build -trimpath -x -ldflags "$GOFlAGS" -o lion .
 
+RUN chmod +x entrypoint.sh
+
 FROM jumpserver/guacd:1.4.0
 ARG TARGETARCH
 
@@ -65,6 +67,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=lion \
     && apt-get update \
     && apt-get install -y --no-install-recommends ${DEPENDENCIES} \
     && echo "zh_CN.UTF-8" | dpkg-reconfigure locales \
+    && sed -i "s@# export @export @g" ~/.bashrc \
+    && sed -i "s@# alias @alias @g" ~/.bashrc \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=ui-build /opt/lion/ui/lion ui/lion/
@@ -72,8 +76,6 @@ COPY --from=stage-build /opt/lion/lion .
 COPY --from=stage-build /opt/lion/config_example.yml .
 COPY --from=stage-build /opt/lion/entrypoint.sh .
 COPY --from=stage-build /opt/lion/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-
-RUN chmod +x entrypoint.sh
 
 ENV LANG=zh_CN.UTF-8
 
