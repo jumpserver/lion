@@ -90,10 +90,11 @@ func NewGuaTunnelRedisCache(conf Config) *GuaTunnelRedisCache {
 		sentinelServiceName := sentinels[0]
 		sentinelHosts := strings.Split(sentinels[1], ",")
 		rdb = redis.NewFailoverClient(&redis.FailoverOptions{
-			MasterName:    sentinelServiceName,
-			SentinelAddrs: sentinelHosts,
-			Password:      conf.SentinelPassword,
-			TLSConfig:     tlsCfg,
+			MasterName:       sentinelServiceName,
+			SentinelAddrs:    sentinelHosts,
+			SentinelPassword: conf.SentinelPassword,
+			Password:         conf.Password,
+			TLSConfig:        tlsCfg,
 		})
 	} else {
 		rdb = redis.NewClient(&redis.Options{
