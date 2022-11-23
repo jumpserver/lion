@@ -79,13 +79,22 @@ func main() {
 }
 
 func NewGuaTunnelCache() tunnel.GuaTunnelCache {
+	cfg := config.GlobalConfig
 	switch strings.ToLower(config.GlobalConfig.ShareRoomType) {
 	case config.ShareTypeRedis:
 		return tunnel.NewGuaTunnelRedisCache(tunnel.Config{
-			Addr: net.JoinHostPort(config.GlobalConfig.RedisHost,
-				strconv.Itoa(config.GlobalConfig.RedisPort)),
-			Password: config.GlobalConfig.RedisPassword,
-			DBIndex:  config.GlobalConfig.RedisDBIndex,
+			Addr: net.JoinHostPort(cfg.RedisHost,
+				strconv.Itoa(cfg.RedisPort)),
+			Password: cfg.RedisPassword,
+			DBIndex:  cfg.RedisDBIndex,
+
+			SentinelsHost:    cfg.RedisSentinelHosts,
+			SentinelPassword: cfg.RedisSentinelPassword,
+
+			UseSSL:  cfg.RedisUseSSL,
+			SSLCert: filepath.Join(cfg.CertsFolderPath, cfg.RedisSSLCert),
+			SSLKey:  filepath.Join(cfg.CertsFolderPath, cfg.RedisSSLKey),
+			SSLCa:   filepath.Join(cfg.CertsFolderPath, cfg.RedisSSLCa),
 		})
 	default:
 		return tunnel.NewLocalTunnelLocalCache()
