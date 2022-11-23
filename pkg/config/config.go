@@ -18,6 +18,7 @@ type Config struct {
 	RecordPath        string
 	LogDirPath        string
 	AccessKeyFilePath string
+	CertsFolderPath   string
 
 	Name           string `mapstructure:"NAME"`
 	CoreHost       string `mapstructure:"CORE_HOST"`
@@ -39,6 +40,13 @@ type Config struct {
 	RedisPort     int    `mapstructure:"REDIS_PORT"`
 	RedisPassword string `mapstructure:"REDIS_PASSWORD"`
 	RedisDBIndex  int    `mapstructure:"REDIS_DB_ROOM"`
+
+	RedisSentinelPassword string `mapstructure:"REDIS_SENTINEL_PASSWORD"`
+	RedisSentinelHosts    string `mapstructure:"REDIS_SENTINEL_HOSTS"`
+	RedisUseSSL           bool   `mapstructure:"REDIS_USE_SSL"`
+	RedisSSLCa            string `mapstructure:"REDIS_SSL_CA"`
+	RedisSSLCert          string `mapstructure:"REDIS_SSL_CERT"`
+	RedisSSLKey           string `mapstructure:"REDIS_SSL_KEY"`
 }
 
 func Setup(configPath string) {
@@ -58,10 +66,11 @@ func getDefaultConfig() Config {
 	recordFolderPath := filepath.Join(dataFolderPath, "replays")
 	LogDirPath := filepath.Join(dataFolderPath, "logs")
 	keyFolderPath := filepath.Join(dataFolderPath, "keys")
+	CertsFolderPath := filepath.Join(dataFolderPath, "certs")
 	accessKeyFilePath := filepath.Join(keyFolderPath, ".access_key")
 
 	folders := []string{dataFolderPath, driveFolderPath, recordFolderPath,
-		keyFolderPath, LogDirPath}
+		keyFolderPath, LogDirPath, CertsFolderPath}
 	for i := range folders {
 		if err := EnsureDirExist(folders[i]); err != nil {
 			log.Fatalf("Create folder failed: %s", err.Error())
@@ -73,6 +82,7 @@ func getDefaultConfig() Config {
 		RecordPath:                recordFolderPath,
 		LogDirPath:                LogDirPath,
 		DrivePath:                 driveFolderPath,
+		CertsFolderPath:           CertsFolderPath,
 		AccessKeyFilePath:         accessKeyFilePath,
 		CoreHost:                  "http://localhost:8080",
 		BootstrapToken:            "",
