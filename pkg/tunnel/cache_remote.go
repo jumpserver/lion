@@ -2,9 +2,13 @@ package tunnel
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -31,17 +35,76 @@ type Config struct {
 	Password string
 
 	DBIndex int
+
+	SentinelPassword string
+	SentinelsHost    string
+	UseSSL           bool
+	SSLCa            string
+	SSLCert          string
+	SSLKey           string
+}
+
+func getRedisTLSCfg(conf *Config) (*tls.Config, error) {
+	tlsCfg := tls.Config{}
+	if conf.SSLCert != "" && conf.SSLKey != "" {
+		cert, err := tls.LoadX509KeyPair(conf.SSLCert, conf.SSLKey)
+		if err != nil {
+			return nil, err
+		}
+		tlsCfg.Certificates = []tls.Certificate{cert}
+		tlsCfg.InsecureSkipVerify = true
+	}
+	if conf.SSLCa != "" {
+		certPool := x509.NewCertPool()
+		buf, err := os.ReadFile(conf.SSLCa)
+		if err != nil {
+			return nil, err
+		}
+		certPool.AppendCertsFromPEM(buf)
+		tlsCfg.RootCAs = certPool
+	}
+	return &tlsCfg, nil
 }
 
 func NewGuaTunnelRedisCache(conf Config) *GuaTunnelRedisCache {
 	if conf.Addr == "" {
 		conf.Addr = "127.0.0.1:6379"
 	}
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     conf.Addr,
-		Password: conf.Password,
-		DB:       conf.DBIndex,
-	})
+	var (
+		rdb    *redis.Client
+		tlsCfg *tls.Config
+		err    error
+	)
+	if conf.UseSSL {
+		tlsCfg, err = getRedisTLSCfg(&conf)
+		if err != nil {
+			logger.Fatalf("Redis tls config failed: %s", err)
+			return nil
+		}
+	}
+	if conf.SentinelsHost != "" {
+		sentinels := strings.SplitN(conf.SentinelsHost, "/", 2)
+		if len(sentinels) != 2 {
+			logger.Fatalf("invalid sentinel host: %s", conf.SentinelsHost)
+		}
+		sentinelServiceName := sentinels[0]
+		sentinelHosts := strings.Split(sentinels[1], ",")
+		rdb = redis.NewFailoverClient(&redis.FailoverOptions{
+			MasterName:       sentinelServiceName,
+			SentinelAddrs:    sentinelHosts,
+			SentinelPassword: conf.SentinelPassword,
+			Password:         conf.Password,
+			TLSConfig:        tlsCfg,
+		})
+	} else {
+		rdb = redis.NewClient(&redis.Options{
+			Addr:      conf.Addr,
+			Password:  conf.Password,
+			DB:        conf.DBIndex,
+			TLSConfig: tlsCfg,
+		})
+	}
+
 	if _, err := rdb.Ping(context.TODO()).Result(); err != nil {
 		logger.Fatalf("Redis ping err: %s", err)
 	}
