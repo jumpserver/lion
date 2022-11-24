@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"strings"
 	"sync"
@@ -74,12 +75,17 @@ func NewGuaTunnelRedisCache(conf Config) *GuaTunnelRedisCache {
 		rdb    *redis.Client
 		tlsCfg *tls.Config
 		err    error
+		dialer func(ctx context.Context, network, addr string) (net.Conn, error)
 	)
 	if conf.UseSSL {
 		tlsCfg, err = getRedisTLSCfg(&conf)
 		if err != nil {
 			logger.Fatalf("Redis tls config failed: %s", err)
 			return nil
+		}
+		tlsDialer := tls.Dialer{Config: tlsCfg}
+		dialer = func(ctx context.Context, network, addr string) (net.Conn, error) {
+			return tlsDialer.DialContext(ctx, network, addr)
 		}
 	}
 	if conf.SentinelsHost != "" {
@@ -89,12 +95,14 @@ func NewGuaTunnelRedisCache(conf Config) *GuaTunnelRedisCache {
 		}
 		sentinelServiceName := sentinels[0]
 		sentinelHosts := strings.Split(sentinels[1], ",")
+
 		rdb = redis.NewFailoverClient(&redis.FailoverOptions{
 			MasterName:       sentinelServiceName,
 			SentinelAddrs:    sentinelHosts,
 			SentinelPassword: conf.SentinelPassword,
 			Password:         conf.Password,
 			TLSConfig:        tlsCfg,
+			Dialer:           dialer,
 		})
 	} else {
 		rdb = redis.NewClient(&redis.Options{
