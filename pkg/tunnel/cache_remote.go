@@ -52,6 +52,7 @@ func getRedisTLSCfg(conf *Config) (*tls.Config, error) {
 		if err != nil {
 			return nil, err
 		}
+		logger.Debugf("Load redis SSL cert: %s, key: %s", conf.SSLCert, conf.SSLKey)
 		tlsCfg.Certificates = []tls.Certificate{cert}
 		tlsCfg.InsecureSkipVerify = true
 	}
@@ -61,6 +62,7 @@ func getRedisTLSCfg(conf *Config) (*tls.Config, error) {
 		if err != nil {
 			return nil, err
 		}
+		logger.Debugf("Load redis SSL ca: %s", conf.SSLCa)
 		certPool.AppendCertsFromPEM(buf)
 		tlsCfg.RootCAs = certPool
 	}
