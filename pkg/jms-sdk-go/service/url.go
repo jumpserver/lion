@@ -48,12 +48,11 @@ const (
 
 // 各资源详情相关API
 const (
-	UserDetailURL        = "/api/v1/users/users/%s/"
-	AssetDetailURL       = "/api/v1/assets/assets/%s/"
-	AssetPlatFormURL     = "/api/v1/assets/assets/%s/platform/"
-	AssetGatewaysURL     = "/api/v1/assets/assets/%s/gateways/"
-	SystemUserDetailURL  = "/api/v1/assets/system-users/%s/"
-	ApplicationDetailURL = "/api/v1/applications/applications/%s/"
+	UserDetailURL       = "/api/v1/users/users/%s/"
+	AssetDetailURL      = "/api/v1/assets/assets/%s/"
+	AssetPlatFormURL    = "/api/v1/assets/assets/%s/platform/"
+	AssetGatewaysURL    = "/api/v1/assets/assets/%s/gateways/"
+	SystemUserDetailURL = "/api/v1/assets/system-users/%s/"
 
 	SystemUserCmdFilterRulesListURL = "/api/v1/assets/system-users/%s/cmd-filter-rules/" // 过滤规则url
 
@@ -61,15 +60,11 @@ const (
 )
 
 const (
-	NotificationCommandURL = "/api/v1/terminal/commands/insecure-command/"
-)
-
-const (
-	StatURL = "/api/v1/terminal/components/state/"
-)
-
-const (
 	PermissionURL = "/api/v1/perms/asset-permissions/user/actions/"
 
 	RemoteAPPURL = "/api/v1/applications/remote-apps/%s/connection-info/"
+)
+
+const (
+	ConnectTokenInfoURL = "/api/v1/authentication/connection-token/secret/"
 )

@@ -11,7 +11,7 @@ export const constantRoutes = []
  */
 export const allRoleRoutes = [
   {
-    path: '/',
+    path: '/connect',
     component: () => import('../components/GuacamoleConnect')
   },
   {

@@ -226,16 +226,8 @@ export default {
     },
     initClipboard() {
       if (this.session && this.session.permission) {
-        const actions = this.session.permission.actions
-        let hasClipboardPermission = false
-        const clipboardActions = ['all', 'clipboard_copy',
-          'clipboard_paste', 'clipboard_copy_paste']
-        for (let i = 0; i < actions.length; i++) {
-          if (clipboardActions.includes(actions[i])) {
-            hasClipboardPermission = true
-            break
-          }
-        }
+        const actions = this.session.action_permission
+        const hasClipboardPermission = actions.enable_copy || actions.enable_paste
         this.$log.debug(this.session.permission)
         this.clipboardInited = hasClipboardPermission
       }
