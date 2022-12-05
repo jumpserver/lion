@@ -87,3 +87,16 @@ const (
 	SecurityVmConnect = "vmconnect"
 	SecurityRdp       = "rdp"
 )
+
+func ValidateSecurityValue(security string) bool {
+	switch security {
+	case SecurityAny,
+		SecurityNla,
+		SecurityNlaExt,
+		SecurityTls,
+		SecurityVmConnect,
+		SecurityRdp:
+		return true
+	}
+	return false
+}

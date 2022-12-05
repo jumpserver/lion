@@ -53,8 +53,6 @@ func (r RDPConfiguration) GetGuacdConfiguration() guacd.Configuration {
 	//if r.SystemUser.AdDomain != "" {
 	//	conf.SetParameter(guacd.RDPDomain, r.SystemUser.AdDomain)
 	//}
-	conf.SetParameter(guacd.RDPSecurity, SecurityAny)
-	conf.SetParameter(guacd.RDPIgnoreCert, BoolTrue)
 
 	// 设置 录像路径
 	if r.TerminalConfig.ReplayStorage.TypeName != "null" {
@@ -99,12 +97,18 @@ func (r RDPConfiguration) GetGuacdConfiguration() guacd.Configuration {
 		conf.SetParameter(guacd.DisablePaste, disablePaste)
 	}
 
-	// platform meta 数据 todo: 优化
-	//{
-	//	for k, v := range ConvertMetaToParams(r.Platform.MetaData) {
-	//		conf.SetParameter(k, v)
-	//	}
-	//}
+	// 平台中的设置
+	rdpSecurityValue := SecurityAny
+	if rdpSettings, ok := r.Platform.GetProtocolSetting(rdp); ok {
+		if ValidateSecurityValue(rdpSettings.Setting.Security) {
+			rdpSecurityValue = rdpSettings.Setting.Security
+		}
+		if rdpSettings.Setting.Console {
+			conf.SetParameter(guacd.RDPConsole, BoolTrue)
+		}
+	}
+	conf.SetParameter(guacd.RDPSecurity, rdpSecurityValue)
+	conf.SetParameter(guacd.RDPIgnoreCert, BoolTrue)
 
 	return conf
 }
