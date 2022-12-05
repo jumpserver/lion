@@ -66,7 +66,7 @@ func (s *Server) CreatByToken(ctx *gin.Context, token string) (TunnelSession, er
 	opts = append(opts, WithAsset(&connectToken.Asset))
 	opts = append(opts, WithAccount(&connectToken.Account))
 	opts = append(opts, WithPlatform(&connectToken.Platform))
-	opts = append(opts, WithGateway(&connectToken.Gateway))
+	opts = append(opts, WithGateway(connectToken.Gateway))
 	opts = append(opts, WithTerminalConfig(&cfg))
 
 	return s.Create(ctx, opts...)
@@ -217,6 +217,7 @@ func (s *Server) CreateRDPAndVNCSession(opt *tunnelOption) (TunnelSession, error
 		Platform:       opt.Platform,
 		Domain:         assetDomain,
 		TerminalConfig: opt.TerminalConfig,
+		Gateway:        opt.Gateway,
 
 		DisplayAccount: &model.Account{
 			BaseAccount: model.BaseAccount{
