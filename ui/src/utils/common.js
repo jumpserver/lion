@@ -25,11 +25,15 @@ export const BaseAPIURL = streamOrigin + '/lion/api'
 export const BaseURL = streamOrigin + '/lion'
 export const apiPrefix = '/api'
 
-const tokenBaseAPI = '/token'
 const sessionBaseAPI = '/api'
-const tokenWSURL = '/lion/ws/token/'
 const wsURL = '/lion/ws/connect/'
 const monitorWsURL = '/lion/ws/monitor/'
+
+/*
+const tokenBaseAPI = '/token'
+const tokenWSURL = '/lion/ws/token/'
+
+ */
 
 export function getCurrentConnectParams() {
   const urlParams = getURLParams()
@@ -41,11 +45,12 @@ export function getCurrentConnectParams() {
   result['data'] = data
   result['ws'] = wsURL
   result['api'] = sessionBaseAPI
-  const token = urlParams.get('token')
-  if (token !== null) {
-    result['ws'] = tokenWSURL
-    result['api'] = tokenBaseAPI
-  }
+  // todo: 后续支持不登录直接连接的方式
+  // const token = urlParams.get('token')
+  // if (token !== null) {
+  //   result['ws'] = tokenWSURL
+  //   result['api'] = tokenBaseAPI
+  // }
   return result
 }
 

@@ -4,8 +4,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"net/http/pprof"
@@ -148,7 +146,7 @@ func runCleanDriverDisk(tunnelCache *tunnel.GuaTunnelCacheManager) {
 	defer cleanDriveTicker.Stop()
 	drivePath := config.GlobalConfig.DrivePath
 	for range cleanDriveTicker.C {
-		folders, err := ioutil.ReadDir(drivePath)
+		folders, err := os.ReadDir(drivePath)
 		if err != nil {
 			logger.Error(err)
 			continue
@@ -171,36 +169,47 @@ func registerRouter(jmsService *service.JMService, tunnelService *tunnel.Guacamo
 		gin.SetMode(gin.ReleaseMode)
 	}
 	eng := gin.New()
-	trustedProxies := []string{"0.0.0.0/0", "::/0"}
-	if err := eng.SetTrustedProxies(trustedProxies); err != nil {
-		log.Fatal(err)
-	}
 	eng.Use(gin.Recovery())
 	eng.Use(gin.Logger())
 
 	lionGroup := eng.Group("/lion")
 	cookieStore := ginCookie.NewStore([]byte(common.RandomStr(32)))
 	lionGroup.Use(middleware.GinSessionAuth(cookieStore))
+	now := time.Now()
 	// vue的设置
 	{
-		lionGroup.Static("/assets", "./ui/lion/assets")
-		lionGroup.StaticFile("/favicon.ico", "./ui/lion/favicon.ico")
-		lionGroup.StaticFile("/", "./ui/lion/index.html")
+		lionGroup.Static("/assets", "./ui/dist/assets")
+		lionGroup.StaticFile("/favicon.ico", "./ui/dist/favicon.ico")
+
 		lionGroup.GET("/health/", func(ctx *gin.Context) {
 			status := make(map[string]interface{})
 			status["timestamp"] = time.Now().UTC()
+			status["uptime"] = time.Now().Sub(now).Minutes()
 			ctx.JSON(http.StatusOK, status)
 		})
-		lionGroup.StaticFile("/monitor", "./ui/lion/index.html")
 	}
-
-	// token 使用 lion 自带认证
-	tokenGroup := lionGroup.Group("/token")
 	{
+		connectGroup := lionGroup.Group("/connect")
+		connectGroup.Use(middleware.JmsCookieAuth(jmsService))
+		connectGroup.GET("/", func(ctx *gin.Context) {
+			ctx.File("./ui/dist/index.html")
+		})
+	}
+	{
+		monitorGroup := lionGroup.Group("/monitor")
+		monitorGroup.Use(middleware.JmsCookieAuth(jmsService))
+		monitorGroup.Any("", func(ctx *gin.Context) {
+			ctx.File("./ui/dist/index.html")
+		})
+	}
+	// token 使用 lion 自带认证
+
+	{
+		tokenGroup := lionGroup.Group("/token")
+		tokenGroup.Use(middleware.SessionAuth(jmsService))
 		tokenGroup.POST("/session", tunnelService.TokenSession)
 		tokenGroup.DELETE("/sessions/:sid/", tunnelService.DeleteSession)
 		tokenTunnels := tokenGroup.Group("/tunnels")
-		tokenTunnels.Use(middleware.SessionAuth(jmsService))
 		tokenTunnels.GET("/:tid/streams/:index/:filename", tunnelService.DownloadFile)
 		tokenTunnels.POST("/:tid/streams/:index/:filename", tunnelService.UploadFile)
 	}
@@ -217,9 +226,9 @@ func registerRouter(jmsService *service.JMService, tunnelService *tunnel.Guacamo
 			middleware.SessionAuth(jmsService)).GET("/", tunnelService.Connect)
 	}
 
-	apiGroup := lionGroup.Group("/api")
-	apiGroup.Use(middleware.JmsCookieAuth(jmsService))
 	{
+		apiGroup := lionGroup.Group("/api")
+		apiGroup.Use(middleware.JmsCookieAuth(jmsService))
 		apiGroup.POST("/session", tunnelService.CreateSession)
 		apiGroup.DELETE("/sessions/:sid/", tunnelService.DeleteSession)
 		apiGroup.GET("/tunnels/:tid/streams/:index/:filename", tunnelService.DownloadFile)
@@ -228,6 +237,7 @@ func registerRouter(jmsService *service.JMService, tunnelService *tunnel.Guacamo
 
 	pprofRouter := eng.Group("/debug/pprof")
 	{
+		pprofRouter.Use(middleware.HTTPMiddleDebugAuth())
 		pprofRouter.GET("/", gin.WrapF(pprof.Index))
 		pprofRouter.GET("/allocs", gin.WrapF(pprof.Handler("allocs").ServeHTTP))
 		pprofRouter.GET("/cmdline", gin.WrapF(pprof.Cmdline))

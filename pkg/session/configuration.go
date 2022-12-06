@@ -23,7 +23,7 @@ type RDPConfiguration struct {
 	Created        common.UTCTime
 	User           *model.User
 	Asset          *model.Asset
-	SystemUser     *model.SystemUserAuthInfo
+	Account        *model.Account
 	Platform       *model.Platform
 	TerminalConfig *model.TerminalConfig
 	ActionsPerm    *ActionPermission
@@ -36,10 +36,10 @@ func (r RDPConfiguration) GetGuacdConfiguration() guacd.Configuration {
 		ip       string
 		port     string
 	)
-	ip = r.Asset.IP
-	port = strconv.Itoa(r.Asset.ProtocolPort(r.SystemUser.Protocol))
-	username = r.SystemUser.Username
-	password = r.SystemUser.Password
+	ip = r.Asset.Address
+	port = strconv.Itoa(r.Asset.ProtocolPort("rdp"))
+	username = r.Account.Username
+	password = r.Account.Secret
 
 	conf := guacd.NewConfiguration()
 	conf.Protocol = rdp
@@ -49,15 +49,15 @@ func (r RDPConfiguration) GetGuacdConfiguration() guacd.Configuration {
 	conf.SetParameter(guacd.RDPUsername, username)
 	conf.SetParameter(guacd.RDPPassword, password)
 
-	if r.SystemUser.AdDomain != "" {
-		conf.SetParameter(guacd.RDPDomain, r.SystemUser.AdDomain)
-	}
-	conf.SetParameter(guacd.RDPSecurity, SecurityAny)
-	conf.SetParameter(guacd.RDPIgnoreCert, BoolTrue)
+	// todo: 账户 域账号
+	//if r.SystemUser.AdDomain != "" {
+	//	conf.SetParameter(guacd.RDPDomain, r.SystemUser.AdDomain)
+	//}
 
 	// 设置 录像路径
 	if r.TerminalConfig.ReplayStorage.TypeName != "null" {
-		recordDirPath := filepath.Join(config.GlobalConfig.RecordPath, r.Created.Format(recordDirTimeFormat))
+		recordDirPath := filepath.Join(config.GlobalConfig.RecordPath,
+			r.Created.Format(recordDirTimeFormat))
 		conf.SetParameter(guacd.RecordingPath, recordDirPath)
 		conf.SetParameter(guacd.CreateRecordingPath, BoolTrue)
 		conf.SetParameter(guacd.RecordingName, r.SessionId)
@@ -97,12 +97,18 @@ func (r RDPConfiguration) GetGuacdConfiguration() guacd.Configuration {
 		conf.SetParameter(guacd.DisablePaste, disablePaste)
 	}
 
-	// platform meta 数据
-	{
-		for k, v := range ConvertMetaToParams(r.Platform.MetaData) {
-			conf.SetParameter(k, v)
+	// 平台中的设置
+	rdpSecurityValue := SecurityAny
+	if rdpSettings, ok := r.Platform.GetProtocolSetting(rdp); ok {
+		if ValidateSecurityValue(rdpSettings.Setting.Security) {
+			rdpSecurityValue = rdpSettings.Setting.Security
+		}
+		if rdpSettings.Setting.Console {
+			conf.SetParameter(guacd.RDPConsole, BoolTrue)
 		}
 	}
+	conf.SetParameter(guacd.RDPSecurity, rdpSecurityValue)
+	conf.SetParameter(guacd.RDPIgnoreCert, BoolTrue)
 
 	return conf
 }
@@ -111,10 +117,10 @@ type VNCConfiguration struct {
 	SessionId      string
 	Created        common.UTCTime
 	User           *model.User
-	Asset          *model.Asset              `json:"asset"`
-	SystemUser     *model.SystemUserAuthInfo `json:"system_user"`
-	Platform       *model.Platform           `json:"platform"`
-	TerminalConfig *model.TerminalConfig     `json:"terminal_config"`
+	Asset          *model.Asset          `json:"asset"`
+	Account        *model.Account        `json:"system_user"`
+	Platform       *model.Platform       `json:"platform"`
+	TerminalConfig *model.TerminalConfig `json:"terminal_config"`
 	ActionsPerm    *ActionPermission
 }
 
@@ -128,10 +134,10 @@ func (r VNCConfiguration) GetGuacdConfiguration() guacd.Configuration {
 		ip       string
 		port     string
 	)
-	ip = r.Asset.IP
-	port = strconv.Itoa(r.Asset.ProtocolPort(r.SystemUser.Protocol))
-	username = r.SystemUser.Username
-	password = r.SystemUser.Password
+	ip = r.Asset.Address
+	port = strconv.Itoa(r.Asset.ProtocolPort("vnc"))
+	username = r.Account.Username
+	password = r.Account.Secret
 	conf.Protocol = vnc
 	conf.SetParameter(guacd.Hostname, ip)
 	conf.SetParameter(guacd.Port, port)

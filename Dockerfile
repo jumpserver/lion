@@ -71,7 +71,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=lion \
     && sed -i "s@# alias @alias @g" ~/.bashrc \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=ui-build /opt/lion/ui/lion ui/lion/
+COPY --from=ui-build /opt/lion/ui/dist ui/dist/
 COPY --from=stage-build /opt/lion/lion .
 COPY --from=stage-build /opt/lion/config_example.yml .
 COPY --from=stage-build /opt/lion/entrypoint.sh .

@@ -111,12 +111,15 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	info := g.getClientInfo(ctx)
 	conf := tunnelSession.GuaConfiguration()
 	// 设置网域网关，替换本地。 兼容云平台同步 配置网域，但网关配置为空的情况
-	if tunnelSession.Domain != nil && len(tunnelSession.Domain.Gateways) != 0 {
+	if (tunnelSession.Domain != nil && len(tunnelSession.Domain.Gateways) != 0) ||
+		tunnelSession.Gateway != nil {
 		dstAddr := net.JoinHostPort(conf.GetParameter(guacd.Hostname),
 			conf.GetParameter(guacd.Port))
 		domainGateway := gateway.DomainGateway{
 			Domain:  tunnelSession.Domain,
 			DstAddr: dstAddr,
+
+			SelectedGateway: tunnelSession.Gateway,
 		}
 		if err = domainGateway.Start(); err != nil {
 			logger.Errorf("Start domain gateway err: %+v", err)
@@ -188,12 +191,10 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 
 func (g *GuacamoleTunnelServer) CreateSession(ctx *gin.Context) {
 	var jsonData struct {
-		TargetId     string `json:"target_id" binding:"required"`
-		TargetType   string `json:"type" binding:"required"`
-		SystemUserId string `json:"system_user_id" binding:"required"`
+		Token string `json:"token" binding:"required"`
 	}
 	if err := ctx.BindJSON(&jsonData); err != nil {
-		logger.Errorf("Request params err: %+v", err)
+		logger.Errorf("Token session json invalid: %+v", err)
 		ctx.JSON(http.StatusBadRequest, ErrorResponse(err))
 		return
 	}
@@ -204,11 +205,16 @@ func (g *GuacamoleTunnelServer) CreateSession(ctx *gin.Context) {
 		return
 	}
 	user := value.(*model.User)
-	connectSession, err := g.SessionService.Create(ctx, user,
-		jsonData.TargetType, jsonData.TargetId, jsonData.SystemUserId)
+	connectSession, err := g.SessionService.CreatByToken(ctx, jsonData.Token)
 	if err != nil {
-		logger.Errorf("Create session err: %+v", err)
+		logger.Errorf("Create token session err: %+v", err)
 		ctx.JSON(http.StatusBadRequest, ErrorResponse(err))
+		return
+	}
+	if user.ID != connectSession.User.ID {
+		logger.Errorf("No match connect token user %s but got %s",
+			connectSession.User.String(), user.String())
+		ctx.JSON(http.StatusBadRequest, ErrorResponse(ErrNoAuthUser))
 		return
 	}
 	g.SessCache.Add(&connectSession)
@@ -257,7 +263,7 @@ func (g *GuacamoleTunnelServer) DownloadFile(ctx *gin.Context) {
 			User:       tun.Sess.User.String(),
 			Hostname:   tun.Sess.Asset.String(),
 			OrgID:      tun.Sess.Asset.OrgID,
-			SystemUser: tun.Sess.SystemUser.String(),
+			SystemUser: tun.Sess.Account.String(),
 			RemoteAddr: ctx.ClientIP(),
 			Operate:    model.OperateDownload,
 			Path:       filename,
@@ -309,7 +315,7 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 			User:       tun.Sess.User.String(),
 			Hostname:   tun.Sess.Asset.String(),
 			OrgID:      tun.Sess.Asset.OrgID,
-			SystemUser: tun.Sess.SystemUser.String(),
+			SystemUser: tun.Sess.Account.String(),
 			RemoteAddr: ctx.ClientIP(),
 			Operate:    model.OperateUpload,
 			Path:       filename,
