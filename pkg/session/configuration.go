@@ -16,7 +16,6 @@ type ConnectionConfiguration interface {
 
 var _ ConnectionConfiguration = RDPConfiguration{}
 var _ ConnectionConfiguration = VNCConfiguration{}
-var _ ConnectionConfiguration = RemoteAPPConfiguration{}
 
 type RDPConfiguration struct {
 	SessionId      string
@@ -99,12 +98,14 @@ func (r RDPConfiguration) GetGuacdConfiguration() guacd.Configuration {
 
 	// 平台中的设置
 	rdpSecurityValue := SecurityAny
-	if rdpSettings, ok := r.Platform.GetProtocolSetting(rdp); ok {
-		if ValidateSecurityValue(rdpSettings.Setting.Security) {
-			rdpSecurityValue = rdpSettings.Setting.Security
-		}
-		if rdpSettings.Setting.Console {
-			conf.SetParameter(guacd.RDPConsole, BoolTrue)
+	if r.Platform != nil {
+		if rdpSettings, ok := r.Platform.GetProtocolSetting(rdp); ok {
+			if ValidateSecurityValue(rdpSettings.Setting.Security) {
+				rdpSecurityValue = rdpSettings.Setting.Security
+			}
+			if rdpSettings.Setting.Console {
+				conf.SetParameter(guacd.RDPConsole, BoolTrue)
+			}
 		}
 	}
 	conf.SetParameter(guacd.RDPSecurity, rdpSecurityValue)
@@ -167,23 +168,6 @@ func (r VNCConfiguration) GetGuacdConfiguration() guacd.Configuration {
 		disablePaste := ConvertBoolToString(!r.ActionsPerm.EnablePaste)
 		conf.SetParameter(guacd.DisableCopy, disableCopy)
 		conf.SetParameter(guacd.DisablePaste, disablePaste)
-	}
-	return conf
-}
-
-type RemoteAPPConfiguration struct {
-	RDPConfiguration
-	RemoteApp *model.RemoteAPP
-}
-
-func (r RemoteAPPConfiguration) GetGuacdConfiguration() guacd.Configuration {
-	conf := r.RDPConfiguration.GetGuacdConfiguration()
-
-	// 设置 remote app 参数
-	{
-		conf.SetParameter(guacd.RDPRemoteApp, r.RemoteApp.Parameters.Program)
-		conf.SetParameter(guacd.RDPRemoteAppDir, r.RemoteApp.Parameters.WorkingDirectory)
-		conf.SetParameter(guacd.RDPRemoteAppArgs, r.RemoteApp.Parameters.Parameters)
 	}
 	return conf
 }

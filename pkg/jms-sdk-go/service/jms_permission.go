@@ -4,8 +4,6 @@ import (
 	"lion/pkg/jms-sdk-go/model"
 )
 
-const actionConnect = "connect"
-
 func (s *JMService) ValidateJoinSessionPermission(userId, sessionId string) (result model.ValidateResult, err error) {
 	data := map[string]string{
 		"user_id":    userId,

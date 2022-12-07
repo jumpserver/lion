@@ -22,6 +22,8 @@ const (
 	TypeRDP       = "rdp"
 	TypeVNC       = "vnc"
 	TypeRemoteApp = "remoteapp"
+
+	connectApplet = "applet"
 )
 
 const loginFrom = "WT"
@@ -49,16 +51,20 @@ func (s *Server) CreatByToken(ctx *gin.Context, token string) (TunnelSession, er
 	if !connectToken.Actions.EnableConnect() {
 		return TunnelSession{}, ErrPermissionDeny
 	}
-	targetType := TypeRDP
-	switch connectToken.Protocol {
-	case TypeRDP:
-		targetType = TypeRDP
-	case TypeVNC:
-		targetType = TypeVNC
-	default:
+	var (
+		appletOpt *model.AppletOption
+	)
+	if connectToken.ConnectMethod.Type == connectApplet {
+		appletOptions, err := s.JmsService.GetConnectTokenAppletOption(token)
+		if err != nil {
+			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
+		}
+		appletOpt = &appletOptions
+		logger.Infof("Connect applet(%s) use host(%s) account (%s)", connectToken.Asset.String(),
+			appletOpt.Host.String(), appletOpt.Account.String())
 	}
 	opts := make([]TunnelOption, 0, 10)
-	opts = append(opts, WithTargetType(targetType))
+	opts = append(opts, WithProtocol(connectToken.Protocol))
 	opts = append(opts, WithUser(&connectToken.User))
 	opts = append(opts, WithActions(connectToken.Actions))
 	opts = append(opts, WithExpireInfo(connectToken.ExpireAt))
@@ -68,7 +74,7 @@ func (s *Server) CreatByToken(ctx *gin.Context, token string) (TunnelSession, er
 	opts = append(opts, WithPlatform(&connectToken.Platform))
 	opts = append(opts, WithGateway(connectToken.Gateway))
 	opts = append(opts, WithTerminalConfig(&cfg))
-
+	opts = append(opts, WithAppletOption(appletOpt))
 	return s.Create(ctx, opts...)
 }
 
@@ -119,9 +125,9 @@ func WithTerminalConfig(cfg *model.TerminalConfig) TunnelOption {
 	}
 }
 
-func WithTargetType(target string) TunnelOption {
+func WithAppletOption(appletOpt *model.AppletOption) TunnelOption {
 	return func(tunnel *tunnelOption) {
-		tunnel.TargetType = target
+		tunnel.appletOpt = appletOpt
 	}
 }
 
@@ -132,7 +138,6 @@ func WithUser(user *model.User) TunnelOption {
 }
 
 type tunnelOption struct {
-	TargetType string
 	Protocol   string
 	User       *model.User
 	Asset      *model.Asset
@@ -144,6 +149,7 @@ type tunnelOption struct {
 	ExpireInfo model.ExpireInfo
 
 	TerminalConfig *model.TerminalConfig
+	appletOpt      *model.AppletOption
 }
 
 type TunnelOption func(*tunnelOption)
@@ -153,26 +159,26 @@ func (s *Server) Create(ctx *gin.Context, opts ...TunnelOption) (sess TunnelSess
 	for _, setter := range opts {
 		setter(opt)
 	}
-	var (
-		sessionAssetName string
-		appInfo          *model.RemoteAPP
-	)
-	targetType := opt.TargetType
-	switch opt.TargetType {
-	case TypeRDP, TypeVNC:
-		sessionAssetName = opt.Asset.String()
-	case TypeRemoteApp:
-		// todo: 待完善
-		return TunnelSession{}, fmt.Errorf("remoteapp 暂时无法连接 %w: %s", ErrUnSupportedType, targetType)
-	default:
-		return TunnelSession{}, fmt.Errorf("%w: %s", ErrUnSupportedType, targetType)
+	targetType := TypeRDP
+	if opt.appletOpt != nil {
+		targetType = TypeRemoteApp
+	} else {
+		switch opt.Protocol {
+		case TypeRDP:
+		case TypeVNC:
+			targetType = TypeVNC
+		default:
+			return TunnelSession{}, fmt.Errorf("%w: %s", ErrUnSupportedProtocol, opt.Protocol)
+		}
 	}
+	sessionAssetName := opt.Asset.String()
 	sess, err = s.CreateRDPAndVNCSession(opt)
 	if err != nil {
 		return TunnelSession{}, err
 	}
 	perm := opt.Actions.Permission()
-	sess.RemoteApp = appInfo
+	sess.AppletOpts = opt.appletOpt
+	sess.RemoteApp = opt.Asset
 	sess.User = opt.User
 	sess.ExpireInfo = opt.ExpireInfo
 	sess.Permission = &perm
@@ -196,17 +202,16 @@ func (s *Server) Create(ctx *gin.Context, opts ...TunnelOption) (sess TunnelSess
 	sess.ConnectedFailedCallback = s.RegisterConnectedFailedCallback(jmsSession)
 	sess.DisConnectedCallback = s.RegisterDisConnectedCallback(jmsSession)
 	sess.FinishReplayCallback = s.RegisterFinishReplayCallback(sess)
+	sess.ReleaseAppletAccount = func() error {
+		if opt.appletOpt != nil {
+			return nil
+		}
+		return s.JmsService.ReleaseAppletAccount(opt.appletOpt.ID)
+	}
 	return
 }
 
 func (s *Server) CreateRDPAndVNCSession(opt *tunnelOption) (TunnelSession, error) {
-
-	var (
-		assetDomain *model.Domain
-	)
-	if opt.Asset.Domain != "" {
-		// todo: 待完善
-	}
 	account := opt.Account
 	newSession := TunnelSession{
 		ID:             common.UUID(),
@@ -215,7 +220,6 @@ func (s *Server) CreateRDPAndVNCSession(opt *tunnelOption) (TunnelSession, error
 		User:           opt.User,
 		Asset:          opt.Asset,
 		Platform:       opt.Platform,
-		Domain:         assetDomain,
 		TerminalConfig: opt.TerminalConfig,
 		Gateway:        opt.Gateway,
 
@@ -333,20 +337,13 @@ func (s *Server) GetCommandRecorder(tunnel *TunnelSession) *CommandRecorder {
 
 func (s *Server) GenerateCommandItem(tunnel *TunnelSession, user, input, output string,
 	riskLevel int64, createdDate time.Time) *model.Command {
-	var (
-		server string
-	)
-	if tunnel.RemoteApp != nil {
-		server = tunnel.RemoteApp.Name
-	} else {
-		server = tunnel.Asset.String()
-	}
+	server := tunnel.Asset.String()
 	return &model.Command{
 		SessionID:   tunnel.ID,
 		OrgID:       tunnel.Asset.OrgID,
 		Server:      server,
 		User:        user,
-		SystemUser:  tunnel.Account.String(),
+		Account:     tunnel.Account.String(),
 		Input:       input,
 		Output:      output,
 		Timestamp:   createdDate.Unix(),

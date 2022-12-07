@@ -27,6 +27,5 @@ type TokenUser struct {
 	SystemUserID   string `json:"system_user"`
 	SystemUserName string `json:"system_user_name"`
 
-	Type          ConnectType `json:"type"`
-	ApplicationID string      `json:"application"`
+	ApplicationID string `json:"application"`
 }
