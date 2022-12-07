@@ -66,5 +66,8 @@ const (
 )
 
 const (
-	ConnectTokenInfoURL = "/api/v1/authentication/connection-token/secret/"
+	SuperConnectTokenSecretURL = "/api/v1/authentication/super-connection-token/secret/"
+
+	SuperConnectTokenAppletOptionURL        = "/api/v1/authentication/super-connection-token/applet-option/"
+	SuperConnectAppletHostAccountReleaseURL = "/api/v1/authentication/super-connection-token/applet-account/release/"
 )

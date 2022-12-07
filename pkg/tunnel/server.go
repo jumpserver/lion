@@ -85,18 +85,25 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrBadParams.String()))
 		return
 	}
-	tunnelSession := g.SessCache.Pop(sessionId)
-	if tunnelSession == nil {
-		logger.Error("No session found")
-		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrNoSession.String()))
-		return
-	}
 	userItem, ok := ctx.Get(config.GinCtxUserKey)
 	if !ok {
 		logger.Error("No auth user found")
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrAuthUser.String()))
 		return
 	}
+
+	tunnelSession := g.SessCache.Pop(sessionId)
+	if tunnelSession == nil {
+		logger.Error("No session found")
+		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrNoSession.String()))
+		return
+	}
+	defer func() {
+		if err2 := tunnelSession.ReleaseAppletAccount(); err2 != nil {
+			logger.Errorf("Release account failed: %s", err2)
+
+		}
+	}()
 	if user := userItem.(*model.User); user.ID != tunnelSession.User.ID {
 		logger.Error("No valid auth user found")
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrAuthUser.String()))

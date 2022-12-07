@@ -15,6 +15,15 @@ type ConnectToken struct {
 	OrgName  string     `json:"org_name"`
 	Platform Platform   `json:"platform"`
 
+	ConnectMethod ConnectMethod `json:"connect_method"`
+
 	Code   string `json:"code"`
 	Detail string `json:"detail"`
+}
+
+type ConnectMethod struct {
+	Component string `json:"component"`
+	Type      string `json:"type"`
+	Label     string `json:"label"`
+	Value     string `json:"value"`
 }
