@@ -75,7 +75,7 @@ windows-amd64:lion-ui
 
 .PHONY: docker
 docker:
-	docker build --build-arg VERSION=$(VERSION) -t jumpserver/lion:$(VERSION) .
+	docker buildx build --build-arg VERSION=$(VERSION) -t jumpserver/lion:$(VERSION) .
 
 lion-ui:
 	@echo "build ui"

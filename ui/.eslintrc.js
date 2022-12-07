@@ -21,6 +21,7 @@ module.exports = {
       'singleline': 10,
       'multiline': 1
     }],
+    'vue/multi-word-component-names': 0,
     'vue/singleline-html-element-content-newline': 'off',
     'vue/multiline-html-element-content-newline': 'off',
     'vue/no-v-html': 'off',
