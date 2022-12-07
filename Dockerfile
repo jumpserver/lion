@@ -7,7 +7,7 @@ RUN set -ex \
     && yarn config set registry ${NPM_REGISTRY}
 
 WORKDIR /opt/lion/ui
-ADD ui/package.json .
+ADD ui/package.json ui/yarn.lock .
 RUN --mount=type=cache,target=/usr/local/share/.cache/yarn,sharing=locked,id=lion \
     yarn install
 
