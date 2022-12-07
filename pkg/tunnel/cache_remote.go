@@ -2,9 +2,14 @@ package tunnel
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
+	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -31,17 +36,86 @@ type Config struct {
 	Password string
 
 	DBIndex int
+
+	SentinelPassword string
+	SentinelsHost    string
+	UseSSL           bool
+	SSLCa            string
+	SSLCert          string
+	SSLKey           string
+}
+
+func getRedisTLSCfg(conf *Config) (*tls.Config, error) {
+	tlsCfg := tls.Config{}
+	if conf.SSLCert != "" && conf.SSLKey != "" {
+		cert, err := tls.LoadX509KeyPair(conf.SSLCert, conf.SSLKey)
+		if err != nil {
+			return nil, err
+		}
+		logger.Debugf("Load redis SSL cert: %s, key: %s", conf.SSLCert, conf.SSLKey)
+		tlsCfg.Certificates = []tls.Certificate{cert}
+		tlsCfg.InsecureSkipVerify = true
+	}
+	if conf.SSLCa != "" {
+		certPool := x509.NewCertPool()
+		buf, err := os.ReadFile(conf.SSLCa)
+		if err != nil {
+			return nil, err
+		}
+		logger.Debugf("Load redis SSL ca: %s", conf.SSLCa)
+		certPool.AppendCertsFromPEM(buf)
+		tlsCfg.RootCAs = certPool
+		tlsCfg.InsecureSkipVerify = true
+	}
+	return &tlsCfg, nil
 }
 
 func NewGuaTunnelRedisCache(conf Config) *GuaTunnelRedisCache {
 	if conf.Addr == "" {
 		conf.Addr = "127.0.0.1:6379"
 	}
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     conf.Addr,
-		Password: conf.Password,
-		DB:       conf.DBIndex,
-	})
+	var (
+		rdb    *redis.Client
+		tlsCfg *tls.Config
+		err    error
+		dialer func(ctx context.Context, network, addr string) (net.Conn, error)
+	)
+	if conf.UseSSL {
+		tlsCfg, err = getRedisTLSCfg(&conf)
+		if err != nil {
+			logger.Fatalf("Redis tls config failed: %s", err)
+			return nil
+		}
+		tlsDialer := tls.Dialer{Config: tlsCfg}
+		dialer = func(ctx context.Context, network, addr string) (net.Conn, error) {
+			return tlsDialer.DialContext(ctx, network, addr)
+		}
+	}
+	if conf.SentinelsHost != "" {
+		sentinels := strings.SplitN(conf.SentinelsHost, "/", 2)
+		if len(sentinels) != 2 {
+			logger.Fatalf("invalid sentinel host: %s", conf.SentinelsHost)
+		}
+		sentinelServiceName := sentinels[0]
+		sentinelHosts := strings.Split(sentinels[1], ",")
+
+		rdb = redis.NewFailoverClient(&redis.FailoverOptions{
+			MasterName:       sentinelServiceName,
+			SentinelAddrs:    sentinelHosts,
+			SentinelPassword: conf.SentinelPassword,
+			Password:         conf.Password,
+			TLSConfig:        tlsCfg,
+			Dialer:           dialer,
+		})
+	} else {
+		rdb = redis.NewClient(&redis.Options{
+			Addr:      conf.Addr,
+			Password:  conf.Password,
+			DB:        conf.DBIndex,
+			TLSConfig: tlsCfg,
+		})
+	}
+
 	if _, err := rdb.Ping(context.TODO()).Result(); err != nil {
 		logger.Fatalf("Redis ping err: %s", err)
 	}
