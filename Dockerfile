@@ -1,4 +1,5 @@
 FROM node:16.5 as ui-build
+ARG TARGETARCH
 ARG NPM_REGISTRY="https://registry.npmmirror.com"
 ENV NPM_REGISTY=$NPM_REGISTRY
 
