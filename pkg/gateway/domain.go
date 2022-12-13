@@ -114,14 +114,13 @@ func (d *DomainGateway) getAvailableGateway() bool {
 func (d *DomainGateway) createGatewaySSHClient(gateway *model.Gateway) (*gossh.Client, error) {
 	auths := make([]gossh.AuthMethod, 0, 3)
 	loginAccount := gateway.Account
-	switch loginAccount.SecretType {
-	case "ssh_key":
+	if loginAccount.IsSSHKey() {
 		if signer, err1 := gossh.ParsePrivateKey([]byte(loginAccount.Secret)); err1 == nil {
 			auths = append(auths, gossh.PublicKeys(signer))
 		} else {
 			logger.Errorf("Domain gateway Parse private key error: %s", err1)
 		}
-	default:
+	} else {
 		auths = append(auths, gossh.Password(loginAccount.Secret))
 		auths = append(auths, gossh.KeyboardInteractive(func(user, instruction string,
 			questions []string, echos []bool) (answers []string, err error) {
