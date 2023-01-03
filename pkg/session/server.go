@@ -160,6 +160,7 @@ func (s *Server) Create(ctx *gin.Context, opts ...TunnelOption) (sess TunnelSess
 		setter(opt)
 	}
 	targetType := TypeRDP
+	sessionProtocol := "rdp"
 	if opt.appletOpt != nil {
 		targetType = TypeRemoteApp
 	} else {
@@ -167,6 +168,7 @@ func (s *Server) Create(ctx *gin.Context, opts ...TunnelOption) (sess TunnelSess
 		case TypeRDP:
 		case TypeVNC:
 			targetType = TypeVNC
+			sessionProtocol = "vnc"
 		default:
 			return TunnelSession{}, fmt.Errorf("%w: %s", ErrUnSupportedProtocol, opt.Protocol)
 		}
@@ -191,7 +193,7 @@ func (s *Server) Create(ctx *gin.Context, opts ...TunnelOption) (sess TunnelSess
 		Account:    sess.Account.String(),
 		LoginFrom:  loginFrom,
 		RemoteAddr: ctx.ClientIP(),
-		Protocol:   sess.Protocol,
+		Protocol:   sessionProtocol,
 		DateStart:  sess.Created,
 		OrgID:      sess.Asset.OrgID,
 		UserID:     sess.User.ID,
