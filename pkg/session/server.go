@@ -205,7 +205,7 @@ func (s *Server) Create(ctx *gin.Context, opts ...TunnelOption) (sess TunnelSess
 	sess.DisConnectedCallback = s.RegisterDisConnectedCallback(jmsSession)
 	sess.FinishReplayCallback = s.RegisterFinishReplayCallback(sess)
 	sess.ReleaseAppletAccount = func() error {
-		if opt.appletOpt != nil {
+		if opt.appletOpt == nil {
 			return nil
 		}
 		return s.JmsService.ReleaseAppletAccount(opt.appletOpt.ID)
