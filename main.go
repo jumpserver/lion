@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -15,6 +16,7 @@ import (
 
 	ginCookie "github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 
 	"lion/pkg/common"
 	"lion/pkg/config"
@@ -110,26 +112,69 @@ func NewGuaTunnelCache() tunnel.GuaTunnelCache {
 
 func runHeartTask(jmsService *service.JMService, tunnelCache *tunnel.GuaTunnelCacheManager) {
 	// default 30s
+	ws, err := jmsService.GetWsClient()
+	if err != nil {
+		logger.Errorf("Start ws heart beat failed: %s", err)
+		time.Sleep(10 * time.Second)
+		go runHeartTask(jmsService, tunnelCache)
+		return
+	}
+	logger.Info("Start ws heart beat success")
+	done := make(chan struct{}, 2)
+	go func() {
+		defer close(done)
+		for {
+			msgType, message, err2 := ws.ReadMessage()
+			if err2 != nil {
+				logger.Errorf("Ws client read err: %s", err2)
+				return
+			}
+			switch msgType {
+			case websocket.PingMessage,
+				websocket.PongMessage:
+				logger.Debug("Ws client ping/pong Message")
+				continue
+			case websocket.CloseMessage:
+				logger.Debug("Ws client close Message")
+				return
+			}
+			var tasks []model.TerminalTask
+			if err = json.Unmarshal(message, &tasks); err != nil {
+				logger.Errorf("Ws client Unmarshal failed: %s", err)
+				continue
+			}
+			for i := range tasks {
+				task := tasks[i]
+				switch task.Name {
+				case model.TaskKillSession:
+					if connection := tunnelCache.GetBySessionId(task.Args); connection != nil {
+						connection.Terminate(task.Kwargs.TerminatedBy)
+						if err = jmsService.FinishTask(task.ID); err != nil {
+							logger.Error(err)
+						}
+					}
+				default:
+				}
+			}
+		}
+	}()
+
 	beatTicker := time.NewTicker(time.Second * 30)
 	defer beatTicker.Stop()
-	for range beatTicker.C {
-		sids := tunnelCache.RangeActiveSessionIds()
-		tasks, err := jmsService.TerminalHeartBeat(sids)
-		if err != nil {
-			logger.Error(err)
-			continue
-		}
-		for i := range tasks {
-			task := tasks[i]
-			switch task.Name {
-			case model.TaskKillSession:
-				if connection := tunnelCache.GetBySessionId(task.Args); connection != nil {
-					connection.Terminate(task.Kwargs.TerminatedBy)
-					if err = jmsService.FinishTask(task.ID); err != nil {
-						logger.Error(err)
-					}
-				}
-			default:
+	if err1 := ws.WriteJSON(GetStatusData(tunnelCache)); err1 != nil {
+		logger.Errorf("Ws heart beat data failed: %s", err1)
+	}
+	for {
+		select {
+		case <-done:
+			logger.Error("Ws heart beat closed, try reconnect after 10s")
+			time.Sleep(10 * time.Second)
+			go runHeartTask(jmsService, tunnelCache)
+			return
+		case <-beatTicker.C:
+			if err1 := ws.WriteJSON(GetStatusData(tunnelCache)); err1 != nil {
+				logger.Errorf("Ws client write stat data failed: %s", err1)
+				continue
 			}
 		}
 	}
@@ -327,6 +372,21 @@ func scanRemainReplay(jmsService *service.JMService, replayDir string) map[strin
 		return nil
 	})
 	return allRemainFiles
+}
+
+func GetStatusData(tunnelCache *tunnel.GuaTunnelCacheManager) interface{} {
+	sids := tunnelCache.RangeActiveSessionIds()
+	payload := model.HeartbeatData{
+		SessionOnlineIds: sids,
+		CpuUsed:          common.CpuLoad1Usage(),
+		MemoryUsed:       common.MemoryUsagePercent(),
+		DiskUsed:         common.DiskUsagePercent(),
+		SessionOnline:    len(sids),
+	}
+	return map[string]interface{}{
+		"type":    "status",
+		"payload": payload,
+	}
 }
 
 func MustJMService() *service.JMService {
