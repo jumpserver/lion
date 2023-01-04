@@ -33,6 +33,6 @@ func (s *JMService) ReleaseAppletAccount(accountId string) (err error) {
 	data := map[string]string{
 		"id": accountId,
 	}
-	_, err = s.authClient.Delete(SuperConnectAppletHostAccountReleaseURL, data)
+	_, err = s.authClient.Post(SuperConnectAppletHostAccountReleaseURL, data, nil)
 	return
 }
