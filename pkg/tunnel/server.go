@@ -143,7 +143,7 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 		localAddr := domainGateway.GetListenAddr()
 		conf.SetParameter(guacd.Hostname, localAddr.IP.String())
 		conf.SetParameter(guacd.Port, strconv.Itoa(localAddr.Port))
-		logger.Infof("Start domain gateway %s listen on %s:%d", tunnelSession.Domain.Name,
+		logger.Infof("Start domain gateway %s listen on %s:%d", domainGateway.SelectedGateway.Name,
 			localAddr.IP.String(), localAddr.Port)
 	}
 
