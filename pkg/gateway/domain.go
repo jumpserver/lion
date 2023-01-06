@@ -40,10 +40,10 @@ func (d *DomainGateway) run() {
 		if err != nil {
 			break
 		}
-		logger.Info("Accept new conn by domain ", d.Domain.Name)
+		logger.Infof("Accept new conn by gateway %s ", d.SelectedGateway.Name)
 		go d.handlerConn(con)
 	}
-	logger.Infof("Stop proxy by domain %s", d.Domain.Name)
+	logger.Infof("Stop proxy by gateway %s", d.SelectedGateway.Name)
 }
 
 func (d *DomainGateway) handlerConn(srcCon net.Conn) {
@@ -92,7 +92,9 @@ func (d *DomainGateway) getAvailableGateway() bool {
 		d.sshClient = sshClient
 		return true
 	}
-
+	if d.Domain == nil {
+		return false
+	}
 	for i := range d.Domain.Gateways {
 		gateway := d.Domain.Gateways[i]
 		if !gateway.Protocols.IsSupportProtocol("ssh") {
