@@ -29,8 +29,9 @@ const (
 const loginFrom = "WT"
 
 var (
-	ErrAPIService          = errors.New("connect API core err")
-	ErrUnSupportedType     = errors.New("unsupported type")
+	ErrAPIService = errors.New("connect API core err")
+	//ErrUnSupportedType     = errors.New("unsupported type")
+
 	ErrUnSupportedProtocol = errors.New("unsupported protocol")
 	ErrPermissionDeny      = errors.New("permission deny")
 )
@@ -180,7 +181,9 @@ func (s *Server) Create(ctx *gin.Context, opts ...TunnelOption) (sess TunnelSess
 	}
 	perm := opt.Actions.Permission()
 	sess.AppletOpts = opt.appletOpt
-	sess.RemoteApp = opt.Asset
+	if opt.appletOpt != nil {
+		sess.RemoteApp = &opt.appletOpt.Applet
+	}
 	sess.User = opt.User
 	sess.ExpireInfo = opt.ExpireInfo
 	sess.Permission = &perm
