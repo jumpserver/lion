@@ -14,7 +14,7 @@ type TunnelSession struct {
 	Account        *model.Account        `json:"-"`
 	User           *model.User           `json:"user"`
 	Platform       *model.Platform       `json:"platform"`
-	RemoteApp      *model.Asset          `json:"remote_app"`
+	RemoteApp      *model.Applet         `json:"remote_app"`
 	Permission     *model.Permission     `json:"permission"`
 	Domain         *model.Domain         `json:"-"`
 	Gateway        *model.Gateway        `json:"-"`
