@@ -205,7 +205,7 @@ export default {
       const vm = this
       let stream
       if (!object) {
-        stream = client.createFileStream(file.type, sanitizeFilename(file.name))
+        stream = client.createFileStream(file.type, sanitizeFilename(file.name).replace(/[:]+/g, '_'))
       } else {
         stream = object.createOutputStream(file.type, streamName)
       }
@@ -283,7 +283,7 @@ export default {
       const file = fileObj.file
       let streamName
       if (this.currentFolder) {
-        streamName = this.currentFolder.streamName + '/' + sanitizeFilename(file.name)
+        streamName = this.currentFolder.streamName + '/' + sanitizeFilename(file.name).replace(/[:]+/g, '_')
       }
       this.$log.debug('File is: ', file)
       let finished = false
