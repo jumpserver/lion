@@ -35,3 +35,15 @@ func JmsCookieAuth(jmsService *service.JMService) gin.HandlerFunc {
 		ctx.Set(config.GinCtxUserKey, user)
 	}
 }
+
+func HTTPMiddleDebugAuth() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		switch ctx.ClientIP() {
+		case "127.0.0.1", "localhost":
+			return
+		default:
+			_ = ctx.AbortWithError(http.StatusBadRequest, fmt.Errorf("invalid host %s", ctx.ClientIP()))
+			return
+		}
+	}
+}

@@ -19,14 +19,11 @@ module.exports = {
   rules: {
     'vue/max-attributes-per-line': [2, {
       'singleline': 10,
-      'multiline': {
-        'max': 1,
-        'allowFirstLine': false
-      }
+      'multiline': 1
     }],
+    'vue/multi-word-component-names': 0,
     'vue/singleline-html-element-content-newline': 'off',
     'vue/multiline-html-element-content-newline': 'off',
-    'vue/name-property-casing': ['error', 'PascalCase'],
     'vue/no-v-html': 'off',
     'accessor-pairs': 2,
     'arrow-spacing': [2, {

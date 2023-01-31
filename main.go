@@ -1,11 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"net/http/pprof"
@@ -17,6 +16,7 @@ import (
 
 	ginCookie "github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 
 	"lion/pkg/common"
 	"lion/pkg/config"
@@ -79,13 +79,31 @@ func main() {
 }
 
 func NewGuaTunnelCache() tunnel.GuaTunnelCache {
+	cfg := config.GlobalConfig
 	switch strings.ToLower(config.GlobalConfig.ShareRoomType) {
 	case config.ShareTypeRedis:
+		existFile := func(path string) string {
+			if info, err2 := os.Stat(path); err2 == nil && !info.IsDir() {
+				return path
+			}
+			return ""
+		}
+		sslCaPath := filepath.Join(cfg.CertsFolderPath, "redis_ca.crt")
+		sslCertPath := filepath.Join(cfg.CertsFolderPath, "redis_client.crt")
+		sslKeyPath := filepath.Join(cfg.CertsFolderPath, "redis_client.key")
 		return tunnel.NewGuaTunnelRedisCache(tunnel.Config{
-			Addr: net.JoinHostPort(config.GlobalConfig.RedisHost,
-				strconv.Itoa(config.GlobalConfig.RedisPort)),
-			Password: config.GlobalConfig.RedisPassword,
-			DBIndex:  config.GlobalConfig.RedisDBIndex,
+			Addr: net.JoinHostPort(cfg.RedisHost,
+				strconv.Itoa(cfg.RedisPort)),
+			Password: cfg.RedisPassword,
+			DBIndex:  cfg.RedisDBIndex,
+
+			SentinelsHost:    cfg.RedisSentinelHosts,
+			SentinelPassword: cfg.RedisSentinelPassword,
+
+			UseSSL:  cfg.RedisUseSSL,
+			SSLCa:   existFile(sslCaPath),
+			SSLCert: existFile(sslCertPath),
+			SSLKey:  existFile(sslKeyPath),
 		})
 	default:
 		return tunnel.NewLocalTunnelLocalCache()
@@ -94,26 +112,69 @@ func NewGuaTunnelCache() tunnel.GuaTunnelCache {
 
 func runHeartTask(jmsService *service.JMService, tunnelCache *tunnel.GuaTunnelCacheManager) {
 	// default 30s
+	ws, err := jmsService.GetWsClient()
+	if err != nil {
+		logger.Errorf("Start ws heart beat failed: %s", err)
+		time.Sleep(10 * time.Second)
+		go runHeartTask(jmsService, tunnelCache)
+		return
+	}
+	logger.Info("Start ws heart beat success")
+	done := make(chan struct{}, 2)
+	go func() {
+		defer close(done)
+		for {
+			msgType, message, err2 := ws.ReadMessage()
+			if err2 != nil {
+				logger.Errorf("Ws client read err: %s", err2)
+				return
+			}
+			switch msgType {
+			case websocket.PingMessage,
+				websocket.PongMessage:
+				logger.Debug("Ws client ping/pong Message")
+				continue
+			case websocket.CloseMessage:
+				logger.Debug("Ws client close Message")
+				return
+			}
+			var tasks []model.TerminalTask
+			if err = json.Unmarshal(message, &tasks); err != nil {
+				logger.Errorf("Ws client Unmarshal failed: %s", err)
+				continue
+			}
+			for i := range tasks {
+				task := tasks[i]
+				switch task.Name {
+				case model.TaskKillSession:
+					if connection := tunnelCache.GetBySessionId(task.Args); connection != nil {
+						connection.Terminate(task.Kwargs.TerminatedBy)
+						if err = jmsService.FinishTask(task.ID); err != nil {
+							logger.Error(err)
+						}
+					}
+				default:
+				}
+			}
+		}
+	}()
+
 	beatTicker := time.NewTicker(time.Second * 30)
 	defer beatTicker.Stop()
-	for range beatTicker.C {
-		sids := tunnelCache.RangeActiveSessionIds()
-		tasks, err := jmsService.TerminalHeartBeat(sids)
-		if err != nil {
-			logger.Error(err)
-			continue
-		}
-		for i := range tasks {
-			task := tasks[i]
-			switch task.Name {
-			case model.TaskKillSession:
-				if connection := tunnelCache.GetBySessionId(task.Args); connection != nil {
-					connection.Terminate(task.Kwargs.TerminatedBy)
-					if err = jmsService.FinishTask(task.ID); err != nil {
-						logger.Error(err)
-					}
-				}
-			default:
+	if err1 := ws.WriteJSON(GetStatusData(tunnelCache)); err1 != nil {
+		logger.Errorf("Ws heart beat data failed: %s", err1)
+	}
+	for {
+		select {
+		case <-done:
+			logger.Error("Ws heart beat closed, try reconnect after 10s")
+			time.Sleep(10 * time.Second)
+			go runHeartTask(jmsService, tunnelCache)
+			return
+		case <-beatTicker.C:
+			if err1 := ws.WriteJSON(GetStatusData(tunnelCache)); err1 != nil {
+				logger.Errorf("Ws client write stat data failed: %s", err1)
+				continue
 			}
 		}
 	}
@@ -130,7 +191,7 @@ func runCleanDriverDisk(tunnelCache *tunnel.GuaTunnelCacheManager) {
 	defer cleanDriveTicker.Stop()
 	drivePath := config.GlobalConfig.DrivePath
 	for range cleanDriveTicker.C {
-		folders, err := ioutil.ReadDir(drivePath)
+		folders, err := os.ReadDir(drivePath)
 		if err != nil {
 			logger.Error(err)
 			continue
@@ -153,36 +214,47 @@ func registerRouter(jmsService *service.JMService, tunnelService *tunnel.Guacamo
 		gin.SetMode(gin.ReleaseMode)
 	}
 	eng := gin.New()
-	trustedProxies := []string{"0.0.0.0/0", "::/0"}
-	if err := eng.SetTrustedProxies(trustedProxies); err != nil {
-		log.Fatal(err)
-	}
 	eng.Use(gin.Recovery())
 	eng.Use(gin.Logger())
 
 	lionGroup := eng.Group("/lion")
 	cookieStore := ginCookie.NewStore([]byte(common.RandomStr(32)))
 	lionGroup.Use(middleware.GinSessionAuth(cookieStore))
+	now := time.Now()
 	// vue的设置
 	{
-		lionGroup.Static("/assets", "./ui/lion/assets")
-		lionGroup.StaticFile("/favicon.ico", "./ui/lion/favicon.ico")
-		lionGroup.StaticFile("/", "./ui/lion/index.html")
+		lionGroup.Static("/assets", "./ui/dist/assets")
+		lionGroup.StaticFile("/favicon.ico", "./ui/dist/favicon.ico")
+
 		lionGroup.GET("/health/", func(ctx *gin.Context) {
 			status := make(map[string]interface{})
 			status["timestamp"] = time.Now().UTC()
+			status["uptime"] = time.Now().Sub(now).Minutes()
 			ctx.JSON(http.StatusOK, status)
 		})
-		lionGroup.StaticFile("/monitor", "./ui/lion/index.html")
 	}
-
-	// token 使用 lion 自带认证
-	tokenGroup := lionGroup.Group("/token")
 	{
+		connectGroup := lionGroup.Group("/connect")
+		connectGroup.Use(middleware.JmsCookieAuth(jmsService))
+		connectGroup.GET("/", func(ctx *gin.Context) {
+			ctx.File("./ui/dist/index.html")
+		})
+	}
+	{
+		monitorGroup := lionGroup.Group("/monitor")
+		monitorGroup.Use(middleware.JmsCookieAuth(jmsService))
+		monitorGroup.Any("", func(ctx *gin.Context) {
+			ctx.File("./ui/dist/index.html")
+		})
+	}
+	// token 使用 lion 自带认证
+
+	{
+		tokenGroup := lionGroup.Group("/token")
+		tokenGroup.Use(middleware.SessionAuth(jmsService))
 		tokenGroup.POST("/session", tunnelService.TokenSession)
 		tokenGroup.DELETE("/sessions/:sid/", tunnelService.DeleteSession)
 		tokenTunnels := tokenGroup.Group("/tunnels")
-		tokenTunnels.Use(middleware.SessionAuth(jmsService))
 		tokenTunnels.GET("/:tid/streams/:index/:filename", tunnelService.DownloadFile)
 		tokenTunnels.POST("/:tid/streams/:index/:filename", tunnelService.UploadFile)
 	}
@@ -199,9 +271,9 @@ func registerRouter(jmsService *service.JMService, tunnelService *tunnel.Guacamo
 			middleware.SessionAuth(jmsService)).GET("/", tunnelService.Connect)
 	}
 
-	apiGroup := lionGroup.Group("/api")
-	apiGroup.Use(middleware.JmsCookieAuth(jmsService))
 	{
+		apiGroup := lionGroup.Group("/api")
+		apiGroup.Use(middleware.JmsCookieAuth(jmsService))
 		apiGroup.POST("/session", tunnelService.CreateSession)
 		apiGroup.DELETE("/sessions/:sid/", tunnelService.DeleteSession)
 		apiGroup.GET("/tunnels/:tid/streams/:index/:filename", tunnelService.DownloadFile)
@@ -210,6 +282,7 @@ func registerRouter(jmsService *service.JMService, tunnelService *tunnel.Guacamo
 
 	pprofRouter := eng.Group("/debug/pprof")
 	{
+		pprofRouter.Use(middleware.HTTPMiddleDebugAuth())
 		pprofRouter.GET("/", gin.WrapF(pprof.Index))
 		pprofRouter.GET("/allocs", gin.WrapF(pprof.Handler("allocs").ServeHTTP))
 		pprofRouter.GET("/cmdline", gin.WrapF(pprof.Cmdline))
@@ -299,6 +372,21 @@ func scanRemainReplay(jmsService *service.JMService, replayDir string) map[strin
 		return nil
 	})
 	return allRemainFiles
+}
+
+func GetStatusData(tunnelCache *tunnel.GuaTunnelCacheManager) interface{} {
+	sids := tunnelCache.RangeActiveSessionIds()
+	payload := model.HeartbeatData{
+		SessionOnlineIds: sids,
+		CpuUsed:          common.CpuLoad1Usage(),
+		MemoryUsed:       common.MemoryUsagePercent(),
+		DiskUsed:         common.DiskUsagePercent(),
+		SessionOnline:    len(sids),
+	}
+	return map[string]interface{}{
+		"type":    "status",
+		"payload": payload,
+	}
 }
 
 func MustJMService() *service.JMService {

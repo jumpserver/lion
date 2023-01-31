@@ -26,8 +26,9 @@ type DomainGateway struct {
 	DstAddr string // 10.0.0.1:3389
 
 	sshClient       *gossh.Client
-	selectedGateway *model.Gateway
-	ln              net.Listener
+	SelectedGateway *model.Gateway
+
+	ln net.Listener
 
 	once sync.Once
 }
@@ -39,10 +40,10 @@ func (d *DomainGateway) run() {
 		if err != nil {
 			break
 		}
-		logger.Info("Accept new conn by domain ", d.Domain.Name)
+		logger.Infof("Accept new conn by gateway %s ", d.SelectedGateway.Name)
 		go d.handlerConn(con)
 	}
-	logger.Infof("Stop proxy by domain %s", d.Domain.Name)
+	logger.Infof("Stop proxy by gateway %s", d.SelectedGateway.Name)
 }
 
 func (d *DomainGateway) handlerConn(srcCon net.Conn) {
@@ -81,49 +82,63 @@ func (d *DomainGateway) GetListenAddr() *net.TCPAddr {
 }
 
 func (d *DomainGateway) getAvailableGateway() bool {
+	if d.SelectedGateway != nil {
+		sshClient, err := d.createGatewaySSHClient(d.SelectedGateway)
+		if err != nil {
+			logger.Errorf("Dial select gateway %s err: %s ", d.SelectedGateway.Name, err)
+			return false
+		}
+		logger.Debugf("Dial select gateway %s success", d.SelectedGateway.Name)
+		d.sshClient = sshClient
+		return true
+	}
+	if d.Domain == nil {
+		return false
+	}
 	for i := range d.Domain.Gateways {
 		gateway := d.Domain.Gateways[i]
-		if gateway.Protocol == "ssh" {
-			logger.Info("Try ssh dial gateway ", gateway.Name)
-			auths := make([]gossh.AuthMethod, 0, 3)
-			if gateway.Password != "" {
-				auths = append(auths, gossh.Password(gateway.Password))
-				auths = append(auths, gossh.KeyboardInteractive(func(user, instruction string,
-					questions []string, echos []bool) (answers []string, err error) {
-					return []string{gateway.Password}, nil
-				}))
-			}
-			if gateway.PrivateKey != "" {
-				if signer, err := gossh.ParsePrivateKey([]byte(gateway.PrivateKey)); err == nil {
-					auths = append(auths, gossh.PublicKeys(signer))
-				} else {
-					// 做一层兼容, 把密码当作私钥的 passphere
-					if signer, err = gossh.ParsePrivateKeyWithPassphrase([]byte(gateway.PrivateKey),
-						[]byte(gateway.Password)); err == nil {
-						auths = append(auths, gossh.PublicKeys(signer))
-					}
-				}
-			}
-			sshConfig := gossh.ClientConfig{
-				User:            gateway.Username,
-				Auth:            auths,
-				HostKeyCallback: gossh.InsecureIgnoreHostKey(),
-				Timeout:         miniTimeout,
-			}
-			addr := net.JoinHostPort(gateway.IP, strconv.Itoa(gateway.Port))
-			sshClient, err := gossh.Dial("tcp", addr, &sshConfig)
-			if err != nil {
-				logger.Errorf("Failed ssh dial %s: %s", gateway.Name, err.Error())
-				continue
-			}
-			d.sshClient = sshClient
-			d.selectedGateway = &gateway
-			return true
+		if !gateway.Protocols.IsSupportProtocol("ssh") {
+			continue
 		}
+		logger.Info("Try ssh dial gateway ", gateway.Name)
+		sshClient, err := d.createGatewaySSHClient(&gateway)
+		if err != nil {
+			logger.Errorf("Failed ssh dial %s: %s", gateway.Name, err.Error())
+			continue
+		}
+		logger.Infof("Dial gateway %s success", gateway.Name)
+		d.sshClient = sshClient
+		d.SelectedGateway = &gateway
+		return true
 	}
 	return false
 }
-
+func (d *DomainGateway) createGatewaySSHClient(gateway *model.Gateway) (*gossh.Client, error) {
+	auths := make([]gossh.AuthMethod, 0, 3)
+	loginAccount := gateway.Account
+	if loginAccount.IsSSHKey() {
+		if signer, err1 := gossh.ParsePrivateKey([]byte(loginAccount.Secret)); err1 == nil {
+			auths = append(auths, gossh.PublicKeys(signer))
+		} else {
+			logger.Errorf("Domain gateway Parse private key error: %s", err1)
+		}
+	} else {
+		auths = append(auths, gossh.Password(loginAccount.Secret))
+		auths = append(auths, gossh.KeyboardInteractive(func(user, instruction string,
+			questions []string, echos []bool) (answers []string, err error) {
+			return []string{loginAccount.Secret}, nil
+		}))
+	}
+	sshConfig := gossh.ClientConfig{
+		User:            loginAccount.Username,
+		Auth:            auths,
+		HostKeyCallback: gossh.InsecureIgnoreHostKey(),
+		Timeout:         miniTimeout,
+	}
+	port := gateway.Protocols.GetProtocolPort("ssh")
+	addr := net.JoinHostPort(gateway.Address, strconv.Itoa(port))
+	return gossh.Dial("tcp", addr, &sshConfig)
+}
 func (d *DomainGateway) Stop() {
 	d.closeOnce()
 }

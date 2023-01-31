@@ -22,13 +22,16 @@ const (
 	TypeRDP       = "rdp"
 	TypeVNC       = "vnc"
 	TypeRemoteApp = "remoteapp"
+
+	connectApplet = "applet"
 )
 
 const loginFrom = "WT"
 
 var (
-	ErrAPIService          = errors.New("connect API core err")
-	ErrUnSupportedType     = errors.New("unsupported type")
+	ErrAPIService = errors.New("connect API core err")
+	//ErrUnSupportedType     = errors.New("unsupported type")
+
 	ErrUnSupportedProtocol = errors.New("unsupported protocol")
 	ErrPermissionDeny      = errors.New("permission deny")
 )
@@ -38,151 +41,199 @@ type Server struct {
 }
 
 func (s *Server) CreatByToken(ctx *gin.Context, token string) (TunnelSession, error) {
-	tokenUser, err := s.JmsService.GetTokenAsset(token)
+	connectToken, err := s.JmsService.GetConnectTokenInfo(token)
 	if err != nil {
 		return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
 	}
-	user, err := s.JmsService.GetUserById(tokenUser.UserID)
+	cfg, err := s.JmsService.GetTerminalConfig()
 	if err != nil {
 		return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
 	}
-	targetType := TypeRDP
-	targetId := tokenUser.AssetID
-	switch tokenUser.Type {
-	case model.ConnectApplication:
-		targetType = TypeRemoteApp
-		targetId = tokenUser.ApplicationID
-	case model.ConnectAsset:
-	}
-	systemUserId := tokenUser.SystemUserID
-	return s.Create(ctx, user, targetType, targetId, systemUserId)
-}
-
-func (s *Server) Create(ctx *gin.Context, user *model.User, targetType, targetId, systemUserId string) (sess TunnelSession, err error) {
-	sysUser, err := s.JmsService.GetSystemUserById(systemUserId)
-	if err != nil {
-		return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
-	}
-	switch sysUser.Protocol {
-	case rdp, vnc:
-	default:
-		return TunnelSession{}, fmt.Errorf("%w: %s", ErrUnSupportedProtocol, sysUser.Protocol)
+	if !connectToken.Actions.EnableConnect() {
+		return TunnelSession{}, ErrPermissionDeny
 	}
 	var (
-		sessionAssetName string
-		assetInfo        *model.Asset
-		appInfo          *model.RemoteAPP
-
-		systemUserAuth *model.SystemUserAuthInfo
-
-		validatePermission func() (model.ExpireInfo, error)
+		appletOpt *model.AppletOption
 	)
-	switch targetType {
-	case TypeRDP, TypeVNC:
-		asset, err := s.JmsService.GetAssetById(targetId)
+	if connectToken.ConnectMethod.Type == connectApplet {
+		appletOptions, err := s.JmsService.GetConnectTokenAppletOption(token)
 		if err != nil {
 			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
 		}
-		validatePermission = func() (model.ExpireInfo, error) {
-			return s.JmsService.ValidateAssetPermission(user.ID, asset.ID, sysUser.ID)
-		}
-		sysUserAuthInfo, err := s.JmsService.GetAssetSysUserAuthInfo(sysUser.ID, asset.ID, user.ID, user.Username)
-		if err != nil {
-			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
-		}
-		assetInfo = &asset
-		systemUserAuth = &sysUserAuthInfo
-		sessionAssetName = asset.String()
-	case TypeRemoteApp:
-		remoteApp, err := s.JmsService.GetRemoteApp(targetId)
-		if err != nil {
-			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
-		}
-		asset, err := s.JmsService.GetAssetById(remoteApp.AssetId)
-		if err != nil {
-			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
-		}
-		validatePermission = func() (model.ExpireInfo, error) {
-			return s.JmsService.ValidateRemoteAppPermission(user.ID, remoteApp.ID, sysUser.ID)
-		}
-		sysUserAuthInfo, err := s.JmsService.GetApplicationSysUserAuthInfo(sysUser.ID, remoteApp.ID, user.ID, user.Username)
-		if err != nil {
-			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
-		}
-		appInfo = &remoteApp
-		assetInfo = &asset
-		systemUserAuth = &sysUserAuthInfo
-		sessionAssetName = remoteApp.Name
-	default:
-		return TunnelSession{}, fmt.Errorf("%w: %s", ErrUnSupportedType, targetType)
+		appletOpt = &appletOptions
+		logger.Infof("Connect applet(%s) use host(%s) account (%s)", connectToken.Asset.String(),
+			appletOpt.Host.String(), appletOpt.Account.String())
 	}
-	expireInfo, err := validatePermission()
-	if err != nil {
-		logger.Error(err)
+	opts := make([]TunnelOption, 0, 10)
+	opts = append(opts, WithProtocol(connectToken.Protocol))
+	opts = append(opts, WithUser(&connectToken.User))
+	opts = append(opts, WithActions(connectToken.Actions))
+	opts = append(opts, WithExpireInfo(connectToken.ExpireAt))
+	opts = append(opts, WithProtocol(connectToken.Protocol))
+	opts = append(opts, WithAsset(&connectToken.Asset))
+	opts = append(opts, WithAccount(&connectToken.Account))
+	opts = append(opts, WithPlatform(&connectToken.Platform))
+	opts = append(opts, WithGateway(connectToken.Gateway))
+	opts = append(opts, WithTerminalConfig(&cfg))
+	opts = append(opts, WithAppletOption(appletOpt))
+	return s.Create(ctx, opts...)
+}
+
+func WithActions(actions model.Actions) TunnelOption {
+	return func(tunnel *tunnelOption) {
+		tunnel.Actions = actions
 	}
-	if !expireInfo.EnableConnect() {
-		return TunnelSession{}, fmt.Errorf("%w: connect deny", ErrPermissionDeny)
+}
+func WithExpireInfo(expireInfo model.ExpireInfo) TunnelOption {
+	return func(tunnel *tunnelOption) {
+		tunnel.ExpireInfo = expireInfo
 	}
-	sess, err = s.CreateRDPAndVNCSession(user, assetInfo, &sysUser)
+}
+
+func WithProtocol(protocol string) TunnelOption {
+	return func(tunnel *tunnelOption) {
+		tunnel.Protocol = protocol
+	}
+}
+
+func WithAsset(asset *model.Asset) TunnelOption {
+	return func(tunnel *tunnelOption) {
+		tunnel.Asset = asset
+	}
+}
+
+func WithAccount(account *model.Account) TunnelOption {
+	return func(tunnel *tunnelOption) {
+		tunnel.Account = account
+	}
+}
+
+func WithPlatform(platform *model.Platform) TunnelOption {
+	return func(tunnel *tunnelOption) {
+		tunnel.Platform = platform
+	}
+}
+
+func WithGateway(gateway *model.Gateway) TunnelOption {
+	return func(tunnel *tunnelOption) {
+		tunnel.Gateway = gateway
+	}
+}
+
+func WithTerminalConfig(cfg *model.TerminalConfig) TunnelOption {
+	return func(tunnel *tunnelOption) {
+		tunnel.TerminalConfig = cfg
+	}
+}
+
+func WithAppletOption(appletOpt *model.AppletOption) TunnelOption {
+	return func(tunnel *tunnelOption) {
+		tunnel.appletOpt = appletOpt
+	}
+}
+
+func WithUser(user *model.User) TunnelOption {
+	return func(tunnel *tunnelOption) {
+		tunnel.User = user
+	}
+}
+
+type tunnelOption struct {
+	Protocol   string
+	User       *model.User
+	Asset      *model.Asset
+	Account    *model.Account
+	Platform   *model.Platform
+	Domain     *model.Domain
+	Gateway    *model.Gateway
+	Actions    model.Actions
+	ExpireInfo model.ExpireInfo
+
+	TerminalConfig *model.TerminalConfig
+	appletOpt      *model.AppletOption
+}
+
+type TunnelOption func(*tunnelOption)
+
+func (s *Server) Create(ctx *gin.Context, opts ...TunnelOption) (sess TunnelSession, err error) {
+	opt := &tunnelOption{}
+	for _, setter := range opts {
+		setter(opt)
+	}
+	targetType := TypeRDP
+	sessionProtocol := "rdp"
+	if opt.appletOpt != nil {
+		targetType = TypeRemoteApp
+	} else {
+		switch opt.Protocol {
+		case TypeRDP:
+		case TypeVNC:
+			targetType = TypeVNC
+			sessionProtocol = "vnc"
+		default:
+			return TunnelSession{}, fmt.Errorf("%w: %s", ErrUnSupportedProtocol, opt.Protocol)
+		}
+	}
+	sessionAssetName := opt.Asset.String()
+	sess, err = s.CreateRDPAndVNCSession(opt)
 	if err != nil {
 		return TunnelSession{}, err
 	}
-	sess.RemoteApp = appInfo
-	sess.ExpireInfo = &expireInfo
-	sess.Permission = &expireInfo.Permission
-	sess.SystemUser = systemUserAuth
-	sess.ActionPerm = NewActionPermission(&expireInfo.Permission, targetType)
+	perm := opt.Actions.Permission()
+	sess.AppletOpts = opt.appletOpt
+	if opt.appletOpt != nil {
+		sess.RemoteApp = &opt.appletOpt.Applet
+	}
+	sess.User = opt.User
+	sess.ExpireInfo = opt.ExpireInfo
+	sess.Permission = &perm
+	sess.Account = opt.Account
+	sess.ActionPerm = NewActionPermission(&perm, targetType)
 	jmsSession := model.Session{
-		ID:           sess.ID,
-		User:         sess.User.String(),
-		Asset:        sessionAssetName,
-		SystemUser:   sess.SystemUser.String(),
-		LoginFrom:    loginFrom,
-		RemoteAddr:   ctx.ClientIP(),
-		Protocol:     sess.SystemUser.Protocol,
-		DateStart:    sess.Created,
-		OrgID:        sess.Asset.OrgID,
-		UserID:       sess.User.ID,
-		AssetID:      sess.Asset.ID,
-		SystemUserID: sess.SystemUser.ID,
+		ID:         sess.ID,
+		User:       sess.User.String(),
+		Asset:      sessionAssetName,
+		Account:    sess.Account.String(),
+		LoginFrom:  loginFrom,
+		RemoteAddr: ctx.ClientIP(),
+		Protocol:   sessionProtocol,
+		DateStart:  sess.Created,
+		OrgID:      sess.Asset.OrgID,
+		UserID:     sess.User.ID,
+		AssetID:    sess.Asset.ID,
 	}
 	sess.ConnectedCallback = s.RegisterConnectedCallback(jmsSession)
 	sess.ConnectedSuccessCallback = s.RegisterConnectedSuccessCallback(jmsSession)
 	sess.ConnectedFailedCallback = s.RegisterConnectedFailedCallback(jmsSession)
 	sess.DisConnectedCallback = s.RegisterDisConnectedCallback(jmsSession)
 	sess.FinishReplayCallback = s.RegisterFinishReplayCallback(sess)
+	sess.ReleaseAppletAccount = func() error {
+		if opt.appletOpt == nil {
+			return nil
+		}
+		return s.JmsService.ReleaseAppletAccount(opt.appletOpt.ID)
+	}
 	return
 }
 
-func (s *Server) CreateRDPAndVNCSession(user *model.User, asset *model.Asset, systemUser *model.SystemUser) (TunnelSession, error) {
-	platform, err := s.JmsService.GetAssetPlatform(asset.ID)
-	if err != nil {
-		return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
-	}
-	terminal, err := s.JmsService.GetTerminalConfig()
-	if err != nil {
-		return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
-	}
-	var (
-		assetDomain *model.Domain
-	)
-	if asset.Domain != "" {
-		domain, err := s.JmsService.GetDomainGateways(asset.Domain)
-		if err != nil {
-			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
-		}
-		assetDomain = &domain
-	}
+func (s *Server) CreateRDPAndVNCSession(opt *tunnelOption) (TunnelSession, error) {
+	account := opt.Account
 	newSession := TunnelSession{
 		ID:             common.UUID(),
+		Protocol:       opt.Protocol,
 		Created:        common.NewNowUTCTime(),
-		User:           user,
-		Asset:          asset,
-		Platform:       &platform,
-		Domain:         assetDomain,
-		TerminalConfig: &terminal,
+		User:           opt.User,
+		Asset:          opt.Asset,
+		Platform:       opt.Platform,
+		TerminalConfig: opt.TerminalConfig,
+		Gateway:        opt.Gateway,
 
-		DisplaySystemUser: systemUser,
+		DisplayAccount: &model.Account{
+			BaseAccount: model.BaseAccount{
+				Name:       account.Name,
+				Username:   account.Username,
+				Secret:     "",
+				SecretType: account.SecretType}},
 	}
 	return newSession, nil
 }
@@ -291,25 +342,18 @@ func (s *Server) GetCommandRecorder(tunnel *TunnelSession) *CommandRecorder {
 
 func (s *Server) GenerateCommandItem(tunnel *TunnelSession, user, input, output string,
 	riskLevel int64, createdDate time.Time) *model.Command {
-	var (
-		server string
-	)
-	if tunnel.RemoteApp != nil {
-		server = tunnel.RemoteApp.Name
-	} else {
-		server = tunnel.Asset.String()
-	}
+	server := tunnel.Asset.String()
 	return &model.Command{
 		SessionID:   tunnel.ID,
-		OrgID:       tunnel.SystemUser.OrgId,
+		OrgID:       tunnel.Asset.OrgID,
 		Server:      server,
 		User:        user,
-		SystemUser:  tunnel.SystemUser.String(),
+		Account:     tunnel.Account.String(),
 		Input:       input,
 		Output:      output,
 		Timestamp:   createdDate.Unix(),
 		RiskLevel:   riskLevel,
-		Protocol:    tunnel.SystemUser.Protocol,
+		Protocol:    tunnel.Protocol,
 		DateCreated: createdDate.UTC(),
 	}
 }

@@ -9,7 +9,7 @@ type Command struct {
 	Output      string    `json:"output"`
 	User        string    `json:"user"`
 	Server      string    `json:"asset"`
-	SystemUser  string    `json:"system_user"`
+	Account     string    `json:"account"`
 	Timestamp   int64     `json:"timestamp"`
 	RiskLevel   int64     `json:"risk_level"`
 	Protocol    string    `json:"protocol"`
