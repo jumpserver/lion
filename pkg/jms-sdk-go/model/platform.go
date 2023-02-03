@@ -5,14 +5,15 @@ type Platform struct {
 	ID     int    `json:"id"`
 	Name   string `json:"name"`
 
-	Protocols     []PlatformProtocol `json:"protocols"`
-	Category      LabelValue         `json:"category"`
-	Charset       LabelValue         `json:"charset"`
-	Type          LabelValue         `json:"type"`
-	SuEnabled     bool               `json:"su_enabled"`
-	SuMethod      string             `json:"su_method"`
-	DomainEnabled bool               `json:"domain_enabled"`
-	Comment       string             `json:"comment"`
+	Protocols []PlatformProtocol `json:"protocols"`
+	Category  LabelValue         `json:"category"`
+	Charset   LabelValue         `json:"charset"`
+	Type      LabelValue         `json:"type"`
+	SuEnabled bool               `json:"su_enabled"`
+
+	//SuMethod      string             `json:"su_method"`
+	//DomainEnabled bool   `json:"domain_enabled"`
+	Comment string `json:"comment"`
 }
 
 func (p *Platform) GetProtocolSetting(protocol string) (PlatformProtocol, bool) {
