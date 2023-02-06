@@ -115,6 +115,13 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrAPIFailed.String()))
 		return
 	}
+	if tunnelSession.AuthInfo.Ticket != nil {
+		if err2 := g.JmsService.CreateSessionTicketRelation(tunnelSession.ID,
+			tunnelSession.AuthInfo.Ticket.ID); err2 != nil {
+			logger.Errorf("Create Session %s Ticket %s relation err: %s", tunnelSession.ID,
+				tunnelSession.AuthInfo.Ticket.ID, err2)
+		}
+	}
 	info := g.getClientInfo(ctx)
 	conf := tunnelSession.GuaConfiguration()
 	// 设置网域网关，替换本地。 兼容云平台同步 配置网域，但网关配置为空的情况
@@ -165,6 +172,7 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	if err := tunnelSession.ConnectedSuccessCallback(); err != nil {
 		logger.Errorf("Update session connect status failed %+v", err)
 	}
+
 	conn := Connection{
 		Sess:        tunnelSession,
 		guacdTunnel: tunnel,
