@@ -209,6 +209,7 @@ func (s *Server) Create(ctx *gin.Context, opts ...TunnelOption) (sess TunnelSess
 		OrgID:      sess.Asset.OrgID,
 		UserID:     sess.User.ID,
 		AssetID:    sess.Asset.ID,
+		AccountID:  opt.Account.ID,
 	}
 	sess.ConnectedCallback = s.RegisterConnectedCallback(jmsSession)
 	sess.ConnectedSuccessCallback = s.RegisterConnectedSuccessCallback(jmsSession)
