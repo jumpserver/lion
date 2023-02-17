@@ -20,7 +20,7 @@ export function ConvertAPIError(errMsg) {
     return errMsg
   }
   const errArray = errMsg.split(':')
-  if (errArray.length > 1) {
+  if (errArray.length >= 1) {
     return APIErrorType[errArray[0]] || errMsg
   }
   return errMsg
