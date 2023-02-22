@@ -17,6 +17,9 @@ type ConnectToken struct {
 
 	ConnectMethod ConnectMethod `json:"connect_method"`
 
+	Ticket     *ObjectId   `json:"from_ticket,omitempty"`
+	TicketInfo interface{} `json:"from_ticket_info,omitempty"`
+
 	Code   string `json:"code"`
 	Detail string `json:"detail"`
 }
@@ -26,4 +29,8 @@ type ConnectMethod struct {
 	Type      string `json:"type"`
 	Label     string `json:"label"`
 	Value     string `json:"value"`
+}
+
+type ObjectId struct {
+	ID string `json:"id"`
 }

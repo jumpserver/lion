@@ -5,15 +5,18 @@ import (
 	"strings"
 )
 
-type Specific struct {
+type SecretInfo struct {
+	CaCert     string `json:"ca_cert"`
+	ClientCert string `json:"client_cert"`
+	ClientKey  string `json:"client_key"`
+}
+
+type SpecInfo struct {
 	// database
 	DBName string `json:"db_name"`
 
-	UseSSL           bool   `json:"use_ssl"`
-	CaCert           string `json:"ca_cert"`
-	ClientCert       string `json:"client_cert"`
-	CertKey          string `json:"cert_key"`
-	AllowInvalidCert bool   `json:"allow_invalid_cert"`
+	UseSSL           bool `json:"use_ssl"`
+	AllowInvalidCert bool `json:"allow_invalid_cert"`
 
 	// web
 	Autofill         string `json:"autofill"`
@@ -34,13 +37,14 @@ type Protocol struct {
 }
 
 type Asset struct {
-	ID        string       `json:"id"`
-	Address   string       `json:"address"`
-	Name      string       `json:"name"`
-	OrgID     string       `json:"org_id"`
-	Protocols []Protocol   `json:"protocols"`
-	Specific  Specific     `json:"specific"`
-	Platform  BasePlatform `json:"platform"`
+	ID         string       `json:"id"`
+	Address    string       `json:"address"`
+	Name       string       `json:"name"`
+	OrgID      string       `json:"org_id"`
+	Protocols  []Protocol   `json:"protocols"`
+	SpecInfo   SpecInfo     `json:"spec_info"`
+	SecretInfo SecretInfo   `json:"secret_info"`
+	Platform   BasePlatform `json:"platform"`
 
 	Domain   string `json:"domain"` // 是否需要走网域
 	Comment  string `json:"comment"`

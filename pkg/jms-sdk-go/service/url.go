@@ -34,6 +34,10 @@ const (
 )
 
 const (
+	TicketSessionURL = "/api/v1/tickets/ticket-session-relation/"
+)
+
+const (
 	SuperConnectTokenSecretURL = "/api/v1/authentication/super-connection-token/secret/"
 
 	SuperConnectTokenAppletOptionURL        = "/api/v1/authentication/super-connection-token/applet-option/"

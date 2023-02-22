@@ -24,6 +24,7 @@ type TunnelSession struct {
 	DisplayAccount *model.Account        `json:"system_user"`
 
 	AppletOpts *model.AppletOption `json:"-"`
+	AuthInfo   *model.ConnectToken `json:"-"`
 
 	ConnectedCallback        func() error          `json:"-"`
 	ConnectedSuccessCallback func() error          `json:"-"`

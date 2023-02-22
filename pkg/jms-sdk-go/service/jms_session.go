@@ -56,3 +56,12 @@ func (s *JMService) sessionPatch(sid string, data interface{}) error {
 	_, err := s.authClient.Patch(Url, data, nil)
 	return err
 }
+
+func (s *JMService) CreateSessionTicketRelation(sid, ticketId string) (err error) {
+	data := map[string]string{
+		"session": sid,
+		"ticket":  ticketId,
+	}
+	_, err = s.authClient.Post(TicketSessionURL, data, nil)
+	return
+}

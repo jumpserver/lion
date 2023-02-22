@@ -65,6 +65,7 @@ func (s *Server) CreatByToken(ctx *gin.Context, token string) (TunnelSession, er
 			appletOpt.Host.String(), appletOpt.Account.String())
 	}
 	opts := make([]TunnelOption, 0, 10)
+	opts = append(opts, ConnectTokenAuthInfo(&connectToken))
 	opts = append(opts, WithProtocol(connectToken.Protocol))
 	opts = append(opts, WithUser(&connectToken.User))
 	opts = append(opts, WithActions(connectToken.Actions))
@@ -79,6 +80,11 @@ func (s *Server) CreatByToken(ctx *gin.Context, token string) (TunnelSession, er
 	return s.Create(ctx, opts...)
 }
 
+func ConnectTokenAuthInfo(authInfo *model.ConnectToken) TunnelOption {
+	return func(tunnel *tunnelOption) {
+		tunnel.authInfo = authInfo
+	}
+}
 func WithActions(actions model.Actions) TunnelOption {
 	return func(tunnel *tunnelOption) {
 		tunnel.Actions = actions
@@ -149,6 +155,7 @@ type tunnelOption struct {
 	Actions    model.Actions
 	ExpireInfo model.ExpireInfo
 
+	authInfo       *model.ConnectToken
 	TerminalConfig *model.TerminalConfig
 	appletOpt      *model.AppletOption
 }
@@ -181,6 +188,7 @@ func (s *Server) Create(ctx *gin.Context, opts ...TunnelOption) (sess TunnelSess
 	}
 	perm := opt.Actions.Permission()
 	sess.AppletOpts = opt.appletOpt
+	sess.AuthInfo = opt.authInfo
 	if opt.appletOpt != nil {
 		sess.RemoteApp = &opt.appletOpt.Applet
 	}
@@ -201,6 +209,7 @@ func (s *Server) Create(ctx *gin.Context, opts ...TunnelOption) (sess TunnelSess
 		OrgID:      sess.Asset.OrgID,
 		UserID:     sess.User.ID,
 		AssetID:    sess.Asset.ID,
+		AccountID:  opt.Account.ID,
 	}
 	sess.ConnectedCallback = s.RegisterConnectedCallback(jmsSession)
 	sess.ConnectedSuccessCallback = s.RegisterConnectedSuccessCallback(jmsSession)
