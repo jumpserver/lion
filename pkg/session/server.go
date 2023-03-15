@@ -52,18 +52,6 @@ func (s *Server) CreatByToken(ctx *gin.Context, token string) (TunnelSession, er
 	if !connectToken.Actions.EnableConnect() {
 		return TunnelSession{}, ErrPermissionDeny
 	}
-	var (
-		appletOpt *model.AppletOption
-	)
-	if connectToken.ConnectMethod.Type == connectApplet {
-		appletOptions, err := s.JmsService.GetConnectTokenAppletOption(token)
-		if err != nil {
-			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
-		}
-		appletOpt = &appletOptions
-		logger.Infof("Connect applet(%s) use host(%s) account (%s)", connectToken.Asset.String(),
-			appletOpt.Host.String(), appletOpt.Account.String())
-	}
 	opts := make([]TunnelOption, 0, 10)
 	opts = append(opts, ConnectTokenAuthInfo(&connectToken))
 	opts = append(opts, WithProtocol(connectToken.Protocol))
@@ -76,7 +64,18 @@ func (s *Server) CreatByToken(ctx *gin.Context, token string) (TunnelSession, er
 	opts = append(opts, WithPlatform(&connectToken.Platform))
 	opts = append(opts, WithGateway(connectToken.Gateway))
 	opts = append(opts, WithTerminalConfig(&cfg))
-	opts = append(opts, WithAppletOption(appletOpt))
+	if connectToken.ConnectMethod.Type == connectApplet {
+		appletOptions, err := s.JmsService.GetConnectTokenAppletOption(token)
+		if err != nil {
+			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
+		}
+		appletOpt := &appletOptions
+		opts = append(opts, WithAppletOption(appletOpt))
+		logger.Infof("Connect applet(%s) use host(%s) account (%s)", connectToken.Asset.String(),
+			appletOpt.Host.String(), appletOpt.Account.String())
+		// 连接发布机，不需要网关
+		opts = append(opts, WithGateway(nil))
+	}
 	return s.Create(ctx, opts...)
 }
 
