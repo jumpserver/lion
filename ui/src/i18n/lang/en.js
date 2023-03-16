@@ -12,7 +12,7 @@ const message = {
   JMSErrNoSession: 'Not found session',
   JMSErrAuthUser: 'Not auth user',
   JMSErrBadParams: 'Bad request params',
-  JMSErrIdleTimeOut: 'Terminated by idle timeout',
+  JMSErrIdleTimeOut: 'Connect idle more than {PLACEHOLDER} minutes, disconnect',
   JMSErrPermissionExpired: 'Terminated by permission expired',
   JMSErrTerminatedByAdmin: 'Terminated by Admin',
   JMSErrAPIFailed: 'Core API failed',

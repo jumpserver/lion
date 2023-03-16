@@ -226,7 +226,8 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 			latestActive = time.Now()
 		case detectTime := <-activeDetectTicker.C:
 			if detectTime.After(latestActive.Add(maxIdleMinutes)) {
-				_ = t.SendWsMessage(ErrIdleTimeOut.Instruction())
+				errIdle := NewJMSIdleTimeOutError(maxIndexTime)
+				_ = t.SendWsMessage(errIdle.Instruction())
 				logger.Errorf("Session[%s] terminated by %d min timeout",
 					t, maxIndexTime)
 				return nil

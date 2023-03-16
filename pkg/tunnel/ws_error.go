@@ -30,6 +30,12 @@ func NewJMSGuacamoleError(code int, msg string) JMSGuacamoleError {
 	}
 }
 
+// todo: 构造一种通用的错误框架，方便前后端处理异常
+
+func NewJMSIdleTimeOutError(min int) JMSGuacamoleError {
+	return NewJMSGuacamoleError(1003, strconv.Itoa(min))
+}
+
 var (
 	ErrNoSession = NewJMSGuacamoleError(1000, "Not Found Session")
 
