@@ -457,13 +457,18 @@ export default {
       let msg = status.message
       const currentLang = getLanguage()
       msg = ErrorStatusCodes[code] ? this.$t(ErrorStatusCodes[code]) : status.message
-      // 管理员终断会话，特殊处理
-      if (code === 1005) {
-        if (currentLang === 'cn') {
-          msg = status.message + ' ' + msg
-        } else {
-          msg = msg + ' ' + status.message
-        }
+      switch (code) {
+        case 1005:
+          // 管理员终断会话，特殊处理
+          if (currentLang === 'cn') {
+            msg = status.message + ' ' + msg
+          } else {
+            msg = msg + ' ' + status.message
+          }
+          break
+        case 1003:
+          msg = msg.replace('{PLACEHOLDER}', status.message)
+          break
       }
       this.$alert(msg, this.$t('ErrTitle'), {
         confirmButtonText: this.$t('OK'),
@@ -785,6 +790,7 @@ export default {
 #display{
   display: inline-block;
 }
+
 #display * {
   position: relative;
 }

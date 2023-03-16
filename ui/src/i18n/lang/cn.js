@@ -13,7 +13,7 @@ const message = {
   JMSErrNoSession: '未能找到会话',
   JMSErrAuthUser: '用户未认证',
   JMSErrBadParams: '请求参数错误',
-  JMSErrIdleTimeOut: '超过最大空闲时间，断开连接',
+  JMSErrIdleTimeOut: '超过最大空闲时间{PLACEHOLDER}分钟，断开连接',
   JMSErrPermissionExpired: '授权已过期，断开连接',
   JMSErrTerminatedByAdmin: '管理员终断会话',
   JMSErrAPIFailed: 'Core API 发生错误',
