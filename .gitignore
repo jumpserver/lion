@@ -46,3 +46,4 @@ ui/pnpm-debug.log*
 ui/yarn.lock
 build
 package-lock.json
+.history/
