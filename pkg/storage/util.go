@@ -64,17 +64,19 @@ func NewReplayStorage(cfg model.ReplayConfig) ReplayStorage {
 		}
 	case "s3", "swift", "cos":
 		var (
-			region    string
-			endpoint  string
-			bucket    string
-			accessKey string
-			secretKey string
+			region        string
+			endpoint      string
+			bucket        string
+			accessKey     string
+			secretKey     string
+			withoutSecret bool
 		)
 		bucket = cfg.Bucket
 		endpoint = cfg.Endpoint
 		region = cfg.Region
 		accessKey = cfg.AccessKey
 		secretKey = cfg.SecretKey
+		withoutSecret = cfg.WithoutSecret
 
 		if region == "" && endpoint != "" {
 			endpointArray := strings.Split(endpoint, ".")
@@ -86,11 +88,12 @@ func NewReplayStorage(cfg model.ReplayConfig) ReplayStorage {
 			bucket = "jumpserver"
 		}
 		return S3ReplayStorage{
-			Bucket:    bucket,
-			Region:    region,
-			AccessKey: accessKey,
-			SecretKey: secretKey,
-			Endpoint:  endpoint,
+			Bucket:        bucket,
+			Region:        region,
+			AccessKey:     accessKey,
+			SecretKey:     secretKey,
+			Endpoint:      endpoint,
+			WithoutSecret: withoutSecret,
 		}
 	case "obs":
 		var (

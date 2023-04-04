@@ -51,7 +51,8 @@ type ReplayConfig struct {
 		s3、 swift cos 需要
 	*/
 
-	Region string `json:"REGION,omitempty"`
+	Region        string `json:"REGION,omitempty"`
+	WithoutSecret bool   `json:"WITHOUT_SECRET,omitempty"`
 
 	/*
 		azure 专属
