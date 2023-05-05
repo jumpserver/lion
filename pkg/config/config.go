@@ -44,6 +44,10 @@ type Config struct {
 	RedisSentinelPassword string `mapstructure:"REDIS_SENTINEL_PASSWORD"`
 	RedisSentinelHosts    string `mapstructure:"REDIS_SENTINEL_HOSTS"`
 	RedisUseSSL           bool   `mapstructure:"REDIS_USE_SSL"`
+
+	EnableVideoWorker bool   `mapstructure:"ENABLE_VIDEO_WORKER"`
+	VideoWorkerHost   string `mapstructure:"VIDEO_WORKER_HOST"`
+	IgnoreVerifyCerts bool   `mapstructure:"IGNORE_VERIFY_CERTS"`
 }
 
 func Setup(configPath string) {
