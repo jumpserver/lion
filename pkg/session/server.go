@@ -12,8 +12,10 @@ import (
 
 	"lion/pkg/common"
 	"lion/pkg/config"
+	"lion/pkg/guacd"
 	"lion/pkg/jms-sdk-go/model"
 	"lion/pkg/jms-sdk-go/service"
+	"lion/pkg/jms-sdk-go/service/videoworker"
 	"lion/pkg/logger"
 	"lion/pkg/storage"
 )
@@ -38,6 +40,8 @@ var (
 
 type Server struct {
 	JmsService *service.JMService
+
+	VideoWorkerClient *videoworker.Client
 }
 
 func (s *Server) CreatByToken(ctx *gin.Context, token string) (TunnelSession, error) {
@@ -272,8 +276,30 @@ func (s *Server) RegisterDisConnectedCallback(sess model.Session) func() error {
 
 const ReplayFileNameSuffix = ".replay.gz"
 
-func (s *Server) RegisterFinishReplayCallback(tunnel TunnelSession) func() error {
-	return func() error {
+func (s *Server) UploadReplayToVideoWorker(tunnel TunnelSession, info guacd.ClientInformation) bool {
+	recordDirPath := filepath.Join(config.GlobalConfig.RecordPath,
+		tunnel.Created.Format(recordDirTimeFormat))
+	originReplayFilePath := filepath.Join(recordDirPath, tunnel.ID)
+	task, err := s.VideoWorkerClient.CreateReplayTask(tunnel.ID, originReplayFilePath,
+		videoworker.ReplayMeta{
+			SessionId:     tunnel.ID,
+			ComponentType: "lion",
+			FileType:      ".replay",
+			SessionDate:   tunnel.Created.Format("2006-01-02"),
+			Width:         info.OptimalScreenWidth,
+			Height:        info.OptimalScreenHeight,
+			Bitrate:       1,
+		})
+	if err != nil {
+		logger.Errorf("video worker create replay task failed: %s", err)
+		return false
+	}
+	logger.Infof("video worker create task success: %+v", task)
+	return true
+}
+
+func (s *Server) RegisterFinishReplayCallback(tunnel TunnelSession) func(guacd.ClientInformation) error {
+	return func(info guacd.ClientInformation) error {
 		replayConfig := tunnel.TerminalConfig.ReplayStorage
 		storageType := replayConfig.TypeName
 		if storageType == "null" {
@@ -292,6 +318,11 @@ func (s *Server) RegisterFinishReplayCallback(tunnel TunnelSession) func() error
 			logger.Error("录像文件小于1024字节，可判断连接失败，未能产生有效的录像文件")
 			_ = os.Remove(originReplayFilePath)
 			return s.JmsService.SessionFailed(tunnel.ID, err)
+		}
+		if s.VideoWorkerClient != nil && s.UploadReplayToVideoWorker(tunnel, info) {
+			logger.Infof("Upload replay file to video worker: %s", originReplayFilePath)
+			_ = os.Remove(originReplayFilePath)
+			return nil
 		}
 
 		// 压缩文件

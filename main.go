@@ -22,6 +22,7 @@ import (
 	"lion/pkg/config"
 	"lion/pkg/jms-sdk-go/model"
 	"lion/pkg/jms-sdk-go/service"
+	"lion/pkg/jms-sdk-go/service/videoworker"
 	"lion/pkg/logger"
 	"lion/pkg/middleware"
 	"lion/pkg/session"
@@ -58,6 +59,7 @@ func main() {
 	config.Setup(configPath)
 	logger.SetupLogger(config.GlobalConfig)
 	jmsService := MustJMService()
+	videoWorkerClient := NewWorkerClient(*config.GlobalConfig)
 	bootstrap(jmsService)
 	tunnelService := tunnel.GuacamoleTunnelServer{
 		Cache: &tunnel.GuaTunnelCacheManager{
@@ -66,8 +68,9 @@ func main() {
 		SessCache: &tunnel.SessionCache{
 			Sessions: make(map[string]*session.TunnelSession),
 		},
-		JmsService:     jmsService,
-		SessionService: &session.Server{JmsService: jmsService},
+		JmsService: jmsService,
+		SessionService: &session.Server{JmsService: jmsService,
+			VideoWorkerClient: videoWorkerClient},
 	}
 	eng := registerRouter(jmsService, &tunnelService)
 	go runHeartTask(jmsService, tunnelService.Cache)
@@ -452,4 +455,80 @@ func MustValidKey(key model.AccessKey) model.AccessKey {
 	logger.Error("校验 access key failed退出")
 	os.Exit(1)
 	return key
+}
+
+func NewWorkerClient(cfg config.Config) *videoworker.Client {
+	if !cfg.EnableVideoWorker {
+		return nil
+	}
+	workerURL := cfg.VideoWorkerHost
+	var key model.AccessKey
+	if err := key.LoadFromFile(cfg.AccessKeyFilePath); err != nil {
+		logger.Errorf("Create video worker client failed: loading access key err %s", err)
+		return nil
+	}
+	workClient := videoworker.NewClient(workerURL, key, cfg.IgnoreVerifyCerts)
+	if workClient == nil {
+		logger.Errorf("Create video worker client failed: worker url %s", workerURL)
+		return nil
+	}
+	go KeepWsConnect(workClient)
+	return workClient
+}
+
+func KeepWsConnect(s *videoworker.Client) {
+	if err := s.Login(); err != nil {
+		logger.Errorf("Worker Ws client login failed: %s, try next 10s", err)
+		time.Sleep(10 * time.Second)
+		go KeepWsConnect(s)
+		return
+	}
+	wsCon, err := s.GetWsClient()
+	if err != nil {
+		time.Sleep(10 * time.Second)
+		go KeepWsConnect(s)
+		return
+	}
+	defer wsCon.Close()
+	logger.Info("Start worker ws client beat success")
+	done := make(chan struct{}, 2)
+	go func() {
+		defer close(done)
+		for {
+			msgType, message, err2 := wsCon.ReadMessage()
+			if err2 != nil {
+				logger.Errorf("Worker Ws client read err: %s", err2)
+				return
+			}
+			switch msgType {
+			case websocket.PingMessage,
+				websocket.PongMessage:
+				logger.Debug("Worker Ws client ping/pong Message")
+				continue
+			case websocket.CloseMessage:
+				logger.Debug("Worker Ws client close Message")
+				return
+			}
+			logger.Debugf("Worker Ws client read message: %s", message)
+		}
+	}()
+	beatTicker := time.NewTicker(time.Second * 30)
+	defer beatTicker.Stop()
+	pingEvent := map[string]string{
+		"event": "ping",
+	}
+	for {
+		select {
+		case <-done:
+			logger.Error("Worker Ws heart beat closed, try reconnect after 10s")
+			time.Sleep(10 * time.Second)
+			go KeepWsConnect(s)
+			return
+		case <-beatTicker.C:
+			if err1 := wsCon.WriteJSON(pingEvent); err1 != nil {
+				logger.Errorf("Ws client write stat data failed: %s", err1)
+				continue
+			}
+		}
+	}
 }

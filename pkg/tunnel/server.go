@@ -198,7 +198,7 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	if err = tunnelSession.DisConnectedCallback(); err != nil {
 		logger.Errorf("Session DisConnectedCallback err: %+v", err)
 	}
-	if err = tunnelSession.FinishReplayCallback(); err != nil {
+	if err = tunnelSession.FinishReplayCallback(info); err != nil {
 		logger.Errorf("Session Replay upload err: %+v", err)
 	}
 	logger.Infof("Session[%s] disconnect", sessionId)
