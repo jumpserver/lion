@@ -6,23 +6,32 @@ import (
 	"lion/pkg/guacd"
 )
 
+type valueType string
+
+const (
+	Boolean valueType = "boolean"
+	String  valueType = "string"
+	Integer valueType = "integer"
+)
+
 type DisplayParameter struct {
 	Key          string
 	DefaultValue string
+	valueType    valueType
 }
 
 var (
-	colorDepth               = DisplayParameter{Key: guacd.RDPColorDepth, DefaultValue: "24"}
-	dpi                      = DisplayParameter{Key: guacd.RDPDpi, DefaultValue: ""}
-	disableAudio             = DisplayParameter{Key: guacd.RDPDisableAudio}
-	enableWallpaper          = DisplayParameter{Key: guacd.RDPEnableWallpaper, DefaultValue: ""}
-	enableTheming            = DisplayParameter{Key: guacd.RDPEnableTheming, DefaultValue: ""}
-	enableFontSmoothing      = DisplayParameter{Key: guacd.RDPEnableFontSmoothing, DefaultValue: ""}
-	enableFullWindowDrag     = DisplayParameter{Key: guacd.RDPEnableFullWindowDrag, DefaultValue: ""}
-	enableDesktopComposition = DisplayParameter{Key: guacd.RDPEnableDesktopComposition, DefaultValue: ""}
-	enableMenuAnimations     = DisplayParameter{Key: guacd.RDPEnableMenuAnimations, DefaultValue: ""}
-	disableBitmapCaching     = DisplayParameter{Key: guacd.RDPDisableBitmapCaching, DefaultValue: ""}
-	disableOffscreenCaching  = DisplayParameter{Key: guacd.RDPDisableOffscreenCaching, DefaultValue: ""}
+	colorDepth               = DisplayParameter{Key: guacd.RDPColorDepth, DefaultValue: "24", valueType: Integer}
+	dpi                      = DisplayParameter{Key: guacd.RDPDpi, DefaultValue: "", valueType: Integer}
+	disableAudio             = DisplayParameter{Key: guacd.RDPDisableAudio, DefaultValue: "", valueType: Boolean}
+	enableWallpaper          = DisplayParameter{Key: guacd.RDPEnableWallpaper, DefaultValue: "", valueType: Boolean}
+	enableTheming            = DisplayParameter{Key: guacd.RDPEnableTheming, DefaultValue: "", valueType: Boolean}
+	enableFontSmoothing      = DisplayParameter{Key: guacd.RDPEnableFontSmoothing, DefaultValue: "", valueType: Boolean}
+	enableFullWindowDrag     = DisplayParameter{Key: guacd.RDPEnableFullWindowDrag, DefaultValue: "", valueType: Boolean}
+	enableDesktopComposition = DisplayParameter{Key: guacd.RDPEnableDesktopComposition, DefaultValue: "", valueType: Boolean}
+	enableMenuAnimations     = DisplayParameter{Key: guacd.RDPEnableMenuAnimations, DefaultValue: "", valueType: Boolean}
+	disableBitmapCaching     = DisplayParameter{Key: guacd.RDPDisableBitmapCaching, DefaultValue: "", valueType: Boolean}
+	disableOffscreenCaching  = DisplayParameter{Key: guacd.RDPDisableOffscreenCaching, DefaultValue: "", valueType: Boolean}
 )
 
 type Display struct {
@@ -34,7 +43,13 @@ func (d Display) GetDisplayParams() map[string]string {
 	for envKey, displayParam := range d.data {
 		res[displayParam.Key] = displayParam.DefaultValue
 		if value := viper.GetString(envKey); value != "" {
-			res[displayParam.Key] = value
+			switch displayParam.valueType {
+			case Boolean:
+				booleanValue := viper.GetBool(envKey)
+				res[displayParam.Key] = ConvertBoolToString(booleanValue)
+			default:
+				res[displayParam.Key] = value
+			}
 		}
 	}
 	return res
