@@ -310,10 +310,20 @@ export default {
       }
       return [width, height]
     },
+    getKeyboardLayout() {
+      const lunaSetting = localStorageGet('LunaSetting') || {}
+      const keyboardLayout = lunaSetting['keyboardLayout']
+      this.$log.debug('KeyboardLayout: ', keyboardLayout)
+      if (!keyboardLayout) {
+        return ''
+      }
+      return keyboardLayout
+    },
 
     getConnectString(sessionId) {
       // Calculate optimal width/height for display
       const [optimalWidth, optimalHeight] = this.getGuaSize()
+      const keyboardLayout = this.getKeyboardLayout()
       const optimalDpi = pixelDensity * 96
       return new Promise((resolve, reject) => {
         Promise.all([
@@ -329,7 +339,8 @@ export default {
               'SESSION_ID=' + encodeURIComponent(sessionId) +
               '&GUAC_WIDTH=' + Math.floor(optimalWidth) +
               '&GUAC_HEIGHT=' + Math.floor(optimalHeight) +
-              '&GUAC_DPI=' + Math.floor(optimalDpi)
+              '&GUAC_DPI=' + Math.floor(optimalDpi) +
+              '&GUAC_KEYBOARD=' + encodeURIComponent(keyboardLayout)
           this.$log.debug('Connect string: ', connectString)
           supportImages.forEach(function(mimetype) {
             connectString += '&GUAC_IMAGE=' + encodeURIComponent(mimetype)
