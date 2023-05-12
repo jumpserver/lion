@@ -6,12 +6,8 @@ import (
 	"lion/pkg/jms-sdk-go/model"
 )
 
-func (s *JMService) Upload(sessionID, gZipFile string) error {
+func (s *JMService) UploadReplay(sid, gZipFile string) error {
 	version := model.ParseReplayVersion(gZipFile, model.Version2)
-	return s.UploadReplay(sessionID, gZipFile, version)
-}
-
-func (s *JMService) UploadReplay(sid, gZipFile string, version model.ReplayVersion) error {
 	var res map[string]interface{}
 	Url := fmt.Sprintf(SessionReplayURL, sid)
 	fields := make(map[string]string)

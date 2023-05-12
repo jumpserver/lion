@@ -10,13 +10,15 @@ import (
 
 	"lion/pkg/guacd"
 	"lion/pkg/logger"
+	"lion/pkg/proxy"
 )
 
 type OutputStreamInterceptingFilter struct {
-	tunnel  *Connection
-	streams map[string]OutStreamResource
 	sync.Mutex
-	acknowledgeBlobs bool
+	tunnel            *Connection
+	streams           map[string]OutStreamResource
+	acknowledgeBlobs  bool
+	recorder          proxy.FTPFileRecorder
 }
 
 func (filter *OutputStreamInterceptingFilter) Filter(unfilteredInstruction *guacd.Instruction) *guacd.Instruction {
@@ -76,6 +78,7 @@ func (filter *OutputStreamInterceptingFilter) handleBlob(unfilteredInstruction *
 			}
 			return nil
 		}
+		filter.recorder.RecordWrite(blob)
 		if !filter.acknowledgeBlobs {
 			filter.acknowledgeBlobs = true
 			ins := guacd.NewInstruction(guacd.InstructionStreamingBlob, index, "")
@@ -147,6 +150,10 @@ func (filter *OutputStreamInterceptingFilter) addOutStream(out OutStreamResource
 		return
 	}
 	filter.streams[out.streamIndex] = out
+}
+
+func (filter *OutputStreamInterceptingFilter) addRecorder(recorder proxy.FTPFileRecorder) {
+	filter.recorder = recorder
 }
 
 // 下载文件的对象

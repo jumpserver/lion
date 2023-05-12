@@ -2,6 +2,7 @@ package tunnel
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"strconv"
@@ -10,6 +11,7 @@ import (
 	ginSessions "github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	uuid "github.com/satori/go.uuid"
 
 	"lion/pkg/common"
 	"lion/pkg/config"
@@ -18,6 +20,7 @@ import (
 	"lion/pkg/jms-sdk-go/model"
 	"lion/pkg/jms-sdk-go/service"
 	"lion/pkg/logger"
+	"lion/pkg/proxy"
 	"lion/pkg/session"
 )
 
@@ -39,6 +42,8 @@ type GuacamoleTunnelServer struct {
 	Cache          *GuaTunnelCacheManager
 	SessCache      *SessionCache
 	SessionService *session.Server
+
+	Recorder       proxy.FTPFileRecorder
 }
 
 func (g *GuacamoleTunnelServer) getClientInfo(ctx *gin.Context) guacd.ClientInformation {
@@ -300,6 +305,7 @@ func (g *GuacamoleTunnelServer) DownloadFile(ctx *gin.Context) {
 	user := userItem.(*model.User)
 	if tun := g.Cache.Get(tid); tun != nil && tun.Sess.User.ID == user.ID {
 		fileLog := model.FTPLog{
+			ID:         uuid.NewV4().String(),
 			User:       tun.Sess.User.String(),
 			Hostname:   tun.Sess.Asset.String(),
 			OrgID:      tun.Sess.Asset.OrgID,
@@ -318,14 +324,18 @@ func (g *GuacamoleTunnelServer) DownloadFile(ctx *gin.Context) {
 			done:        make(chan struct{}),
 		}
 		tun.outputFilter.addOutStream(out)
+		g.Recorder.SetFTPLog(&fileLog)
+		tun.outputFilter.addRecorder(g.Recorder)
 		if err := out.Wait(); err != nil {
 			logger.Errorf("Session[%s] download file %s err: %s", tun, filename, err)
 			ctx.JSON(http.StatusBadRequest, ErrorResponse(err))
 			g.SessionService.AuditFileOperation(fileLog)
+			g.Recorder.Clear()
 			return
 		}
 		fileLog.IsSuccess = true
 		g.SessionService.AuditFileOperation(fileLog)
+		g.Recorder.UploadFile(3)
 		logger.Infof("Session[%s] download file %s success", tun, filename)
 		return
 	}
@@ -352,6 +362,7 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 	if tun := g.Cache.Get(tid); tun != nil && tun.Sess.User.ID == user.ID {
 		logger.Infof("User %s upload file %s", user, filename)
 		fileLog := model.FTPLog{
+			ID:         uuid.NewV4().String(),
 			User:       tun.Sess.User.String(),
 			Hostname:   tun.Sess.Asset.String(),
 			OrgID:      tun.Sess.Asset.OrgID,
@@ -374,7 +385,6 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 			}
 			tun.inputFilter.addInputStream(&stream)
 			stream.Wait()
-			_ = fdReader.Close()
 			if err := stream.WaitErr(); err != nil {
 				logger.Errorf("Session[%s] upload file %s err: %s", tun, filename, err)
 				g.SessionService.AuditFileOperation(fileLog)
@@ -383,6 +393,9 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 			logger.Infof("Session[%s] upload file %s success", tun, filename)
 			fileLog.IsSuccess = true
 			g.SessionService.AuditFileOperation(fileLog)
+			fdReader.(io.Seeker).Seek(0, io.SeekStart)
+			g.Recorder.Record(&fileLog, fdReader)
+			_ = fdReader.Close()
 		}
 		return
 	}

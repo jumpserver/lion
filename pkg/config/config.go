@@ -16,6 +16,7 @@ type Config struct {
 	Root              string
 	DrivePath         string
 	RecordPath        string
+	FTPFilePath       string
 	LogDirPath        string
 	AccessKeyFilePath string
 	CertsFolderPath   string
@@ -65,6 +66,7 @@ func getDefaultConfig() Config {
 	dataFolderPath := filepath.Join(rootPath, "data")
 	driveFolderPath := filepath.Join(dataFolderPath, "drive")
 	recordFolderPath := filepath.Join(dataFolderPath, "replays")
+	ftpFileFolderPath := filepath.Join(dataFolderPath, "ftp_files")
 	LogDirPath := filepath.Join(dataFolderPath, "logs")
 	keyFolderPath := filepath.Join(dataFolderPath, "keys")
 	CertsFolderPath := filepath.Join(dataFolderPath, "certs")
@@ -81,6 +83,7 @@ func getDefaultConfig() Config {
 		Name:                      defaultName,
 		Root:                      rootPath,
 		RecordPath:                recordFolderPath,
+		FTPFilePath:               ftpFileFolderPath,
 		LogDirPath:                LogDirPath,
 		DrivePath:                 driveFolderPath,
 		CertsFolderPath:           CertsFolderPath,
