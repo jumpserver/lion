@@ -55,4 +55,17 @@ type ClientInformation struct {
 	 * The timezone reported by the client.
 	 */
 	Timezone string
+
+	/**
+	 * qwerty keyboard layout
+	 */
+	KeyboardLayout string
+}
+
+func (info *ClientInformation) ExtraConfig() map[string]string {
+	ret := make(map[string]string)
+	if layout, ok := RDPServerLayouts[info.KeyboardLayout]; ok {
+		ret[RDPServerLayout] = layout
+	}
+	return ret
 }

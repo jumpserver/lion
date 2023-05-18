@@ -67,7 +67,9 @@ func (g *GuacamoleTunnelServer) getClientInfo(ctx *gin.Context) guacd.ClientInfo
 			info.OptimalResolution = dpiInt
 		}
 	}
-
+	if keyboardLayout, ok := ctx.GetQuery("GUAC_KEYBOARD"); ok {
+		info.KeyboardLayout = keyboardLayout
+	}
 	return info
 }
 
@@ -124,6 +126,9 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	}
 	info := g.getClientInfo(ctx)
 	conf := tunnelSession.GuaConfiguration()
+	for argName, argValue := range info.ExtraConfig() {
+		conf.SetParameter(argName, argValue)
+	}
 	// 设置网域网关，替换本地。 兼容云平台同步 配置网域，但网关配置为空的情况
 	if (tunnelSession.Domain != nil && len(tunnelSession.Domain.Gateways) != 0) ||
 		tunnelSession.Gateway != nil {
@@ -198,7 +203,7 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	if err = tunnelSession.DisConnectedCallback(); err != nil {
 		logger.Errorf("Session DisConnectedCallback err: %+v", err)
 	}
-	if err = tunnelSession.FinishReplayCallback(); err != nil {
+	if err = tunnelSession.FinishReplayCallback(info); err != nil {
 		logger.Errorf("Session Replay upload err: %+v", err)
 	}
 	logger.Infof("Session[%s] disconnect", sessionId)
