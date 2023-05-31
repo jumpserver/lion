@@ -31,7 +31,9 @@ const message = {
   Password: 'Password',
   RequireParams: 'Require Params',
   Settings: 'Settings',
-  UploadSuccess: 'Upload success'
+  UploadSuccess: 'Upload success',
+  Display: 'Display',
+  AutoFit: 'Auto Fit'
 }
 
 export default {
