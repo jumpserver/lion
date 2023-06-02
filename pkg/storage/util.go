@@ -29,7 +29,7 @@ type CommandStorage interface {
 	StorageType
 }
 
-func GetStorage(fileType string, jmsService *service.JMService, cfg model.ReplayConfig) Storage {
+func GetStorage(cfg model.ReplayConfig) Storage {
 	switch cfg.TypeName {
 	case "azure":
 		var (
@@ -121,23 +121,24 @@ func GetStorage(fileType string, jmsService *service.JMService, cfg model.Replay
 			SecretKey: secretKey,
 		}
 	default:
-		switch fileType {
-		case "replay":
-			return ServerStorage{StorageType: "server", JmsService: jmsService, FileType: fileType}
-		case "ftpFile":
-			return ServerStorage{StorageType: "server", JmsService: jmsService, FileType: fileType}
-		default:
-			return NewNullStorage()
-		}
+		return nil
 	}
 }
 
 func NewReplayStorage(jmsService *service.JMService, cfg model.ReplayConfig) ReplayStorage {
-	return GetStorage("replay", jmsService, cfg)
+	replayStorage := GetStorage(cfg)
+	if replayStorage == nil {
+		replayStorage = ServerStorage{StorageType: "server", JmsService: jmsService}
+	}
+	return replayStorage
 }
 
 func NewFTPFileStorage(jmsService *service.JMService, cfg model.ReplayConfig) FTPFileStorage {
-	return GetStorage("ftpFile", jmsService, cfg)
+	ftpStorage := GetStorage(cfg)
+	if ftpStorage == nil {
+		ftpStorage = FTPServerStorage{StorageType: "server", JmsService: jmsService}
+	}
+	return ftpStorage
 }
 
 func NewCommandStorage(jmsService *service.JMService, conf *model.TerminalConfig) CommandStorage {

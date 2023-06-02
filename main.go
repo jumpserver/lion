@@ -360,7 +360,7 @@ func uploadRemainReplay(jmsService *service.JMService, remainFiles map[string]st
 	var replayStorage storage.ReplayStorage
 	terminalConf, _ := jmsService.GetTerminalConfig()
 	replayStorage = storage.NewReplayStorage(jmsService, terminalConf.ReplayStorage)
-	defaultStorage := storage.ServerStorage{StorageType: "server", JmsService: jmsService, FileType: "replay"}
+	defaultStorage := storage.FTPServerStorage{StorageType: "server", JmsService: jmsService}
 	for sid, path := range remainFiles {
 		absGzPath := path
 		replayDateDirName := filepath.Base(filepath.Dir(path))

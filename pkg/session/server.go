@@ -330,7 +330,7 @@ func (s *Server) RegisterFinishReplayCallback(tunnel TunnelSession) func(guacd.C
 		}
 		// 压缩完成则删除源文件
 		defer os.Remove(originReplayFilePath)
-		defaultStorage := storage.ServerStorage{StorageType: "server", JmsService: s.JmsService, FileType: "replay"}
+		defaultStorage := storage.ServerStorage{StorageType: "server", JmsService: s.JmsService}
 		logger.Infof("Upload record file: %s, type: %s", dstReplayFilePath, storageType)
 		if replayStorage := storage.NewReplayStorage(s.JmsService, replayConfig); replayStorage != nil {
 			targetName := strings.Join([]string{tunnel.Created.Format(recordDirTimeFormat),

@@ -95,11 +95,7 @@ func (r *FTPFileRecorder) uploadFTPFile() {
     }
     stat, err := os.Stat(r.absFilePath)
     if err == nil {
-        if stat.Size() == 0 {
-            logger.Info("FTP file is empty, removed: ", r.absFilePath)
-            _ = os.Remove(r.absFilePath)
-            return
-        } else if stat.Size() >= r.MaxStore * 1024 * 1024 {
+        if stat.Size() >= r.MaxStore * 1024 * 1024 {
             logger.Info("FTP file is exceeds the upper limit for saving files, removed: ", r.absFilePath)
             _ = os.Remove(r.absFilePath)
             return
