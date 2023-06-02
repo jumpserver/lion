@@ -10,7 +10,11 @@ import (
 
 type ServerStorage struct {
 	StorageType string
-	FileType    string
+	JmsService  *service.JMService
+}
+
+type FTPServerStorage struct {
+	StorageType string
 	JmsService  *service.JMService
 }
 
@@ -18,18 +22,20 @@ func (s ServerStorage) BulkSave(commands []*model.Command) (err error) {
 	return s.JmsService.PushSessionCommand(commands)
 }
 
-func (s ServerStorage) Upload(filePath, target string) (err error) {
-	id := strings.Split(filepath.Base(filePath), ".")[0]
-	switch s.FileType {
-	case "replay":
-		return s.JmsService.UploadReplay(id, filePath)
-	case "ftpFile":
-		return s.JmsService.UploadFTPFile(id, filePath)
-	default:
-		return nil
-	}
+func (s ServerStorage) Upload(gZipFilePath, target string) (err error) {
+	sessionID := strings.Split(filepath.Base(gZipFilePath), ".")[0]
+	return s.JmsService.UploadReplay(sessionID, gZipFilePath)
 }
 
 func (s ServerStorage) TypeName() string {
+	return s.StorageType
+}
+
+func (s FTPServerStorage) Upload(filePath, target string) (err error) {
+	id := strings.Split(filepath.Base(filePath), ".")[0]
+	return s.JmsService.UploadFTPFile(id, filePath)
+}
+
+func (s FTPServerStorage) TypeName() string {
 	return s.StorageType
 }
