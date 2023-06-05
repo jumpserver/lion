@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 	"strconv"
+	"strings"
 
 	ginSessions "github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
@@ -125,6 +126,25 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 		}
 	}
 	info := g.getClientInfo(ctx)
+	opts := tunnelSession.AuthInfo.ConnectOptions
+	resolution := strings.ToLower(opts.Resolution)
+	switch resolution {
+	case "":
+	case "auto":
+	default:
+		resolutions := strings.Split(resolution, "x")
+		if len(resolutions) == 2 {
+			width := resolutions[0]
+			height := resolutions[1]
+			if widthInt, err1 := strconv.Atoi(width); err1 == nil && widthInt > 0 {
+				info.OptimalScreenWidth = widthInt
+			}
+			if heightInt, err1 := strconv.Atoi(height); err1 == nil && heightInt > 0 {
+				info.OptimalScreenHeight = heightInt
+			}
+		}
+	}
+
 	conf := tunnelSession.GuaConfiguration()
 	for argName, argValue := range info.ExtraConfig() {
 		conf.SetParameter(argName, argValue)

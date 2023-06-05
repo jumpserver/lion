@@ -17,6 +17,8 @@ type ConnectToken struct {
 
 	ConnectMethod ConnectMethod `json:"connect_method"`
 
+	ConnectOptions ConnectOptions `json:"connect_options"`
+
 	Ticket     *ObjectId   `json:"from_ticket,omitempty"`
 	TicketInfo interface{} `json:"from_ticket_info,omitempty"`
 
@@ -33,4 +35,11 @@ type ConnectMethod struct {
 
 type ObjectId struct {
 	ID string `json:"id"`
+}
+
+type ConnectOptions struct {
+	Charset          string `json:"charset"`
+	DisableAutoHash  bool   `json:"disableautohash"`
+	Resolution       string `json:"resolution"`
+	BackspaceAsCtrlH bool   `json:"backspaceAsCtrlH"`
 }
