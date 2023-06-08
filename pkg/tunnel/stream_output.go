@@ -9,16 +9,16 @@ import (
 	"sync"
 
 	"lion/pkg/guacd"
+	"lion/pkg/jms-sdk-go/model"
 	"lion/pkg/logger"
 	"lion/pkg/proxy"
 )
 
 type OutputStreamInterceptingFilter struct {
 	sync.Mutex
-	tunnel            *Connection
-	streams           map[string]OutStreamResource
-	acknowledgeBlobs  bool
-	recorder          proxy.FTPFileRecorder
+	tunnel           *Connection
+	streams          map[string]OutStreamResource
+	acknowledgeBlobs bool
 }
 
 func (filter *OutputStreamInterceptingFilter) Filter(unfilteredInstruction *guacd.Instruction) *guacd.Instruction {
@@ -78,7 +78,7 @@ func (filter *OutputStreamInterceptingFilter) handleBlob(unfilteredInstruction *
 			}
 			return nil
 		}
-		filter.recorder.RecordWrite(blob)
+		stream.recorder.RecordWrite(stream.ftpLog, blob)
 		if !filter.acknowledgeBlobs {
 			filter.acknowledgeBlobs = true
 			ins := guacd.NewInstruction(guacd.InstructionStreamingBlob, index, "")
@@ -152,10 +152,6 @@ func (filter *OutputStreamInterceptingFilter) addOutStream(out OutStreamResource
 	filter.streams[out.streamIndex] = out
 }
 
-func (filter *OutputStreamInterceptingFilter) addRecorder(recorder proxy.FTPFileRecorder) {
-	filter.recorder = recorder
-}
-
 // 下载文件的对象
 
 type OutStreamResource struct {
@@ -165,6 +161,9 @@ type OutStreamResource struct {
 	done        chan struct{}
 	err         error
 	ctx         context.Context
+
+	ftpLog   *model.FTPLog
+	recorder *proxy.FTPFileRecorder
 }
 
 func (r *OutStreamResource) Wait() error {

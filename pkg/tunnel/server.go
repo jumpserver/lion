@@ -42,8 +42,6 @@ type GuacamoleTunnelServer struct {
 	Cache          *GuaTunnelCacheManager
 	SessCache      *SessionCache
 	SessionService *session.Server
-
-	Recorder       proxy.FTPFileRecorder
 }
 
 func (g *GuacamoleTunnelServer) getClientInfo(ctx *gin.Context) guacd.ClientInformation {
@@ -304,6 +302,7 @@ func (g *GuacamoleTunnelServer) DownloadFile(ctx *gin.Context) {
 	}
 	user := userItem.(*model.User)
 	if tun := g.Cache.Get(tid); tun != nil && tun.Sess.User.ID == user.ID {
+		recorder := proxy.GetFTPFileRecorder(g.JmsService)
 		fileLog := model.FTPLog{
 			ID:         uuid.NewV4().String(),
 			User:       tun.Sess.User.String(),
@@ -323,20 +322,20 @@ func (g *GuacamoleTunnelServer) DownloadFile(ctx *gin.Context) {
 			writer:      ctx.Writer,
 			ctx:         ctx.Request.Context(),
 			done:        make(chan struct{}),
+			ftpLog:      &fileLog,
+			recorder:    recorder,
 		}
 		tun.outputFilter.addOutStream(out)
-		g.Recorder.SetFTPLog(&fileLog)
-		tun.outputFilter.addRecorder(g.Recorder)
 		if err := out.Wait(); err != nil {
 			logger.Errorf("Session[%s] download file %s err: %s", tun, filename, err)
 			ctx.JSON(http.StatusBadRequest, ErrorResponse(err))
 			g.SessionService.AuditFileOperation(fileLog)
-			g.Recorder.Clear()
+			recorder.RemoveFtpLog(fileLog.ID)
 			return
 		}
 		fileLog.IsSuccess = true
 		g.SessionService.AuditFileOperation(fileLog)
-		g.Recorder.UploadFile(3)
+		recorder.FinishFTPFile(fileLog.ID)
 		logger.Infof("Session[%s] download file %s success", tun, filename)
 		return
 	}
@@ -362,6 +361,7 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 	user := userItem.(*model.User)
 	if tun := g.Cache.Get(tid); tun != nil && tun.Sess.User.ID == user.ID {
 		logger.Infof("User %s upload file %s", user, filename)
+		recorder := proxy.GetFTPFileRecorder(g.JmsService)
 		fileLog := model.FTPLog{
 			ID:         uuid.NewV4().String(),
 			User:       tun.Sess.User.String(),
@@ -395,8 +395,10 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 			logger.Infof("Session[%s] upload file %s success", tun, filename)
 			fileLog.IsSuccess = true
 			g.SessionService.AuditFileOperation(fileLog)
-			fdReader.(io.Seeker).Seek(0, io.SeekStart)
-			g.Recorder.Record(&fileLog, fdReader)
+			_, _ = fdReader.(io.Seeker).Seek(0, io.SeekStart)
+			if err1 := recorder.Record(&fileLog, fdReader); err1 != nil {
+				logger.Errorf("Record file %s err: %s", filename, err1)
+			}
 			_ = fdReader.Close()
 		}
 		return

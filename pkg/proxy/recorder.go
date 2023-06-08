@@ -1,184 +1,230 @@
 package proxy
 
 import (
-    "io"
-    "lion/pkg/common"
-    "lion/pkg/config"
-    "lion/pkg/jms-sdk-go/model"
-    "lion/pkg/jms-sdk-go/service"
-    "lion/pkg/logger"
-    "lion/pkg/storage"
-    "os"
-    "path/filepath"
-    "strings"
-    "time"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+
+	"lion/pkg/common"
+	"lion/pkg/config"
+	"lion/pkg/jms-sdk-go/model"
+	"lion/pkg/jms-sdk-go/service"
+	"lion/pkg/logger"
+	"lion/pkg/storage"
 )
 
 const (
-    dateTimeFormat = "2006-01-02"
+	dateTimeFormat = "2006-01-02"
 )
 
 type FTPFileRecorder struct {
-    FTPLog     *model.FTPLog
-    jmsService *service.JMService
-    storage    storage.FTPFileStorage
+	jmsService *service.JMService
+	storage    storage.FTPFileStorage
 
-    absFilePath     string
-    Target          string
-    TargetPrefix    string
-    MaxStore        int64
-    err             error
+	TargetPrefix string
 
-    file *os.File
+	MaxStoreFileSize int64
+
+	ftpLogMap map[string]*FTPFileInfo
+
+	lock sync.RWMutex
 }
 
-type FTPFileInfo struct {
-    TimeStamp  time.Time
+func (r *FTPFileRecorder) removeFTPFile(id string) {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+	delete(r.ftpLogMap, id)
 }
 
-func (r *FTPFileRecorder) PreRecord() (err error) {
-    info := &FTPFileInfo{
-        TimeStamp: time.Now(),
-    }
-    today := info.TimeStamp.UTC().Format(dateTimeFormat)
-    ftpFileRootDir := config.GlobalConfig.FTPFilePath
-    ftpFileDirPath := filepath.Join(ftpFileRootDir, today)
-    err = config.EnsureDirExist(ftpFileDirPath)
-    if err != nil {
-        logger.Errorf("Create dir %s error: %s\n", ftpFileDirPath, err)
-        return
-    }
-    absFilePath := filepath.Join(ftpFileDirPath, r.FTPLog.ID)
-    storageTargetName := strings.Join([]string{today, r.FTPLog.ID}, "/")
-    r.absFilePath = absFilePath
-    r.Target = storageTargetName
-    fd, err := os.OpenFile(r.absFilePath, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0666)
-    if err != nil {
-        logger.Errorf("Create FTP file %s error: %s\n", r.absFilePath, err)
-        return
-    }
-    r.file = fd
-    return
+func (r *FTPFileRecorder) getFTPFile(id string) *FTPFileInfo {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+	return r.ftpLogMap[id]
+}
+
+func (r *FTPFileRecorder) setFTPFile(id string, info *FTPFileInfo) {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+	r.ftpLogMap[id] = info
+}
+
+func (r *FTPFileRecorder) CreateFTPFileInfo(logData *model.FTPLog) (info *FTPFileInfo, err error) {
+	info = &FTPFileInfo{
+		ftpLog: logData,
+	}
+	today := info.ftpLog.DateStart.UTC().Format(dateTimeFormat)
+	ftpFileRootDir := config.GlobalConfig.FTPFilePath
+	ftpFileDirPath := filepath.Join(ftpFileRootDir, today)
+	err = config.EnsureDirExist(ftpFileDirPath)
+	if err != nil {
+		logger.Errorf("Create dir %s error: %s\n", ftpFileDirPath, err)
+		return nil, err
+	}
+	absFilePath := filepath.Join(ftpFileDirPath, logData.ID)
+	storageTargetName := strings.Join([]string{FTPTargetPrefix, today, logData.ID}, "/")
+	info.absFilePath = absFilePath
+	info.Target = storageTargetName
+	fd, err := os.OpenFile(info.absFilePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	if err != nil {
+		logger.Errorf("Create FTP file %s error: %s\n", absFilePath, err)
+		return nil, err
+	}
+	logger.Debugf("Create or open FTP file %s", absFilePath)
+	info.fd = fd
+	r.setFTPFile(logData.ID, info)
+	return info, nil
 }
 
 func (r *FTPFileRecorder) Record(ftpLog *model.FTPLog, reader io.Reader) (err error) {
-    if r.isNullStorage() {
-        return
-    }
-    r.FTPLog = ftpLog
-    err = r.PreRecord()
-    if err != nil {
-        return
-    }
-    io.Copy(r.file, reader)
-    defer r.file.Close()
-    reader.(io.Seeker).Seek(0, io.SeekStart)
-    go func () {
-        r.uploadFTPFile()
-    }()
-    return
-}
-
-func (r *FTPFileRecorder) RealTarget() string {
-    return strings.Join([]string{r.TargetPrefix, r.Target}, "/")
+	if r.isNullStorage() {
+		return
+	}
+	info := r.getFTPFile(ftpLog.ID)
+	if info == nil {
+		info, err = r.CreateFTPFileInfo(ftpLog)
+	}
+	if err != nil {
+		return err
+	}
+	_, _ = io.Copy(info.fd, reader)
+	_ = info.Close()
+	go r.UploadFile(3, ftpLog.ID)
+	return
 }
 
 func (r *FTPFileRecorder) isNullStorage() bool {
-    return r.storage.TypeName() == "null" || r.err != nil
+	return r.storage.TypeName() == "null"
 }
 
-func (r *FTPFileRecorder) uploadFTPFile() {
-    logger.Infof("FTP log %s: FTP File recorder is uploading", r.FTPLog.ID)
-    if !common.FileExists(r.absFilePath) {
-        logger.Info("FTP file not found, passed: ", r.absFilePath)
-        return
-    }
-    stat, err := os.Stat(r.absFilePath)
-    if err == nil {
-        if stat.Size() >= r.MaxStore * 1024 * 1024 {
-            logger.Info("FTP file is exceeds the upper limit for saving files, removed: ", r.absFilePath)
-            _ = os.Remove(r.absFilePath)
-            return
-        }
-    }
-    r.UploadFile(3)
+func (r *FTPFileRecorder) exceedFileMaxSize(info *FTPFileInfo) bool {
+	stat, err := os.Stat(info.absFilePath)
+	if err == nil {
+		if stat.Size() >= r.MaxStoreFileSize {
+			return true
+		}
+	}
+	return false
+}
+func (r *FTPFileRecorder) UploadFile(maxRetry int, ftpLogId string) {
+	if r.isNullStorage() {
+		return
+	}
+	info := r.getFTPFile(ftpLogId)
+	if info == nil {
+		logger.Errorf("FTP file %s not found", ftpLogId)
+		return
+	}
+	if !common.FileExists(info.absFilePath) {
+		logger.Infof("FTP file not found: %s", info.absFilePath)
+		return
+	}
+	if r.exceedFileMaxSize(info) {
+		logger.Info("FTP file is exceeds the upper limit for saving files, removed: ",
+			info.absFilePath)
+		_ = os.Remove(info.absFilePath)
+		r.removeFTPFile(info.ftpLog.ID)
+		return
+	}
+	logger.Infof("FTPLog %s: FTP File recorder is uploading", info.ftpLog.ID)
+
+	for i := 0; i <= maxRetry; i++ {
+		logger.Infof("Upload FTP file: %s, type: %s", info.absFilePath, r.storage.TypeName())
+		err := r.storage.Upload(info.absFilePath, info.Target)
+		if err == nil {
+			_ = os.Remove(info.absFilePath)
+			if err := r.jmsService.FinishFTPFile(info.ftpLog.ID); err != nil {
+				logger.Errorf("FTP file %s upload failed: %s", info.ftpLog.ID, err)
+			}
+			r.removeFTPFile(info.ftpLog.ID)
+			break
+		}
+		logger.Errorf("Upload FTP file err: %s", err)
+		// 如果还是失败，上传 server 再传一次
+		if i == maxRetry {
+			if r.storage.TypeName() == "server" {
+				break
+			}
+			logger.Errorf("Session[%s] using server storage retry upload", info.ftpLog.ID)
+			r.storage = storage.FTPServerStorage{StorageType: "server", JmsService: r.jmsService}
+			r.UploadFile(3, info.ftpLog.ID)
+			break
+		}
+	}
 }
 
-func (r *FTPFileRecorder) UploadFile(maxRetry int) {
-    if r.isNullStorage() {
-        _ = os.Remove(r.absFilePath)
-        return
-    }
-    for i := 0; i <= maxRetry; i++ {
-        logger.Infof("Upload FTP file: %s, type: %s", r.absFilePath, r.storage.TypeName())
-        err := r.storage.Upload(r.absFilePath, r.RealTarget())
-        if err == nil {
-            _ = os.Remove(r.absFilePath)
-            if err := r.jmsService.FinishFTPFile(r.FTPLog.ID); err != nil {
-                logger.Errorf("FTP file %s upload failed: %s", r.FTPLog.ID, err)
-            }
-            break
-        }
-        logger.Errorf("Upload FTP file err: %s", err)
-        // 如果还是失败，上传 server 再传一次
-        if i == maxRetry {
-            if r.storage.TypeName() == "server" {
-                break
-            }
-            logger.Errorf("Session[%s] using server storage retry upload", r.FTPLog.ID)
-            r.storage = storage.ServerStorage{StorageType: "server", JmsService: r.jmsService}
-            r.UploadFile(3)
-            break
-        }
-    }
-    r.file.Close()
+func (r *FTPFileRecorder) RecordWrite(ftpLog *model.FTPLog, p []byte) (err error) {
+	if r.isNullStorage() {
+		return
+	}
+	info := r.getFTPFile(ftpLog.ID)
+	if info == nil {
+		info, err = r.CreateFTPFileInfo(ftpLog)
+	}
+	if err != nil {
+		return
+	}
+	_, err = info.fd.Write(p)
+	return err
 }
 
-func (r *FTPFileRecorder) SetFTPLog(ftpLog *model.FTPLog) {
-    r.FTPLog = ftpLog
-    err := r.PreRecord()
-    if err != nil {
-        return
-    }
+func (r *FTPFileRecorder) FinishFTPFile(id string) {
+	info := r.getFTPFile(id)
+	if info == nil {
+		return
+	}
+	_ = info.Close()
+	go r.UploadFile(3, id)
 }
 
-func (r *FTPFileRecorder) RecordWrite(p []byte) (err error) {
-    if r.isNullStorage() {
-        return
-    }
-    _, err = r.file.Write(p)
-    if err != nil {
-        logger.Errorf("Record write save err: %s", err)
-    }
-    return
+func (r *FTPFileRecorder) RemoveFtpLog(id string) {
+	if r.isNullStorage() {
+		return
+	}
+	info := r.getFTPFile(id)
+	if info == nil {
+		return
+	}
+	_ = info.Close()
+	_ = os.Remove(info.absFilePath)
+	r.removeFTPFile(id)
 }
 
-func (r *FTPFileRecorder) Clear() (err error) {
-    if r.isNullStorage() {
-        return
-    }
-    err = os.Remove(r.absFilePath)
-    return
+func NewFTPFileRecord(jmsService *service.JMService, storage storage.FTPFileStorage, maxStore int64) *FTPFileRecorder {
+	recorder := &FTPFileRecorder{
+		jmsService:       jmsService,
+		storage:          storage,
+		TargetPrefix:     FTPTargetPrefix,
+		MaxStoreFileSize: maxStore,
+	}
+	return recorder
 }
 
-func NewFTPFileRecord(jmsService *service.JMService, storage storage.FTPFileStorage, maxStore int64) (FTPFileRecorder, error) {
-    recorder := FTPFileRecorder{
-        jmsService:   jmsService,
-        storage:      storage,
-        TargetPrefix: "FTP_FILES",
-        MaxStore:     maxStore,
-    }
-    return recorder, nil
+const FTPTargetPrefix = "FTP_FILES"
+
+func GetFTPFileRecorder(jmsService *service.JMService) *FTPFileRecorder {
+	terminalConfig, _ := jmsService.GetTerminalConfig()
+	maxStoreSize := terminalConfig.MaxStoreFTPFileSize
+	maxSize := int64(maxStoreSize) * 1024 * 1024
+	ftpStorage := storage.NewFTPFileStorage(jmsService, terminalConfig.ReplayStorage)
+	recorder := NewFTPFileRecord(jmsService, ftpStorage, maxSize)
+	return recorder
 }
 
-func GetFTPFileRecorder(jmsService *service.JMService) FTPFileRecorder {
-    terminalConfig, _ := jmsService.GetTerminalConfig()
-    maxStore := terminalConfig.FTPFileMaxStore
-    recorder, err := NewFTPFileRecord(jmsService, storage.NewFTPFileStorage(jmsService, terminalConfig.ReplayStorage), maxStore)
-    if err != nil {
-        logger.Error(err)
-    }
-    return recorder
+type FTPFileInfo struct {
+	ftpLog *model.FTPLog
+	fd     *os.File
+
+	absFilePath string
+	Target      string
 }
 
-
+func (f *FTPFileInfo) Close() error {
+	if f.fd != nil {
+		err := f.fd.Close()
+		f.fd = nil
+		return err
+	}
+	return nil
+}
