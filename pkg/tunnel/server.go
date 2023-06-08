@@ -314,6 +314,7 @@ func (g *GuacamoleTunnelServer) DownloadFile(ctx *gin.Context) {
 			Operate:    model.OperateDownload,
 			Path:       filename,
 			DateStart:  common.NewNowUTCTime(),
+			Session:    tun.Sess.ID,
 		}
 		ctx.Writer.Header().Set("content-disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
 		out := OutStreamResource{
@@ -371,6 +372,7 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 			Operate:    model.OperateUpload,
 			Path:       filename,
 			DateStart:  common.NewNowUTCTime(),
+			Session:    tun.Sess.ID,
 		}
 		files := form.File["file"]
 		for _, file := range files {

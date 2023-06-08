@@ -146,12 +146,10 @@ func (r *FTPFileRecorder) RecordWrite(p []byte) (err error) {
     if r.isNullStorage() {
         return
     }
-    go func () {
-        _, err = r.file.Write(p)
-        if err != nil {
-            logger.Errorf("Record write save err: %s", err)
-        }
-    }()
+    _, err = r.file.Write(p)
+    if err != nil {
+        logger.Errorf("Record write save err: %s", err)
+    }
     return
 }
 
