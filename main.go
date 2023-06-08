@@ -25,7 +25,7 @@ import (
 	"lion/pkg/jms-sdk-go/service/videoworker"
 	"lion/pkg/logger"
 	"lion/pkg/middleware"
-    "lion/pkg/proxy"
+	"lion/pkg/proxy"
 	"lion/pkg/session"
 	"lion/pkg/storage"
 	"lion/pkg/tunnel"
@@ -62,7 +62,6 @@ func main() {
 	jmsService := MustJMService()
 	videoWorkerClient := NewWorkerClient(*config.GlobalConfig)
 	bootstrap(jmsService)
-	recorder := proxy.GetFTPFileRecorder(jmsService)
 	tunnelService := tunnel.GuacamoleTunnelServer{
 		Cache: &tunnel.GuaTunnelCacheManager{
 			GuaTunnelCache: NewGuaTunnelCache(),
@@ -73,7 +72,6 @@ func main() {
 		JmsService: jmsService,
 		SessionService: &session.Server{JmsService: jmsService,
 			VideoWorkerClient: videoWorkerClient},
-		Recorder: recorder,
 	}
 	eng := registerRouter(jmsService, &tunnelService)
 	go runHeartTask(jmsService, tunnelService.Cache)
@@ -314,46 +312,47 @@ func bootstrap(jmsService *service.JMService) {
 }
 
 func uploadRemainFTPFile(jmsService *service.JMService, fileStoreDir string) {
-    err := config.EnsureDirExist(fileStoreDir)
-    if err != nil {
-        logger.Debugf("upload failed FTP file err: %s", err.Error())
-        return
-    }
+	err := config.EnsureDirExist(fileStoreDir)
+	if err != nil {
+		logger.Debugf("upload failed FTP file err: %s", err.Error())
+		return
+	}
 
-    terminalConf, _ := jmsService.GetTerminalConfig()
-    ftpFileStorage := storage.NewFTPFileStorage(jmsService, terminalConf.ReplayStorage)
+	terminalConf, _ := jmsService.GetTerminalConfig()
+	ftpFileStorage := storage.NewFTPFileStorage(jmsService, terminalConf.ReplayStorage)
 
-    allRemainFiles := make(map[string]string)
-    _ = filepath.Walk(fileStoreDir, func(path string, info os.FileInfo, err error) error {
-        if err != nil || info.IsDir() {
-            return nil
-        }
-        var fid string
-        filename := info.Name()
-        if len(filename) == 36 {
-            fid = filename
-        }
-        if fid != "" {
-            allRemainFiles[path] = fid
-        }
-        return nil
-    })
+	allRemainFiles := make(map[string]string)
+	_ = filepath.Walk(fileStoreDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return nil
+		}
+		var fid string
+		filename := info.Name()
+		if len(filename) == 36 {
+			fid = filename
+		}
+		if fid != "" {
+			allRemainFiles[path] = fid
+		}
+		return nil
+	})
 
-    for path, fid := range allRemainFiles {
-        target, _ := filepath.Rel(fileStoreDir, path)
-        logger.Infof("Upload FTP file: %s, type: %s", path, ftpFileStorage.TypeName())
-        if err = ftpFileStorage.Upload(path, target); err != nil {
-            logger.Errorf("Upload remain FTP file %s failed: %s", path, err)
-            continue
-        }
-        if err := jmsService.FinishFTPFile(fid); err != nil {
-            logger.Errorf("Notify FTP file %s upload failed: %s", fid, err)
-            continue
-        }
-        _ = os.Remove(path)
-        logger.Infof("Upload remain FTP file %s success", path)
-    }
-    logger.Debug("Upload remain replay done")
+	for path, fid := range allRemainFiles {
+		dateTarget, _ := filepath.Rel(fileStoreDir, path)
+		target := strings.Join([]string{proxy.FTPTargetPrefix, dateTarget}, "/")
+		logger.Infof("Upload FTP file: %s, type: %s", path, ftpFileStorage.TypeName())
+		if err = ftpFileStorage.Upload(path, target); err != nil {
+			logger.Errorf("Upload remain FTP file %s failed: %s", path, err)
+			continue
+		}
+		if err := jmsService.FinishFTPFile(fid); err != nil {
+			logger.Errorf("Notify FTP file %s upload failed: %s", fid, err)
+			continue
+		}
+		_ = os.Remove(path)
+		logger.Infof("Upload remain FTP file %s success", path)
+	}
+	logger.Debug("Upload remain replay done")
 }
 
 func uploadRemainReplay(jmsService *service.JMService, remainFiles map[string]string) {
