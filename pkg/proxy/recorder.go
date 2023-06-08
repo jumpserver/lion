@@ -197,6 +197,7 @@ func NewFTPFileRecord(jmsService *service.JMService, storage storage.FTPFileStor
 		storage:          storage,
 		TargetPrefix:     FTPTargetPrefix,
 		MaxStoreFileSize: maxStore,
+		ftpLogMap:        make(map[string]*FTPFileInfo),
 	}
 	return recorder
 }
