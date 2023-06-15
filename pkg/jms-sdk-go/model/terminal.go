@@ -8,6 +8,7 @@ type TerminalConfig struct {
 	MaxIdleTime         int                    `json:"SECURITY_MAX_IDLE_TIME"`
 	HeartbeatDuration   int                    `json:"TERMINAL_HEARTBEAT_INTERVAL"`
 	HostKey             string                 `json:"TERMINAL_HOST_KEY"`
+	MaxStoreFTPFileSize int                    `json:"FTP_FILE_MAX_STORE"`
 }
 
 type Terminal struct {

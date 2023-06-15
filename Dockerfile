@@ -16,7 +16,7 @@ ADD ui .
 RUN --mount=type=cache,target=/usr/local/share/.cache/yarn,sharing=locked,id=lion \
     yarn build
 
-FROM golang:1.19-bullseye as stage-build
+FROM golang:1.19-buster as stage-build
 LABEL stage=stage-build
 ARG TARGETARCH
 
@@ -47,7 +47,7 @@ RUN --mount=type=cache,target=/root/.cache \
 
 RUN chmod +x entrypoint.sh
 
-FROM jumpserver/guacd:1.4.0
+FROM jumpserver/guacd:1.5.2
 ARG TARGETARCH
 
 USER root

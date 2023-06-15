@@ -2,13 +2,16 @@ package tunnel
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"strconv"
+	"strings"
 
 	ginSessions "github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	uuid "github.com/satori/go.uuid"
 
 	"lion/pkg/common"
 	"lion/pkg/config"
@@ -17,6 +20,7 @@ import (
 	"lion/pkg/jms-sdk-go/model"
 	"lion/pkg/jms-sdk-go/service"
 	"lion/pkg/logger"
+	"lion/pkg/proxy"
 	"lion/pkg/session"
 )
 
@@ -125,6 +129,25 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 		}
 	}
 	info := g.getClientInfo(ctx)
+	opts := tunnelSession.AuthInfo.ConnectOptions
+	resolution := strings.ToLower(opts.Resolution)
+	switch resolution {
+	case "":
+	case "auto":
+	default:
+		resolutions := strings.Split(resolution, "x")
+		if len(resolutions) == 2 {
+			width := resolutions[0]
+			height := resolutions[1]
+			if widthInt, err1 := strconv.Atoi(width); err1 == nil && widthInt > 0 {
+				info.OptimalScreenWidth = widthInt
+			}
+			if heightInt, err1 := strconv.Atoi(height); err1 == nil && heightInt > 0 {
+				info.OptimalScreenHeight = heightInt
+			}
+		}
+	}
+
 	conf := tunnelSession.GuaConfiguration()
 	for argName, argValue := range info.ExtraConfig() {
 		conf.SetParameter(argName, argValue)
@@ -279,7 +302,9 @@ func (g *GuacamoleTunnelServer) DownloadFile(ctx *gin.Context) {
 	}
 	user := userItem.(*model.User)
 	if tun := g.Cache.Get(tid); tun != nil && tun.Sess.User.ID == user.ID {
+		recorder := proxy.GetFTPFileRecorder(g.JmsService)
 		fileLog := model.FTPLog{
+			ID:         uuid.NewV4().String(),
 			User:       tun.Sess.User.String(),
 			Hostname:   tun.Sess.Asset.String(),
 			OrgID:      tun.Sess.Asset.OrgID,
@@ -288,6 +313,7 @@ func (g *GuacamoleTunnelServer) DownloadFile(ctx *gin.Context) {
 			Operate:    model.OperateDownload,
 			Path:       filename,
 			DateStart:  common.NewNowUTCTime(),
+			Session:    tun.Sess.ID,
 		}
 		ctx.Writer.Header().Set("content-disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
 		out := OutStreamResource{
@@ -296,16 +322,20 @@ func (g *GuacamoleTunnelServer) DownloadFile(ctx *gin.Context) {
 			writer:      ctx.Writer,
 			ctx:         ctx.Request.Context(),
 			done:        make(chan struct{}),
+			ftpLog:      &fileLog,
+			recorder:    recorder,
 		}
 		tun.outputFilter.addOutStream(out)
 		if err := out.Wait(); err != nil {
 			logger.Errorf("Session[%s] download file %s err: %s", tun, filename, err)
 			ctx.JSON(http.StatusBadRequest, ErrorResponse(err))
 			g.SessionService.AuditFileOperation(fileLog)
+			recorder.RemoveFtpLog(fileLog.ID)
 			return
 		}
 		fileLog.IsSuccess = true
 		g.SessionService.AuditFileOperation(fileLog)
+		recorder.FinishFTPFile(fileLog.ID)
 		logger.Infof("Session[%s] download file %s success", tun, filename)
 		return
 	}
@@ -331,7 +361,9 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 	user := userItem.(*model.User)
 	if tun := g.Cache.Get(tid); tun != nil && tun.Sess.User.ID == user.ID {
 		logger.Infof("User %s upload file %s", user, filename)
+		recorder := proxy.GetFTPFileRecorder(g.JmsService)
 		fileLog := model.FTPLog{
+			ID:         uuid.NewV4().String(),
 			User:       tun.Sess.User.String(),
 			Hostname:   tun.Sess.Asset.String(),
 			OrgID:      tun.Sess.Asset.OrgID,
@@ -340,6 +372,7 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 			Operate:    model.OperateUpload,
 			Path:       filename,
 			DateStart:  common.NewNowUTCTime(),
+			Session:    tun.Sess.ID,
 		}
 		files := form.File["file"]
 		for _, file := range files {
@@ -354,7 +387,6 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 			}
 			tun.inputFilter.addInputStream(&stream)
 			stream.Wait()
-			_ = fdReader.Close()
 			if err := stream.WaitErr(); err != nil {
 				logger.Errorf("Session[%s] upload file %s err: %s", tun, filename, err)
 				g.SessionService.AuditFileOperation(fileLog)
@@ -363,6 +395,11 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 			logger.Infof("Session[%s] upload file %s success", tun, filename)
 			fileLog.IsSuccess = true
 			g.SessionService.AuditFileOperation(fileLog)
+			_, _ = fdReader.(io.Seeker).Seek(0, io.SeekStart)
+			if err1 := recorder.Record(&fileLog, fdReader); err1 != nil {
+				logger.Errorf("Record file %s err: %s", filename, err1)
+			}
+			_ = fdReader.Close()
 		}
 		return
 	}

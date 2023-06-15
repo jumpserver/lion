@@ -30,6 +30,9 @@
           </el-button>
         </div>
       </li>
+      <li class="item">
+        <slot />
+      </li>
     </ul>
   </div>
 </template>

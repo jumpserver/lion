@@ -9,13 +9,15 @@ import (
 	"sync"
 
 	"lion/pkg/guacd"
+	"lion/pkg/jms-sdk-go/model"
 	"lion/pkg/logger"
+	"lion/pkg/proxy"
 )
 
 type OutputStreamInterceptingFilter struct {
-	tunnel  *Connection
-	streams map[string]OutStreamResource
 	sync.Mutex
+	tunnel           *Connection
+	streams          map[string]OutStreamResource
 	acknowledgeBlobs bool
 }
 
@@ -76,6 +78,7 @@ func (filter *OutputStreamInterceptingFilter) handleBlob(unfilteredInstruction *
 			}
 			return nil
 		}
+		stream.recorder.RecordWrite(stream.ftpLog, blob)
 		if !filter.acknowledgeBlobs {
 			filter.acknowledgeBlobs = true
 			ins := guacd.NewInstruction(guacd.InstructionStreamingBlob, index, "")
@@ -158,6 +161,9 @@ type OutStreamResource struct {
 	done        chan struct{}
 	err         error
 	ctx         context.Context
+
+	ftpLog   *model.FTPLog
+	recorder *proxy.FTPFileRecorder
 }
 
 func (r *OutStreamResource) Wait() error {

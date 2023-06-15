@@ -32,7 +32,9 @@ const message = {
   Password: '密码',
   RequireParams: '必填参数',
   Settings: '设置',
-  UploadSuccess: '上传成功'
+  UploadSuccess: '上传成功',
+  Display: '显示',
+  AutoFit: '自动适应'
 }
 
 export default {

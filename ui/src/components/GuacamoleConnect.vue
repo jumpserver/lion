@@ -16,7 +16,20 @@
       </el-row>
     </el-main>
     <RightPanel>
-      <Settings :settings="settings" :title="$t('Settings')" />
+      <Settings :settings="settings" :title="$t('Settings')">
+        <el-button type="text" class="item-button el-icon-c-scale-to-original">
+           {{ $t('Display') }}
+        </el-button>
+        <div class="content"> <i class="el-icon-remove-outline" @click="decreaseScale" />
+          <span>{{ scaleValue }}%</span>
+          <i class="el-icon-circle-plus-outline" @click="increaseScale" />
+          <el-form label-position="left">
+            <el-form-item :label="$t('AutoFit')">
+              <el-switch v-model="autoFit" />
+            </el-form-item>
+          </el-form>
+        </div>
+      </Settings>
     </RightPanel>
     <GuacClipboard
       v-if="clipboardInited"
@@ -135,7 +148,9 @@ export default {
       scale: 1,
       timeout: null,
       origin: null,
-      lunaId: null
+      lunaId: null,
+      display: null,
+      autoFit: true
     }
   },
   computed: {
@@ -144,6 +159,9 @@ export default {
         height: this.displayHeight + 'px',
         width: this.displayWidth + 'px'
       }
+    },
+    scaleValue() {
+      return Math.floor(this.scale * 100)
     },
     menuDisable: function() {
       return !(this.clientState === 'Connected') || !(this.tunnelState === 'OPEN')
@@ -184,6 +202,13 @@ export default {
       return settings
     }
   },
+  watch: {
+    autoFit: function(val) {
+      if (val) {
+        this.updateDisplayScale()
+      }
+    }
+  },
   mounted: function() {
     const result = getCurrentConnectParams()
     this.apiPrefix = result['api']
@@ -203,6 +228,19 @@ export default {
     window.addEventListener('message', this.handleEventFromLuna, false)
   },
   methods: {
+    increaseScale() {
+      this.autoFit = false
+      this.scale += 0.1
+      this.display.scale(this.scale)
+    },
+    decreaseScale() {
+      this.autoFit = false
+      this.scale -= 0.1
+      if (this.scale < 0.5) {
+        this.scale = 0.5
+      }
+      this.display.scale(this.scale)
+    },
     toggleFileSystem(e) {
       if (this.menuDisable) {
         return
@@ -557,7 +595,12 @@ export default {
     getPropScale() {
       const display = this.client.getDisplay()
       if (!display) {
-        return
+        return 1
+      }
+      const displayWidth = display.getWidth()
+      const displayHeight = display.getHeight()
+      if (displayWidth === 0 || displayHeight === 0) {
+        return 1
       }
       const [width, height] = this.getAutoSize()
       // Calculate scale to fit screen
@@ -578,7 +621,6 @@ export default {
         return
       }
       this.scale = scale
-      this.$log.debug('this scale', scale)
       this.display.scale(scale)
     },
 
@@ -593,6 +635,10 @@ export default {
       // 监听 window display的变化
       this.displayWidth = window.innerWidth - sideWidth
       this.displayHeight = window.innerHeight
+      if (!this.autoFit) {
+        this.$log.debug('onWindowResize, autoFit is false')
+        return
+      }
       const [optimalWidth, optimalHeight] = this.getGuaSize()
       if (this.client !== null) {
         const display = this.client.getDisplay()

@@ -62,7 +62,6 @@ func (s *Server) CreatByToken(ctx *gin.Context, token string) (TunnelSession, er
 	opts = append(opts, WithUser(&connectToken.User))
 	opts = append(opts, WithActions(connectToken.Actions))
 	opts = append(opts, WithExpireInfo(connectToken.ExpireAt))
-	opts = append(opts, WithProtocol(connectToken.Protocol))
 	opts = append(opts, WithAsset(&connectToken.Asset))
 	opts = append(opts, WithAccount(&connectToken.Account))
 	opts = append(opts, WithPlatform(&connectToken.Platform))
@@ -171,18 +170,16 @@ func (s *Server) Create(ctx *gin.Context, opts ...TunnelOption) (sess TunnelSess
 		setter(opt)
 	}
 	targetType := TypeRDP
-	sessionProtocol := "rdp"
-	if opt.appletOpt != nil {
-		targetType = TypeRemoteApp
-	} else {
-		switch opt.Protocol {
-		case TypeRDP:
-		case TypeVNC:
-			targetType = TypeVNC
-			sessionProtocol = "vnc"
-		default:
+	sessionProtocol := opt.Protocol
+	switch opt.Protocol {
+	case TypeRDP:
+	case TypeVNC:
+		targetType = TypeVNC
+	default:
+		if opt.appletOpt == nil {
 			return TunnelSession{}, fmt.Errorf("%w: %s", ErrUnSupportedProtocol, opt.Protocol)
 		}
+		targetType = TypeRemoteApp
 	}
 	sessionAssetName := opt.Asset.String()
 	sess, err = s.CreateRDPAndVNCSession(opt)
@@ -333,17 +330,18 @@ func (s *Server) RegisterFinishReplayCallback(tunnel TunnelSession) func(guacd.C
 		}
 		// 压缩完成则删除源文件
 		defer os.Remove(originReplayFilePath)
+		defaultStorage := storage.ServerStorage{StorageType: "server", JmsService: s.JmsService}
 		logger.Infof("Upload record file: %s, type: %s", dstReplayFilePath, storageType)
-		if replayStorage := storage.NewReplayStorage(replayConfig); replayStorage != nil {
+		if replayStorage := storage.NewReplayStorage(s.JmsService, replayConfig); replayStorage != nil {
 			targetName := strings.Join([]string{tunnel.Created.Format(recordDirTimeFormat),
 				tunnel.ID + ReplayFileNameSuffix}, "/")
 			if err = replayStorage.Upload(dstReplayFilePath, targetName); err != nil {
 				logger.Errorf("Upload replay failed: %s", err)
 				logger.Errorf("Upload replay by type %s failed, try use default", storageType)
-				err = s.JmsService.Upload(tunnel.ID, dstReplayFilePath)
+				err = defaultStorage.Upload(tunnel.ID, dstReplayFilePath)
 			}
 		} else {
-			err = s.JmsService.Upload(tunnel.ID, dstReplayFilePath)
+			err = defaultStorage.Upload(tunnel.ID, dstReplayFilePath)
 		}
 		// 上传文件
 		if err != nil {

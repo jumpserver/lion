@@ -11,8 +11,17 @@ type StorageType interface {
 	TypeName() string
 }
 
-type ReplayStorage interface {
+type Storage interface {
 	Upload(gZipFile, target string) error
+	StorageType
+}
+
+type FTPFileStorage interface {
+	Storage
+}
+
+type ReplayStorage interface {
+	Storage
 }
 
 type CommandStorage interface {
@@ -20,7 +29,7 @@ type CommandStorage interface {
 	StorageType
 }
 
-func NewReplayStorage(cfg model.ReplayConfig) ReplayStorage {
+func GetStorage(cfg model.ReplayConfig) Storage {
 	switch cfg.TypeName {
 	case "azure":
 		var (
@@ -114,6 +123,22 @@ func NewReplayStorage(cfg model.ReplayConfig) ReplayStorage {
 	default:
 		return nil
 	}
+}
+
+func NewReplayStorage(jmsService *service.JMService, cfg model.ReplayConfig) ReplayStorage {
+	replayStorage := GetStorage(cfg)
+	if replayStorage == nil {
+		replayStorage = ServerStorage{StorageType: "server", JmsService: jmsService}
+	}
+	return replayStorage
+}
+
+func NewFTPFileStorage(jmsService *service.JMService, cfg model.ReplayConfig) FTPFileStorage {
+	ftpStorage := GetStorage(cfg)
+	if ftpStorage == nil {
+		ftpStorage = FTPServerStorage{StorageType: "server", JmsService: jmsService}
+	}
+	return ftpStorage
 }
 
 func NewCommandStorage(jmsService *service.JMService, conf *model.TerminalConfig) CommandStorage {
