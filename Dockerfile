@@ -46,7 +46,7 @@ RUN --mount=type=cache,target=/root/.cache \
 
 RUN chmod +x entrypoint.sh
 
-FROM jumpserver/guacd:1.4.0
+FROM jumpserver/guacd:1.5.2
 ARG TARGETARCH
 
 USER root
