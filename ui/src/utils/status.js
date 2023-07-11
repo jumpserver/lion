@@ -32,3 +32,32 @@ export const APIErrorType = {
   'unsupported protocol': 'JMSErrBadParams',
   'permission deny': 'JMSErrPermission'
 }
+
+export function ConvertGuacamoleError(errMsg) {
+  if (typeof errMsg !== 'string') {
+    return errMsg
+  }
+  return GuacamoleErrMsg[errMsg] || errMsg
+}
+
+export const GuacamoleErrMsg = {
+  'Disconnected.': 'GuacamoleErrDisconnected',
+  'Credentials expired.': 'GuacamoleErrCredentialsExpired',
+  'Security negotiation failed (wrong security type?)': 'GuacamoleErrSecurityNegotiationFailed',
+  'Access denied by server (account locked/disabled?)': 'GuacamoleErrAccessDenied',
+  'Authentication failure (invalid credentials?)': 'GuacamoleErrAuthenticationFailure',
+  'SSL/TLS connection failed (untrusted/self-signed certificate?)': 'GuacamoleErrSSLTLSConnectionFailed',
+  'DNS lookup failed (incorrect hostname?)': 'GuacamoleErrDNSLookupFailed',
+  'Server refused connection (wrong security type?)': 'GuacamoleErrServerRefusedConnectionBySecurityType',
+  'Connection failed (server unreachable?)': 'GuacamoleErrConnectionFailed',
+  'Upstream error.': 'GuacamoleErrUpstreamError',
+  'Forcibly disconnected.': 'GuacamoleErrForciblyDisconnected',
+  'Logged off.': 'GuacamoleErrLoggedOff',
+  'Idle session time limit exceeded.': 'GuacamoleErrIdleSessionTimeLimitExceeded',
+  'Active session time limit exceeded.': 'GuacamoleErrActiveSessionTimeLimitExceeded',
+  'Disconnected by other connection.': 'GuacamoleErrDisconnectedByOtherConnection',
+  'Server refused connection.': 'GuacamoleErrServerRefusedConnection',
+  'Insufficient privileges.': 'GuacamoleErrInsufficientPrivileges',
+  'Manually disconnected.': 'GuacamoleErrManuallyDisconnected',
+  'Manually logged off.': 'GuacamoleErrManuallyLoggedOff'
+}
