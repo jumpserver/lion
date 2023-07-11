@@ -33,7 +33,27 @@ const message = {
   Settings: 'Settings',
   UploadSuccess: 'Upload success',
   Display: 'Display',
-  AutoFit: 'Auto Fit'
+  AutoFit: 'Auto Fit',
+
+  GuacamoleErrDisconnected: 'Disconnected.',
+  GuacamoleErrCredentialsExpired: 'Credentials expired.',
+  GuacamoleErrSecurityNegotiationFailed: 'Security negotiation failed (wrong security type?)',
+  GuacamoleErrAccessDenied: 'Access denied by server (account locked/disabled?)',
+  GuacamoleErrAuthenticationFailure: 'Authentication failure (invalid credentials?)',
+  GuacamoleErrSSLTLSConnectionFailed: 'SSL/TLS connection failed (untrusted/self-signed certificate?)',
+  GuacamoleErrDNSLookupFailed: 'DNS lookup failed (incorrect hostname?)',
+  GuacamoleErrServerRefusedConnectionBySecurityType: 'Server refused connection (wrong security type?)',
+  GuacamoleErrConnectionFailed: 'Connection failed (server unreachable?)',
+  GuacamoleErrUpstreamError: 'Upstream error.',
+  GuacamoleErrForciblyDisconnected: 'Forcibly disconnected.',
+  GuacamoleErrLoggedOff: 'Logged off.',
+  GuacamoleErrIdleSessionTimeLimitExceeded: 'Idle session time limit exceeded.',
+  GuacamoleErrActiveSessionTimeLimitExceeded: 'Active session time limit exceeded.',
+  GuacamoleErrDisconnectedByOtherConnection: 'Disconnected by other connection.',
+  GuacamoleErrServerRefusedConnection: 'Server refused connection.',
+  GuacamoleErrInsufficientPrivileges: 'Insufficient privileges.',
+  GuacamoleErrManuallyDisconnected: 'Manually disconnected.',
+  GuacamoleErrManuallyLoggedOff: 'Manually logged off.'
 }
 
 export default {

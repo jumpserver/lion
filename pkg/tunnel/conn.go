@@ -144,7 +144,7 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 			switch instruction.Opcode {
 			case guacd.InstructionServerDisconnect,
 				guacd.InstructionServerError:
-				logger.Infof("Session[%s] receive guacamole server disconnect opcode", t)
+				logger.Infof("Session[%s] receive guacamole server disconnect: %s", t, instruction.String())
 			case guacd.InstructionStreamingAck:
 				select {
 				case activeChan <- struct{}{}:
@@ -180,16 +180,20 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 				}
 
 				switch ret.Opcode {
+				case guacd.InstructionKey:
+					userInputMessageChan <- &session.Message{
+						Opcode: ret.Opcode, Body: ret.Args,
+						Meta: meta}
+				default:
+
+				}
+
+				switch ret.Opcode {
 				case guacd.InstructionClientSync,
 					guacd.InstructionClientNop,
 					guacd.InstructionStreamingAck:
 				case guacd.InstructionClientDisconnect:
 					logger.Errorf("Session[%s] receive web client disconnect opcode", t)
-				case guacd.InstructionKey:
-					userInputMessageChan <- &session.Message{
-						Opcode: ret.Opcode, Body: ret.Args,
-						Meta: meta}
-					fallthrough
 				default:
 					select {
 					case activeChan <- struct{}{}:
