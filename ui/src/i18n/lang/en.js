@@ -53,7 +53,8 @@ const message = {
   GuacamoleErrServerRefusedConnection: 'Server refused connection.',
   GuacamoleErrInsufficientPrivileges: 'Insufficient privileges.',
   GuacamoleErrManuallyDisconnected: 'Manually disconnected.',
-  GuacamoleErrManuallyLoggedOff: 'Manually logged off.'
+  GuacamoleErrManuallyLoggedOff: 'Manually logged off.',
+  GuacamoleErrUnsupportedCredentialTypeRequested: 'Unsupported credential type requested.'
 }
 
 export default {

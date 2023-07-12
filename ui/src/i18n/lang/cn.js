@@ -54,7 +54,8 @@ const message = {
   GuacamoleErrServerRefusedConnection: '远程连接的服务器拒绝连接',
   GuacamoleErrInsufficientPrivileges: '远程连接的用户权限不足',
   GuacamoleErrManuallyDisconnected: '远程连接被手动断开',
-  GuacamoleErrManuallyLoggedOff: '远程连接的用户被手动注销'
+  GuacamoleErrManuallyLoggedOff: '远程连接的用户被手动注销',
+  GuacamoleErrUnsupportedCredentialTypeRequested: '远程连接的凭证类型不支持'
 }
 
 export default {

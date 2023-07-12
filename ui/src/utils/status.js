@@ -59,5 +59,7 @@ export const GuacamoleErrMsg = {
   'Server refused connection.': 'GuacamoleErrServerRefusedConnection',
   'Insufficient privileges.': 'GuacamoleErrInsufficientPrivileges',
   'Manually disconnected.': 'GuacamoleErrManuallyDisconnected',
-  'Manually logged off.': 'GuacamoleErrManuallyLoggedOff'
+  'Manually logged off.': 'GuacamoleErrManuallyLoggedOff',
+
+  'Unsupported credential type requested.': 'GuacamoleErrUnsupportedCredentialTypeRequested'
 }
