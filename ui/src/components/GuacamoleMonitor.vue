@@ -15,8 +15,7 @@ import { getMonitorConnectParams } from '@/utils/common'
 import { getSupportedMimetypes } from '@/utils/image'
 import { getSupportedGuacAudios } from '@/utils/audios'
 import { getSupportedGuacVideos } from '@/utils/video'
-import { getLanguage } from '@/i18n'
-import { ErrorStatusCodes } from '@/utils/status'
+import { ConvertGuacamoleError, ErrorStatusCodes } from '@/utils/status'
 
 const pixelDensity = window.devicePixelRatio || 1
 export default {
@@ -220,9 +219,7 @@ export default {
       this.$log.debug(status, i18n.locale)
       const code = status.code
       let msg = status.message
-      if (getLanguage() === 'cn') {
-        msg = ErrorStatusCodes[code] ? this.$t(ErrorStatusCodes[code]) : status.message
-      }
+      msg = ErrorStatusCodes[code] ? this.$t(ErrorStatusCodes[code]) : this.$t(ConvertGuacamoleError(status.message))
       this.$alert(msg, this.$t('ErrTitle'), {
         confirmButtonText: this.$t('OK'),
         callback: action => {
@@ -239,6 +236,7 @@ export default {
       const tunnel = new Guacamole.WebSocketTunnel(wsURL)
       const client = new Guacamole.Client(tunnel)
       const vm = this
+      tunnel.receiveTimeout = 60 * 1000
       tunnel.onerror = function tunnelError(status) {
         vm.$log.debug('tunnelError ', status)
         display.innerHTML = ''

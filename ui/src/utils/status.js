@@ -12,7 +12,8 @@ export const ErrorStatusCodes = {
   1005: 'JMSErrTerminatedByAdmin',
   1006: 'JMSErrAPIFailed',
   1007: 'JMSErrGatewayFailed',
-  1008: 'JMSErrGuacamoleServer'
+  1008: 'JMSErrGuacamoleServer',
+  1009: 'JMSErrDisconnected'
 }
 
 export function ConvertAPIError(errMsg) {

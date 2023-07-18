@@ -56,4 +56,6 @@ var (
 	ErrGuacamoleServer = NewJMSGuacamoleError(1008, "Connect guacamole server failed")
 
 	ErrPermission = NewJMSGuacamoleError(256, "No permission")
+
+	ErrDisconnect = NewJMSGuacamoleError(1009, "Disconnect by client")
 )
