@@ -30,14 +30,12 @@ type PlatformProtocol struct {
 	Setting ProtocolSetting `json:"setting"`
 }
 type ProtocolSetting struct {
-	Security         string `json:"security"`
-	Console          bool   `json:"console"`
-	SftpEnabled      bool   `json:"sftp_enabled"`
-	SftpHome         string `json:"sftp_home"`
-	AutoFill         bool   `json:"auto_fill"`
-	UsernameSelector string `json:"username_selector"`
-	PasswordSelector string `json:"password_selector"`
-	SubmitSelector   string `json:"submit_selector"`
+	Security    string `json:"security"`
+	Console     bool   `json:"console"`
+	SftpEnabled bool   `json:"sftp_enabled"`
+	SftpHome    string `json:"sftp_home"`
+	AutoFill    bool   `json:"auto_fill"`
+	AdDomain    string `json:"ad_domain"`
 }
 
 /*

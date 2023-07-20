@@ -11,6 +11,7 @@ import (
 )
 
 type MonitorCon struct {
+	Id          string
 	guacdTunnel Tunneler
 
 	ws *websocket.Conn
@@ -53,7 +54,8 @@ func (m *MonitorCon) Run(ctx context.Context) (err error) {
 		for {
 			instruction, err := t.readTunnelInstruction()
 			if err != nil {
-				logger.Error(err)
+				_ = t.writeWsMessage([]byte(ErrDisconnect.String()))
+				logger.Infof("Monitor[%s] guacd tunnel read err: %+v", t.Id, err)
 				exit <- err
 				break
 			}
@@ -70,6 +72,8 @@ func (m *MonitorCon) Run(ctx context.Context) (err error) {
 		for {
 			_, message, err := t.ws.ReadMessage()
 			if err != nil {
+				logger.Infof("Monitor[%s] ws read err: %+v", t.Id, err)
+
 				exit <- err
 				break
 			}
@@ -82,11 +86,11 @@ func (m *MonitorCon) Run(ctx context.Context) (err error) {
 					continue
 				}
 			} else {
-				logger.Errorf("Parse instruction err %s", err)
+				logger.Errorf("Monitor[%s] parse instruction err %s", t.Id, err)
 			}
 			_, err = t.writeTunnelMessage(message)
 			if err != nil {
-				logger.Errorf("Guacamole server write err: %+v", err)
+				logger.Errorf("Monitor[%s] guacamole tunnel write err: %+v", t.Id, err)
 				exit <- err
 				break
 			}
@@ -97,8 +101,10 @@ func (m *MonitorCon) Run(ctx context.Context) (err error) {
 	for {
 		select {
 		case err = <-exit:
+			logger.Infof("Monitor[%s] exit: %+v", m.Id, err)
 			return err
 		case <-ctx.Done():
+			logger.Info("Monitor[%s] done", m.Id)
 			return nil
 		}
 	}

@@ -452,6 +452,7 @@ func (g *GuacamoleTunnelServer) Monitor(ctx *gin.Context) {
 	}
 	defer tunnelCon.Close()
 	conn := MonitorCon{
+		Id:          sessionId,
 		guacdTunnel: tunnelCon,
 		ws:          ws,
 	}

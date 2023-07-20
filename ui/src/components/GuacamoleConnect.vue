@@ -18,7 +18,7 @@
     <RightPanel>
       <Settings :settings="settings" :title="$t('Settings')">
         <el-button type="text" class="item-button el-icon-c-scale-to-original">
-           {{ $t('Display') }}
+          {{ $t('Display') }}
         </el-button>
         <div class="content"> <i class="el-icon-remove-outline" @click="decreaseScale" />
           <span>{{ scaleValue }}%</span>
@@ -62,7 +62,7 @@ import GuacFileSystem from './GuacFileSystem'
 import RightPanel from './RightPanel'
 import Settings from './Settings'
 import { default as i18n, getLanguage } from '@/i18n'
-import { ErrorStatusCodes, ConvertAPIError } from '@/utils'
+import { ErrorStatusCodes, ConvertAPIError, ConvertGuacamoleError } from '@/utils'
 import { localStorageGet } from '@/utils/common'
 
 const pixelDensity = 1
@@ -505,7 +505,7 @@ export default {
       const code = status.code
       let msg = status.message
       const currentLang = getLanguage()
-      msg = ErrorStatusCodes[code] ? this.$t(ErrorStatusCodes[code]) : status.message
+      msg = ErrorStatusCodes[code] ? this.$t(ErrorStatusCodes[code]) : this.$t(ConvertGuacamoleError(status.message))
       switch (code) {
         case 1005:
           // 管理员终断会话，特殊处理

@@ -18,6 +18,7 @@ const message = {
   JMSErrAPIFailed: 'Core API failed',
   JMSErrGatewayFailed: 'Gateway not available',
   JMSErrGuacamoleServer: 'Connect guacamole server failed',
+  JMSErrDisconnected: 'Session Disconnected',
   GuaErrUpstreamNotFound: 'The remote desktop server does not appear to exist, or cannot be reached over the network.',
   GuaErrSessionConflict: 'The session has ended because it conflicts with another session.',
   GuaErrClientUnauthorized: 'User failed to logged in. (username and password are incorrect)',
@@ -33,7 +34,28 @@ const message = {
   Settings: 'Settings',
   UploadSuccess: 'Upload success',
   Display: 'Display',
-  AutoFit: 'Auto Fit'
+  AutoFit: 'Auto Fit',
+
+  GuacamoleErrDisconnected: 'Disconnected.',
+  GuacamoleErrCredentialsExpired: 'Credentials expired.',
+  GuacamoleErrSecurityNegotiationFailed: 'Security negotiation failed (wrong security type?)',
+  GuacamoleErrAccessDenied: 'Access denied by server (account locked/disabled?)',
+  GuacamoleErrAuthenticationFailure: 'Authentication failure (invalid credentials?)',
+  GuacamoleErrSSLTLSConnectionFailed: 'SSL/TLS connection failed (untrusted/self-signed certificate?)',
+  GuacamoleErrDNSLookupFailed: 'DNS lookup failed (incorrect hostname?)',
+  GuacamoleErrServerRefusedConnectionBySecurityType: 'Server refused connection (wrong security type?)',
+  GuacamoleErrConnectionFailed: 'Connection failed (server unreachable?)',
+  GuacamoleErrUpstreamError: 'Upstream error.',
+  GuacamoleErrForciblyDisconnected: 'Forcibly disconnected.',
+  GuacamoleErrLoggedOff: 'Logged off.',
+  GuacamoleErrIdleSessionTimeLimitExceeded: 'Idle session time limit exceeded.',
+  GuacamoleErrActiveSessionTimeLimitExceeded: 'Active session time limit exceeded.',
+  GuacamoleErrDisconnectedByOtherConnection: 'Disconnected by other connection.',
+  GuacamoleErrServerRefusedConnection: 'Server refused connection.',
+  GuacamoleErrInsufficientPrivileges: 'Insufficient privileges.',
+  GuacamoleErrManuallyDisconnected: 'Manually disconnected.',
+  GuacamoleErrManuallyLoggedOff: 'Manually logged off.',
+  GuacamoleErrUnsupportedCredentialTypeRequested: 'Unsupported credential type requested.'
 }
 
 export default {

@@ -52,7 +52,13 @@ func (r RDPConfiguration) GetGuacdConfiguration() guacd.Configuration {
 	//if r.SystemUser.AdDomain != "" {
 	//	conf.SetParameter(guacd.RDPDomain, r.SystemUser.AdDomain)
 	//}
-
+	if r.Platform != nil {
+		if rdpSetting, ok := r.Platform.GetProtocolSetting("rdp"); ok {
+			if rdpSetting.Setting.AdDomain != "" {
+				conf.SetParameter(guacd.RDPDomain, rdpSetting.Setting.AdDomain)
+			}
+		}
+	}
 	// 设置 录像路径
 	if r.TerminalConfig.ReplayStorage.TypeName != "null" {
 		recordDirPath := filepath.Join(config.GlobalConfig.RecordPath,
