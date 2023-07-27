@@ -1,11 +1,5 @@
 package model
 
-type RemoteAppParameter struct {
-	Parameters       string `json:"parameters"`
-	Program          string `json:"program"`
-	WorkingDirectory string `json:"working_directory"`
-}
-
 type Applet struct {
 	Id   string `json:"id"`
 	Name string `json:"name"`
@@ -16,7 +10,7 @@ type AppletOption struct {
 	Applet          Applet                 `json:"applet"`
 	Host            Asset                  `json:"host"`
 	Account         Account                `json:"account"`
-	Gateway         Gateway                `json:"gateway"`
+	Gateway         *Gateway               `json:"gateway"`
 	RemoteAppOption RemoteAppCommandOption `json:"remote_app_option"`
 }
 
