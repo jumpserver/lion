@@ -152,15 +152,11 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	for argName, argValue := range info.ExtraConfig() {
 		conf.SetParameter(argName, argValue)
 	}
-	// 设置网域网关，替换本地。 兼容云平台同步 配置网域，但网关配置为空的情况
-	if (tunnelSession.Domain != nil && len(tunnelSession.Domain.Gateways) != 0) ||
-		tunnelSession.Gateway != nil {
+	if tunnelSession.Gateway != nil {
 		dstAddr := net.JoinHostPort(conf.GetParameter(guacd.Hostname),
 			conf.GetParameter(guacd.Port))
 		domainGateway := gateway.DomainGateway{
-			Domain:  tunnelSession.Domain,
-			DstAddr: dstAddr,
-
+			DstAddr:         dstAddr,
 			SelectedGateway: tunnelSession.Gateway,
 		}
 		if err = domainGateway.Start(); err != nil {
