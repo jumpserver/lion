@@ -149,15 +149,14 @@ func runHeartTask(jmsService *service.JMService, tunnelCache *tunnel.GuaTunnelCa
 			}
 			for i := range tasks {
 				task := tasks[i]
-				switch task.Name {
-				case model.TaskKillSession:
-					if connection := tunnelCache.GetBySessionId(task.Args); connection != nil {
-						connection.Terminate(task.Kwargs.TerminatedBy)
-						if err = jmsService.FinishTask(task.ID); err != nil {
-							logger.Error(err)
-						}
+				if connection := tunnelCache.GetBySessionId(task.Args); connection != nil {
+					if err1 := connection.HandleTask(&task); err1 != nil {
+						logger.Errorf("Ws client HandleTask failed: %s", err1)
+						continue
 					}
-				default:
+					if err = jmsService.FinishTask(task.ID); err != nil {
+						logger.Errorf("Ws client FinishTask failed: %s", err)
+					}
 				}
 			}
 		}

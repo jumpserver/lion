@@ -35,6 +35,8 @@ const message = {
   UploadSuccess: 'Upload success',
   Display: 'Display',
   AutoFit: 'Auto Fit',
+  PauseSession: 'Pause Session',
+  ResumeSession: 'Resume Session',
 
   GuacamoleErrDisconnected: 'Disconnected.',
   GuacamoleErrCredentialsExpired: 'Credentials expired.',
