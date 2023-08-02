@@ -30,6 +30,14 @@ func NewJMSGuacamoleError(code int, msg string) JMSGuacamoleError {
 	}
 }
 
+const (
+	InstructionJmsEvent = "jms_event"
+)
+
+func NewJmsEventInstruction(event string, jsonData string) guacd.Instruction {
+	return guacd.NewInstruction(InstructionJmsEvent, event, jsonData)
+}
+
 // todo: 构造一种通用的错误框架，方便前后端处理异常
 
 func NewJMSIdleTimeOutError(min int) JMSGuacamoleError {

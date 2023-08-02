@@ -36,6 +36,8 @@ const message = {
   UploadSuccess: '上传成功',
   Display: '显示',
   AutoFit: '自动适应',
+  PauseSession: '暂停会话',
+  ResumeSession: '恢复会话',
 
   GuacamoleErrDisconnected: '远程连接断开',
   GuacamoleErrCredentialsExpired: '远程连接的凭证过期',
