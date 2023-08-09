@@ -19,6 +19,7 @@ const message = {
   JMSErrGatewayFailed: 'Gateway not available',
   JMSErrGuacamoleServer: 'Connect guacamole server failed',
   JMSErrDisconnected: 'Session Disconnected',
+  JMSErrMaxSession: 'Session connection time more than {PLACEHOLDER} hours, disconnect',
   GuaErrUpstreamNotFound: 'The remote desktop server does not appear to exist, or cannot be reached over the network.',
   GuaErrSessionConflict: 'The session has ended because it conflicts with another session.',
   GuaErrClientUnauthorized: 'User failed to logged in. (username and password are incorrect)',

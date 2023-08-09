@@ -241,6 +241,9 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 		}
 	}(t)
 	maxIndexTime := t.Sess.TerminalConfig.MaxIdleTime
+	maxSessionTimeInt := t.Sess.TerminalConfig.MaxSessionTime
+	maxSessionDuration := time.Duration(maxSessionTimeInt) * time.Hour
+	maxSessionTime := time.Now().Add(maxSessionDuration)
 	maxIdleMinutes := time.Duration(maxIndexTime) * time.Minute
 	activeDetectTicker := time.NewTicker(time.Minute)
 	defer activeDetectTicker.Stop()
@@ -258,6 +261,13 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 		case <-activeChan:
 			latestActive = time.Now()
 		case detectTime := <-activeDetectTicker.C:
+			if detectTime.After(maxSessionTime) {
+				errSession := NewJMSMaxSessionTimeError(t.Sess.TerminalConfig.MaxSessionTime)
+				_ = t.SendWsMessage(errSession.Instruction())
+				logger.Errorf("Session[%s] terminated by max session time %d hour",
+					t, maxSessionTimeInt)
+				return nil
+			}
 			if detectTime.After(latestActive.Add(maxIdleMinutes)) {
 				errIdle := NewJMSIdleTimeOutError(maxIndexTime)
 				_ = t.SendWsMessage(errIdle.Instruction())

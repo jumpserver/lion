@@ -6,6 +6,7 @@ type TerminalConfig struct {
 	SessionKeepDuration int                    `json:"TERMINAL_SESSION_KEEP_DURATION"`
 	TelnetRegex         string                 `json:"TERMINAL_TELNET_REGEX"`
 	MaxIdleTime         int                    `json:"SECURITY_MAX_IDLE_TIME"`
+	MaxSessionTime      int                    `json:"SECURITY_MAX_SESSION_TIME"`
 	HeartbeatDuration   int                    `json:"TERMINAL_HEARTBEAT_INTERVAL"`
 	HostKey             string                 `json:"TERMINAL_HOST_KEY"`
 	MaxStoreFTPFileSize int                    `json:"FTP_FILE_MAX_STORE"`

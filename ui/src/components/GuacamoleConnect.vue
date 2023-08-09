@@ -518,6 +518,9 @@ export default {
         case 1003:
           msg = msg.replace('{PLACEHOLDER}', status.message)
           break
+        case 1010:
+          msg = msg.replace('{PLACEHOLDER}', status.message)
+          break
       }
       this.$alert(msg, this.$t('ErrTitle'), {
         confirmButtonText: this.$t('OK'),

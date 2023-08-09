@@ -44,6 +44,10 @@ func NewJMSIdleTimeOutError(min int) JMSGuacamoleError {
 	return NewJMSGuacamoleError(1003, strconv.Itoa(min))
 }
 
+func NewJMSMaxSessionTimeError(min int) JMSGuacamoleError {
+	return NewJMSGuacamoleError(1010, strconv.Itoa(min))
+}
+
 var (
 	ErrNoSession = NewJMSGuacamoleError(1000, "Not Found Session")
 
@@ -51,11 +55,11 @@ var (
 
 	ErrBadParams = NewJMSGuacamoleError(1002, "Not session params")
 
-	ErrIdleTimeOut = NewJMSGuacamoleError(1003, "Terminated by idle timeout")
+	//ErrIdleTimeOut = NewJMSGuacamoleError(1003, "Terminated by idle timeout")
 
 	ErrPermissionExpired = NewJMSGuacamoleError(1004, "Terminated by permission expired")
 
-	ErrTerminatedByAdmin = NewJMSGuacamoleError(1005, "Terminated by Admin")
+	//ErrTerminatedByAdmin = NewJMSGuacamoleError(1005, "Terminated by Admin")
 
 	ErrAPIFailed = NewJMSGuacamoleError(1006, "API failed")
 
