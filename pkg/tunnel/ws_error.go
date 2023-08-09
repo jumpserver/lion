@@ -44,8 +44,8 @@ func NewJMSIdleTimeOutError(min int) JMSGuacamoleError {
 	return NewJMSGuacamoleError(1003, strconv.Itoa(min))
 }
 
-func NewJMSMaxSessionTimeError(min int) JMSGuacamoleError {
-	return NewJMSGuacamoleError(1010, strconv.Itoa(min))
+func NewJMSMaxSessionTimeError(hour int) JMSGuacamoleError {
+	return NewJMSGuacamoleError(1010, strconv.Itoa(hour))
 }
 
 var (
