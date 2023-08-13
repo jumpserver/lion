@@ -19,23 +19,17 @@ NPMINSTALL=yarn
 NPMBUILD=yarn build
 
 PLATFORM_LIST = \
-	darwin-amd64 \
 	linux-amd64 \
-	linux-arm64
+	linux-arm64 \
+	linux-s390x \
+	linux-ppc64le
 
-WINDOWS_ARCH_LIST = \
-	windows-amd64
+CURRENT_OS_ARCH = $(shell go env GOOS)-$(shell go env GOARCH)
 
-all-arch: $(PLATFORM_LIST) $(WINDOWS_ARCH_LIST)
+all-arch: $(PLATFORM_LIST)
 
-darwin-amd64:lion-ui
-	GOARCH=amd64 GOOS=darwin $(GOBUILD) -o $(BUILDDIR)/$(NAME)-$@
-	mkdir -p $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(UIDIR)/dist/
-	cp $(BUILDDIR)/$(NAME)-$@ $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(NAME)
-	-cp config_example.yml $(BUILDDIR)/$(NAME)-$(VERSION)-$@/config_example.yml
-	cp -r $(UIDIR)/dist/* $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(UIDIR)/dist/
-	cd $(BUILDDIR) && tar -czvf $(NAME)-$(VERSION)-$@.tar.gz $(NAME)-$(VERSION)-$@
-	rm -rf $(BUILDDIR)/$(NAME)-$(VERSION)-$@ $(BUILDDIR)/$(NAME)-$@
+build:
+	$(GOBUILD) -o $(BUILDDIR)/$(NAME)-$(CURRENT_OS_ARCH)
 
 linux-amd64:lion-ui
 	GOARCH=amd64 GOOS=linux $(GOBUILD) -o $(BUILDDIR)/$(NAME)-$@
@@ -55,6 +49,24 @@ linux-arm64:lion-ui
 	cd $(BUILDDIR) && tar -czvf $(NAME)-$(VERSION)-$@.tar.gz $(NAME)-$(VERSION)-$@
 	rm -rf $(BUILDDIR)/$(NAME)-$(VERSION)-$@ $(BUILDDIR)/$(NAME)-$@
 
+linux-s390x:lion-ui
+	GOARCH=s390x GOOS=linux $(GOBUILD) -o $(BUILDDIR)/$(NAME)-$@
+	mkdir -p $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(UIDIR)/dist/
+	cp $(BUILDDIR)/$(NAME)-$@ $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(NAME)
+	-cp config_example.yml $(BUILDDIR)/$(NAME)-$(VERSION)-$@/config_example.yml
+	cp -r $(UIDIR)/dist/* $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(UIDIR)/dist/
+	cd $(BUILDDIR) && tar -czvf $(NAME)-$(VERSION)-$@.tar.gz $(NAME)-$(VERSION)-$@
+	rm -rf $(BUILDDIR)/$(NAME)-$(VERSION)-$@ $(BUILDDIR)/$(NAME)-$@
+
+linux-ppc64le:lion-ui
+	GOARCH=ppc64le GOOS=linux $(GOBUILD) -o $(BUILDDIR)/$(NAME)-$@
+	mkdir -p $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(UIDIR)/dist/
+	cp $(BUILDDIR)/$(NAME)-$@ $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(NAME)
+	-cp config_example.yml $(BUILDDIR)/$(NAME)-$(VERSION)-$@/config_example.yml
+	cp -r $(UIDIR)/dist/* $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(UIDIR)/dist/
+	cd $(BUILDDIR) && tar -czvf $(NAME)-$(VERSION)-$@.tar.gz $(NAME)-$(VERSION)-$@
+	rm -rf $(BUILDDIR)/$(NAME)-$(VERSION)-$@ $(BUILDDIR)/$(NAME)-$@
+
 linux-loong64:lion-ui
 	GOARCH=loong64 GOOS=linux $(GOBUILD) -o $(BUILDDIR)/$(NAME)-$@
 	mkdir -p $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(UIDIR)/dist/
@@ -63,15 +75,6 @@ linux-loong64:lion-ui
 	cp -r $(UIDIR)/dist/* $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(UIDIR)/dist/
 	cd $(BUILDDIR) && tar -czvf $(NAME)-$(VERSION)-$@.tar.gz $(NAME)-$(VERSION)-$@
 	rm -rf $(BUILDDIR)/$(NAME)-$(VERSION)-$@ $(BUILDDIR)/$(NAME)-$@
-
-windows-amd64:lion-ui
-	GOARCH=amd64 GOOS=windows $(GOBUILD) -o $(BUILDDIR)/$(NAME)-$@.exe
-	mkdir -p $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(UIDIR)/dist/
-	cp $(BUILDDIR)/$(NAME)-$@.exe $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(NAME).exe
-	-cp config_example.yml $(BUILDDIR)/$(NAME)-$(VERSION)-$@/config_example.yml
-	cp -r $(UIDIR)/dist/* $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(UIDIR)/dist/
-	cd $(BUILDDIR) && tar -czvf $(NAME)-$(VERSION)-$@.tar.gz $(NAME)-$(VERSION)-$@
-	rm -rf $(BUILDDIR)/$(NAME)-$(VERSION)-$@ $(BUILDDIR)/$(NAME)-$@.exe
 
 .PHONY: docker
 docker:

@@ -1,4 +1,4 @@
-FROM jumpserver/node:16.17.1 as ui-build
+FROM node:16.17.1-bullseye-slim as ui-build
 ARG TARGETARCH
 ARG NPM_REGISTRY="https://registry.npmmirror.com"
 ENV NPM_REGISTY=$NPM_REGISTRY
@@ -16,7 +16,7 @@ ADD ui .
 RUN --mount=type=cache,target=/usr/local/share/.cache/yarn,sharing=locked,id=lion \
     yarn build
 
-FROM jumpserver/golang:1.19-buster as stage-build
+FROM golang:1.20-bullseye as stage-build
 LABEL stage=stage-build
 ARG TARGETARCH
 
@@ -47,7 +47,7 @@ RUN --mount=type=cache,target=/root/.cache \
 
 RUN chmod +x entrypoint.sh
 
-FROM jumpserver/guacd:1.5.2
+FROM jumpserver/guacd:1.5.3
 ARG TARGETARCH
 
 USER root
