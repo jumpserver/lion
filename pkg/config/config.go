@@ -181,7 +181,7 @@ default name rule:
 
 func getDefaultName() string {
 	hostname, _ := os.Hostname()
-	hostname = fmt.Sprintf("%s-%s", hostname, common.UUID())
+	hostname = fmt.Sprintf("%s-%s", hostname, common.RandomStr(7))
 	if serverHostname, ok := os.LookupEnv(hostEnvKey); ok {
 		hostname = fmt.Sprintf("%s-%s", serverHostname, hostname)
 	}
