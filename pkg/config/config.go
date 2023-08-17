@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/spf13/viper"
+	"lion/pkg/common"
 )
 
 var GlobalConfig *Config
@@ -173,13 +174,14 @@ const (
 /*
 SERVER_HOSTNAME: 环境变量名，可用于自定义默认注册名称的前缀
 default name rule:
-[Lion]-{SERVER_HOSTNAME}-{HOSTNAME}
+[Lion]-{SERVER_HOSTNAME}-{HOSTNAME}-{UUID}
  or
-[Lion]-{HOSTNAME}
+[Lion]-{HOSTNAME}-{UUID}
 */
 
 func getDefaultName() string {
 	hostname, _ := os.Hostname()
+	hostname = fmt.Sprintf("%s-%s", hostname, common.RandomStr(7))
 	if serverHostname, ok := os.LookupEnv(hostEnvKey); ok {
 		hostname = fmt.Sprintf("%s-%s", serverHostname, hostname)
 	}

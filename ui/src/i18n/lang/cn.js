@@ -20,6 +20,7 @@ const message = {
   JMSErrGatewayFailed: '网关连接失败',
   JMSErrGuacamoleServer: '无法连接 Guacamole 服务器',
   JMSErrDisconnected: '会话连接已断开',
+  JMSErrMaxSession: '超过最大会话时间{PLACEHOLDER}小时，断开连接',
   GuaErrUpstreamNotFound: '无法连接到远程桌面服务器（网络不可达 | 安全策略错误）',
   GuaErrSessionConflict: '因与另一个连接冲突，远程桌面服务器关闭了本连接。请稍后重试。',
   GuaErrClientUnauthorized: '用户名和密码认证错误，登录失败',
@@ -36,6 +37,8 @@ const message = {
   UploadSuccess: '上传成功',
   Display: '显示',
   AutoFit: '自动适应',
+  PauseSession: '暂停会话',
+  ResumeSession: '恢复会话',
 
   GuacamoleErrDisconnected: '远程连接断开',
   GuacamoleErrCredentialsExpired: '远程连接的凭证过期',

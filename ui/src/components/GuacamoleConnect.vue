@@ -518,6 +518,9 @@ export default {
         case 1003:
           msg = msg.replace('{PLACEHOLDER}', status.message)
           break
+        case 1010:
+          msg = msg.replace('{PLACEHOLDER}', status.message)
+          break
       }
       this.$alert(msg, this.$t('ErrTitle'), {
         confirmButtonText: this.$t('OK'),
@@ -693,6 +696,35 @@ export default {
         vm.tunnel.uuid = uuid
       }
       tunnel.onstatechange = vm.onTunnelStateChanged
+      const oninstruction = tunnel.oninstruction
+      tunnel.oninstruction = (opcode, argv) => {
+        if (oninstruction) {
+          oninstruction(opcode, argv)
+        }
+        if (opcode === 'jms_event') {
+          vm.onJmsEvent(argv[0], argv[1])
+          vm.$log.debug('Tunnel instruction: ', opcode, argv)
+        }
+      }
+    },
+
+    onJmsEvent(event, data) {
+      const dataObj = JSON.parse(data)
+      switch (event) {
+        case 'session_pause': {
+          const msg = `${dataObj.user} ${this.$t('PauseSession')}`
+          this.$message.info(msg)
+          break
+        }
+        case 'session_resume': {
+          const msg = `${dataObj.user} ${this.$t('ResumeSession')}`
+          this.$message.info(msg)
+          break
+        }
+        default:
+          break
+      }
+      this.$log.debug('onJmsEvent: ', event, data)
     },
 
     onFileSystem(obj, name) {

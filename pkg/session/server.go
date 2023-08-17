@@ -76,8 +76,8 @@ func (s *Server) CreatByToken(ctx *gin.Context, token string) (TunnelSession, er
 		opts = append(opts, WithAppletOption(appletOpt))
 		logger.Infof("Connect applet(%s) use host(%s) account (%s)", connectToken.Asset.String(),
 			appletOpt.Host.String(), appletOpt.Account.String())
-		// 连接发布机，不需要网关
-		opts = append(opts, WithGateway(nil))
+		// 连接发布机，需要使用发布机的网关
+		opts = append(opts, WithGateway(appletOptions.Gateway))
 	}
 	return s.Create(ctx, opts...)
 }

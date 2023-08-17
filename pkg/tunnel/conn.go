@@ -1,9 +1,12 @@
 package tunnel
 
 import (
+	"encoding/json"
+	"fmt"
 	"net"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -57,6 +60,9 @@ type Connection struct {
 
 	traceLock sync.Mutex
 	traceMap  map[*guacd.Tunnel]struct{}
+
+	lockedStatus atomic.Bool
+	operatorUser atomic.Value
 }
 
 func (t *Connection) SendWsMessage(msg guacd.Instruction) error {
@@ -163,19 +169,42 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 
 	go func(t *Connection) {
 		for {
-			_, message, err := t.ws.ReadMessage()
-			if err != nil {
-				logger.Errorf("Session[%s] web client read err: %+v", t, err)
-				exit <- err
+			_, message, err1 := t.ws.ReadMessage()
+			if err1 != nil {
+				logger.Errorf("Session[%s] web client read err: %+v", t, err1)
+				exit <- err1
 				break
 			}
 
-			if ret, err := guacd.ParseInstructionString(string(message)); err == nil {
+			if ret, err2 := guacd.ParseInstructionString(string(message)); err2 == nil {
 				if ret.Opcode == INTERNALDATAOPCODE && len(ret.Args) >= 2 && ret.Args[0] == PINGOPCODE {
-					if err := t.SendWsMessage(guacd.NewInstruction(INTERNALDATAOPCODE, PINGOPCODE)); err != nil {
+					if err3 := t.SendWsMessage(guacd.NewInstruction(INTERNALDATAOPCODE, PINGOPCODE)); err3 != nil {
 						logger.Errorf("Session[%s] unable to send 'ping' response for WebSocket tunnel: %+v",
-							t, err)
+							t, err3)
 					}
+					continue
+				}
+				if t.lockedStatus.Load() {
+					switch ret.Opcode {
+					case guacd.InstructionClientSync,
+						guacd.InstructionClientNop,
+						guacd.InstructionStreamingAck:
+					default:
+						select {
+						case activeChan <- struct{}{}:
+						default:
+						}
+						logger.Infof("Session[%s] in locked status drop receive web client message opcode[%s]",
+							t, ret.Opcode)
+						continue
+					}
+					_, err4 := t.writeTunnelMessage(message)
+					if err4 != nil {
+						logger.Errorf("Session[%s] guacamole server write err: %+v", t, err2)
+						exit <- err4
+						break
+					}
+					logger.Debugf("Session[%s] send guacamole server message when locked status", t)
 					continue
 				}
 
@@ -212,6 +241,9 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 		}
 	}(t)
 	maxIndexTime := t.Sess.TerminalConfig.MaxIdleTime
+	maxSessionTimeInt := t.Sess.TerminalConfig.MaxSessionTime
+	maxSessionDuration := time.Duration(maxSessionTimeInt) * time.Hour
+	maxSessionTime := time.Now().Add(maxSessionDuration)
 	maxIdleMinutes := time.Duration(maxIndexTime) * time.Minute
 	activeDetectTicker := time.NewTicker(time.Minute)
 	defer activeDetectTicker.Stop()
@@ -229,6 +261,13 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 		case <-activeChan:
 			latestActive = time.Now()
 		case detectTime := <-activeDetectTicker.C:
+			if detectTime.After(maxSessionTime) {
+				errSession := NewJMSMaxSessionTimeError(t.Sess.TerminalConfig.MaxSessionTime)
+				_ = t.SendWsMessage(errSession.Instruction())
+				logger.Errorf("Session[%s] terminated by max session time %d hour",
+					t, maxSessionTimeInt)
+				return nil
+			}
 			if detectTime.After(latestActive.Add(maxIdleMinutes)) {
 				errIdle := NewJMSIdleTimeOutError(maxIndexTime)
 				_ = t.SendWsMessage(errIdle.Instruction())
@@ -246,10 +285,35 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 
 }
 
-func (t *Connection) Terminate(username string) {
-	ins := NewJMSGuacamoleError(1005, username)
-	_ = t.SendWsMessage(ins.Instruction())
-	logger.Errorf("Session[%s] terminated by Admin %s", t, username)
+func (t *Connection) HandleTask(task *model.TerminalTask) error {
+	switch task.Name {
+	case model.TaskUnlockSession:
+		t.lockedStatus.Store(false)
+		t.operatorUser.Store(task.Kwargs.CreatedByUser)
+		data := map[string]interface{}{
+			"user": task.Kwargs.CreatedByUser,
+		}
+		p, _ := json.Marshal(data)
+		ins := NewJmsEventInstruction("session_resume", string(p))
+		_ = t.SendWsMessage(ins)
+	case model.TaskLockSession:
+		t.lockedStatus.Store(true)
+		t.operatorUser.Store(task.Kwargs.CreatedByUser)
+		data := map[string]interface{}{
+			"user": task.Kwargs.CreatedByUser,
+		}
+		p, _ := json.Marshal(data)
+		ins := NewJmsEventInstruction("session_pause", string(p))
+		_ = t.SendWsMessage(ins)
+	case model.TaskKillSession:
+		username := task.Kwargs.TerminatedBy
+		ins := NewJMSGuacamoleError(1005, username)
+		_ = t.SendWsMessage(ins.Instruction())
+	default:
+		return fmt.Errorf("unknown task %s", task.Name)
+	}
+	logger.Infof("Session[%s] handle task %s", t, task.Name)
+	return nil
 }
 
 func (t *Connection) String() string {

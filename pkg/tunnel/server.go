@@ -11,7 +11,6 @@ import (
 	ginSessions "github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	uuid "github.com/satori/go.uuid"
 
 	"lion/pkg/common"
 	"lion/pkg/config"
@@ -135,6 +134,8 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	case "":
 	case "auto":
 	default:
+		logger.Infof("Session[%s] Connect options resolution: %s",
+			sessionId, resolution)
 		resolutions := strings.Split(resolution, "x")
 		if len(resolutions) == 2 {
 			width := resolutions[0]
@@ -152,15 +153,11 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	for argName, argValue := range info.ExtraConfig() {
 		conf.SetParameter(argName, argValue)
 	}
-	// 设置网域网关，替换本地。 兼容云平台同步 配置网域，但网关配置为空的情况
-	if (tunnelSession.Domain != nil && len(tunnelSession.Domain.Gateways) != 0) ||
-		tunnelSession.Gateway != nil {
+	if tunnelSession.Gateway != nil {
 		dstAddr := net.JoinHostPort(conf.GetParameter(guacd.Hostname),
 			conf.GetParameter(guacd.Port))
 		domainGateway := gateway.DomainGateway{
-			Domain:  tunnelSession.Domain,
-			DstAddr: dstAddr,
-
+			DstAddr:         dstAddr,
 			SelectedGateway: tunnelSession.Gateway,
 		}
 		if err = domainGateway.Start(); err != nil {
@@ -200,6 +197,8 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	if err := tunnelSession.ConnectedSuccessCallback(); err != nil {
 		logger.Errorf("Update session connect status failed %+v", err)
 	}
+	logger.Infof("Session[%s] use resolution (%d*%d)",
+		sessionId, info.OptimalScreenWidth, info.OptimalScreenHeight)
 
 	conn := Connection{
 		Sess:        tunnelSession,
@@ -304,7 +303,7 @@ func (g *GuacamoleTunnelServer) DownloadFile(ctx *gin.Context) {
 	if tun := g.Cache.Get(tid); tun != nil && tun.Sess.User.ID == user.ID {
 		recorder := proxy.GetFTPFileRecorder(g.JmsService)
 		fileLog := model.FTPLog{
-			ID:         uuid.NewV4().String(),
+			ID:         common.UUID(),
 			User:       tun.Sess.User.String(),
 			Hostname:   tun.Sess.Asset.String(),
 			OrgID:      tun.Sess.Asset.OrgID,
@@ -363,7 +362,7 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 		logger.Infof("User %s upload file %s", user, filename)
 		recorder := proxy.GetFTPFileRecorder(g.JmsService)
 		fileLog := model.FTPLog{
-			ID:         uuid.NewV4().String(),
+			ID:         common.UUID(),
 			User:       tun.Sess.User.String(),
 			Hostname:   tun.Sess.Asset.String(),
 			OrgID:      tun.Sess.Asset.OrgID,

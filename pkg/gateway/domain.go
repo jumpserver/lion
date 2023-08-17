@@ -22,7 +22,6 @@ const (
 )
 
 type DomainGateway struct {
-	Domain  *model.Domain
 	DstAddr string // 10.0.0.1:3389
 
 	sshClient       *gossh.Client
@@ -90,25 +89,6 @@ func (d *DomainGateway) getAvailableGateway() bool {
 		}
 		logger.Debugf("Dial select gateway %s success", d.SelectedGateway.Name)
 		d.sshClient = sshClient
-		return true
-	}
-	if d.Domain == nil {
-		return false
-	}
-	for i := range d.Domain.Gateways {
-		gateway := d.Domain.Gateways[i]
-		if !gateway.Protocols.IsSupportProtocol("ssh") {
-			continue
-		}
-		logger.Info("Try ssh dial gateway ", gateway.Name)
-		sshClient, err := d.createGatewaySSHClient(&gateway)
-		if err != nil {
-			logger.Errorf("Failed ssh dial %s: %s", gateway.Name, err.Error())
-			continue
-		}
-		logger.Infof("Dial gateway %s success", gateway.Name)
-		d.sshClient = sshClient
-		d.SelectedGateway = &gateway
 		return true
 	}
 	return false
