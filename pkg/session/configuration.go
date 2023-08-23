@@ -3,6 +3,7 @@ package session
 import (
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"lion/pkg/common"
 	"lion/pkg/config"
@@ -55,6 +56,11 @@ func (r RDPConfiguration) GetGuacdConfiguration() guacd.Configuration {
 	if r.Platform != nil {
 		if rdpSetting, ok := r.Platform.GetProtocolSetting("rdp"); ok {
 			if rdpSetting.Setting.AdDomain != "" {
+				parts := strings.Split(username, `\`)
+				if len(parts) == 2 {
+					username = parts[1] + "@" + parts[0]
+				}
+				conf.SetParameter(guacd.RDPUsername, username)
 				conf.SetParameter(guacd.RDPDomain, rdpSetting.Setting.AdDomain)
 			}
 		}
