@@ -1,13 +1,14 @@
 package session
 
 import (
-	"path/filepath"
-	"strconv"
-
+	"fmt"
 	"lion/pkg/common"
 	"lion/pkg/config"
 	"lion/pkg/guacd"
 	"lion/pkg/jms-sdk-go/model"
+	"path/filepath"
+	"strconv"
+	"strings"
 )
 
 type ConnectionConfiguration interface {
@@ -45,6 +46,11 @@ func (r RDPConfiguration) GetGuacdConfiguration() guacd.Configuration {
 	conf.SetParameter(guacd.Hostname, ip)
 	conf.SetParameter(guacd.Port, port)
 
+	parts := strings.Split(username, `\`)
+	if len(parts) == 2 {
+		username = fmt.Sprintf("%s@%s", parts[1], parts[0])
+	}
+
 	conf.SetParameter(guacd.RDPUsername, username)
 	conf.SetParameter(guacd.RDPPassword, password)
 
@@ -52,6 +58,7 @@ func (r RDPConfiguration) GetGuacdConfiguration() guacd.Configuration {
 	//if r.SystemUser.AdDomain != "" {
 	//	conf.SetParameter(guacd.RDPDomain, r.SystemUser.AdDomain)
 	//}
+
 	if r.Platform != nil {
 		if rdpSetting, ok := r.Platform.GetProtocolSetting("rdp"); ok {
 			if rdpSetting.Setting.AdDomain != "" {
