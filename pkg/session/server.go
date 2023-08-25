@@ -171,15 +171,20 @@ func (s *Server) Create(ctx *gin.Context, opts ...TunnelOption) (sess TunnelSess
 	}
 	targetType := TypeRDP
 	sessionProtocol := opt.Protocol
-	switch opt.Protocol {
-	case TypeRDP:
-	case TypeVNC:
-		targetType = TypeVNC
-	default:
-		if opt.appletOpt == nil {
-			return TunnelSession{}, fmt.Errorf("%w: %s", ErrUnSupportedProtocol, opt.Protocol)
-		}
+	if opt.authInfo.ConnectMethod.Type == connectApplet {
 		targetType = TypeRemoteApp
+	} else {
+		switch opt.Protocol {
+		case TypeRDP:
+			targetType = TypeRDP
+		case TypeVNC:
+			targetType = TypeVNC
+		default:
+			if opt.appletOpt == nil {
+				return TunnelSession{}, fmt.Errorf("%w: %s", ErrUnSupportedProtocol, opt.Protocol)
+			}
+			targetType = TypeRemoteApp
+		}
 	}
 	sessionAssetName := opt.Asset.String()
 	sess, err = s.CreateRDPAndVNCSession(opt)
