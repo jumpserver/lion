@@ -2,13 +2,14 @@ package session
 
 import (
 	"fmt"
+	"path/filepath"
+	"strconv"
+	"strings"
+
 	"lion/pkg/common"
 	"lion/pkg/config"
 	"lion/pkg/guacd"
 	"lion/pkg/jms-sdk-go/model"
-	"path/filepath"
-	"strconv"
-	"strings"
 )
 
 type ConnectionConfiguration interface {
@@ -35,9 +36,11 @@ func (r RDPConfiguration) GetGuacdConfiguration() guacd.Configuration {
 		password string
 		ip       string
 		port     string
+		adDomain string
 	)
+
 	ip = r.Asset.Address
-	port = strconv.Itoa(r.Asset.ProtocolPort("rdp"))
+	port = strconv.Itoa(r.Asset.ProtocolPort(rdp))
 	username = r.Account.Username
 	password = r.Account.Secret
 
@@ -46,26 +49,31 @@ func (r RDPConfiguration) GetGuacdConfiguration() guacd.Configuration {
 	conf.SetParameter(guacd.Hostname, ip)
 	conf.SetParameter(guacd.Port, port)
 
+	if r.Platform != nil {
+		if rdpSetting, ok := r.Platform.GetProtocolSetting(rdp); ok {
+			if rdpSetting.Setting.AdDomain != "" {
+				adDomain = rdpSetting.Setting.AdDomain
+			}
+		}
+	}
+	/*
+		AD Domain 的处理调整为
+		1、如果账号 username 格式是 domain\username 则需要转换为 username@domain，且覆盖平台的 AD 域设置。
+		2、其他格式的账号，如果平台中设置了 AD 域则使用平台中的设置，否则使用不设置
+	*/
+
 	parts := strings.Split(username, `\`)
 	if len(parts) == 2 {
 		username = fmt.Sprintf("%s@%s", parts[1], parts[0])
+		adDomain = parts[0]
 	}
 
 	conf.SetParameter(guacd.RDPUsername, username)
 	conf.SetParameter(guacd.RDPPassword, password)
-
-	// todo: 账户 域账号
-	//if r.SystemUser.AdDomain != "" {
-	//	conf.SetParameter(guacd.RDPDomain, r.SystemUser.AdDomain)
-	//}
-
-	if r.Platform != nil {
-		if rdpSetting, ok := r.Platform.GetProtocolSetting("rdp"); ok {
-			if rdpSetting.Setting.AdDomain != "" {
-				conf.SetParameter(guacd.RDPDomain, rdpSetting.Setting.AdDomain)
-			}
-		}
+	if adDomain != "" {
+		conf.SetParameter(guacd.RDPDomain, adDomain)
 	}
+
 	// 设置 录像路径
 	if r.TerminalConfig.ReplayStorage.TypeName != "null" {
 		recordDirPath := filepath.Join(config.GlobalConfig.RecordPath,
@@ -183,24 +191,6 @@ func (r VNCConfiguration) GetGuacdConfiguration() guacd.Configuration {
 		conf.SetParameter(guacd.DisablePaste, disablePaste)
 	}
 	return conf
-}
-
-func ConvertMetaToParams(meta map[string]interface{}) map[string]string {
-	res := make(map[string]string)
-	for k, v := range meta {
-		switch value := v.(type) {
-		case string:
-			res[k] = value
-		case bool:
-			res[k] = ConvertBoolToString(value)
-		case int:
-			res[k] = strconv.Itoa(value)
-		case float64:
-			res[k] = strconv.FormatFloat(value, 'E', -1, 64)
-		}
-	}
-
-	return res
 }
 
 const (
