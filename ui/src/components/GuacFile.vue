@@ -56,5 +56,15 @@ export default {
 
 .filename {
   padding-left: 6px;
+  color: #afa8a8;
 }
+
+.filename:hover{
+  color: #faf7f7 !important;
+}
+
+.el-link:after{
+  border-color: #faf7f7 !important;
+}
+
 </style>

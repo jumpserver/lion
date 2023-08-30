@@ -68,11 +68,11 @@ export default {
   text-align: left;
   padding-left: 12px;
   font-size: 18px;
-  color: #000;
+  color: #ffffff;
 }
 
 .item {
-  color: rgba(0, 0, 0, 0.65);
+  color: rgb(255, 255, 255);
   font-size: 14px;
   list-style-type: none;
   cursor: pointer;
@@ -84,7 +84,7 @@ export default {
   padding-left: 10px;
   width: 100%;
   text-align: left;
-  color: #000;
+  color: #ffffff;
 }
 
 .item-button.is-disabled {
@@ -97,7 +97,7 @@ export default {
 }
 
 .item-button:hover {
-  background: rgba(0, 0, 0, .1);
+  background: rgba(0, 0, 0, .5);
 }
 
 .content {
@@ -110,7 +110,7 @@ export default {
   text-overflow: ellipsis;
   overflow: hidden;
   padding: 4px 0;
-  color: black;
+  color: #ffffff;
   margin-left: 0;
   display: block;
   width: 100%;
@@ -119,6 +119,6 @@ export default {
 
 .content-item:hover {
   border-radius: 2px;
-  background: rgba(0, 0, 0, .1);
+  background: rgba(0, 0, 0, .5);
 }
 </style>
