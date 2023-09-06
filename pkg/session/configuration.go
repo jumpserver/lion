@@ -132,6 +132,9 @@ func (r RDPConfiguration) GetGuacdConfiguration() guacd.Configuration {
 	conf.SetParameter(guacd.RDPSecurity, rdpSecurityValue)
 	conf.SetParameter(guacd.RDPIgnoreCert, BoolTrue)
 
+	// 设置客户端名称，任务管理器--用户---客户端名称显示
+	conf.SetParameter(guacd.RDPClientName, "JumpServer-Lion")
+
 	return conf
 }
 
