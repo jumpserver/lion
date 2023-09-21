@@ -137,6 +137,20 @@ export default {
   z-index: 1200;
 }
 
+.right-panel-items {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.right-panel-items::-webkit-scrollbar-track {
+  box-shadow: none;
+  background-color: transparent;
+}
+
+.right-panel-items::-webkit-scrollbar {
+  width: 9px;
+}
+
 .show {
   transition: all .3s cubic-bezier(.7, .3, .1, 1);
 }
