@@ -18,8 +18,8 @@
         :http-request="uploadFile"
         :on-success="refresh"
       >
-        <el-button slot="trigger" size="small" type="primary">{{ $t('UploadFile') }}</el-button>
-        <el-button size="small" type="default" style="margin-left: 10px" @click="clearFileList">{{ $t('ClearDone') }}</el-button>
+        <el-button slot="trigger" size="small" class="upload-btn" type="primary">{{ $t('UploadFile') }}</el-button>
+        <el-button size="small" type="default" class="upload-btn" style="margin-left: 10px" @click="clearFileList">{{ $t('ClearDone') }}</el-button>
       </el-upload>
       <div style="padding: 20px" class="fileZone">
         <el-row :gutter="20" class="currentFolder">
@@ -446,7 +446,7 @@ export default {
 
 .upload-file {
   padding: 20px;
-  border: 1px solid #ebebeb;
+  background-color: #737477;
 }
 
 .upload-file ::v-deep .el-upload-list__item .el-icon-upload-success {
@@ -454,13 +454,13 @@ export default {
 }
 
 .fileZone {
-  color: #409eff;
+  color: #afa8a8;
   font-size: 14px;
   line-height: 25px;
 }
 
 .el-icon-refresh:hover {
-  color: #10355A;
+  color: #ffffff;
 }
 
 .fileList {
@@ -473,5 +473,15 @@ export default {
   cursor: pointer;
   font-weight: bold;
   padding-bottom: 20px
+}
+
+.upload-btn {
+  background-color: #363638;
+  border-color:  #363638;
+  color: #737477;
+}
+
+.upload-btn:hover{
+  color: #faf7f7;
 }
 </style>

@@ -1,5 +1,5 @@
 <template>
-  <el-drawer direction="ltr" :title="$t('Clipboard')" :visible="visible" @update:visible="updateVisible" @close="onCloseDrawer">
+  <el-drawer direction="ltr" class="clipboardDrawer" :title="$t('Clipboard')" :visible="visible" @update:visible="updateVisible" @close="onCloseDrawer">
     <div class="grid-content bg-purple" style="width: 100%">
       <el-input v-model="clipboardText" type="textarea" class="clipboard" :rows="10" />
     </div>
@@ -137,10 +137,15 @@ export default {
   padding-left: 10px;
   height: 100%;
   width: calc(100% - 20px);
+
 }
 
 .clipboard div {
   margin: 0;
+}
+
+.clipboard .el-textarea__inner {
+  background-color: #303133;
 }
 
 </style>

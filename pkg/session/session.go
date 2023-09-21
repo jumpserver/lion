@@ -41,6 +41,9 @@ const (
 )
 
 func (s TunnelSession) GuaConfiguration() guacd.Configuration {
+	if s.AppletOpts != nil {
+		return s.configurationRemoteAppRDP()
+	}
 	switch s.Protocol {
 	case vnc:
 		return s.configurationVNC()

@@ -26,3 +26,28 @@ body {
 #guacamole-connect-menu {
     text-align:left;
 }
+
+.el-form-item__label {
+  color: #ffffff;
+}
+
+.el-drawer {
+  background-color: #303133;
+}
+
+.el-drawer__header span {
+  color: #faf7f7;
+}
+
+/* .el-drawer__body {
+  background-color: #303133;
+  设置和 .el-drawer  一样的背景颜色，隐藏 btn 的关闭按钮
+} */
+.el-drawer__close-btn {
+  color: #303133;
+}
+
+.el-textarea__inner {
+  background-color: #737477;
+  color: #ffffff;
+}
