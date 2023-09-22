@@ -58,14 +58,24 @@ func (p *Parser) ParseStream(userInChan chan *Message) {
 			close(p.cmdRecordChan)
 			logger.Infof("Session %s: Parser routine done", p.id)
 		}()
+		maxTimeout := time.Second * 20
+		cmdRecordTicker := time.NewTicker(time.Second * 30)
+		defer cmdRecordTicker.Stop()
+		lastActiveTime := time.Now()
 		for {
 			select {
 			case <-p.closed:
 				return
+			case now := <-cmdRecordTicker.C:
+				if now.Sub(lastActiveTime) > maxTimeout {
+					p.ParseUserInput(charEnter) //手动结算一次命令
+				}
+				continue
 			case msg, ok := <-userInChan:
 				if !ok {
 					return
 				}
+				lastActiveTime = time.Now()
 				p.UpdateActiveUser(msg)
 				s := msg.Body
 				var b []byte
