@@ -308,18 +308,30 @@ func (s *Server) RegisterFinishReplayCallback(tunnel TunnelSession) func(guacd.C
 			logger.Error("录像存储设置为 null，无存储")
 			return nil
 		}
+		var replayErrReason model.ReplayError
+
+		defer func() {
+			if replayErrReason != "" {
+				if err1 := s.JmsService.SessionReplayFailed(tunnel.ID, replayErrReason); err1 != nil {
+					logger.Errorf("Update %s replay status %s failed err: %s", tunnel.ID, replayErrReason, err1)
+				}
+			}
+		}()
+
 		recordDirPath := filepath.Join(config.GlobalConfig.RecordPath,
 			tunnel.Created.Format(recordDirTimeFormat))
 		originReplayFilePath := filepath.Join(recordDirPath, tunnel.ID)
 		dstReplayFilePath := originReplayFilePath + ReplayFileNameSuffix
 		fi, err := os.Stat(originReplayFilePath)
 		if err != nil {
+			replayErrReason = model.SessionReplayErrConnectFailed
 			return err
 		}
 		if fi.Size() < 1024 {
 			logger.Error("录像文件小于1024字节，可判断连接失败，未能产生有效的录像文件")
 			_ = os.Remove(originReplayFilePath)
-			return s.JmsService.SessionFailed(tunnel.ID, err)
+			replayErrReason = model.SessionReplayErrConnectFailed
+			return s.JmsService.SessionFailed(tunnel.ID, replayErrReason)
 		}
 		if s.VideoWorkerClient != nil && s.UploadReplayToVideoWorker(tunnel, info) {
 			logger.Infof("Upload replay file to video worker: %s", originReplayFilePath)
@@ -331,6 +343,7 @@ func (s *Server) RegisterFinishReplayCallback(tunnel TunnelSession) func(guacd.C
 		err = common.CompressToGzipFile(originReplayFilePath, dstReplayFilePath)
 		if err != nil {
 			logger.Error("压缩文件失败: ", err)
+			replayErrReason = model.SessionReplayErrCreatedFailed
 			return err
 		}
 		// 压缩完成则删除源文件
@@ -351,6 +364,7 @@ func (s *Server) RegisterFinishReplayCallback(tunnel TunnelSession) func(guacd.C
 		// 上传文件
 		if err != nil {
 			logger.Errorf("Upload replay failed: %s", err.Error())
+			replayErrReason = model.SessionReplayErrUploadFailed
 			return err
 		}
 		// 上传成功，删除压缩文件

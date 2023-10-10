@@ -358,7 +358,6 @@ func uploadRemainReplay(jmsService *service.JMService, remainFiles map[string]st
 	var replayStorage storage.ReplayStorage
 	terminalConf, _ := jmsService.GetTerminalConfig()
 	replayStorage = storage.NewReplayStorage(jmsService, terminalConf.ReplayStorage)
-	defaultStorage := storage.FTPServerStorage{StorageType: "server", JmsService: jmsService}
 	for sid, path := range remainFiles {
 		absGzPath := path
 		replayDateDirName := filepath.Base(filepath.Dir(path))
@@ -381,15 +380,15 @@ func uploadRemainReplay(jmsService *service.JMService, remainFiles map[string]st
 			storageType = "server"
 		}
 		logger.Infof("Upload record file: %s, type: %s", absGzPath, storageType)
-		if replayStorage != nil {
-			targetName := strings.Join([]string{replayDateDirName,
-				sid + session.ReplayFileNameSuffix}, "/")
-			err = replayStorage.Upload(absGzPath, targetName)
-		} else {
-			err = defaultStorage.Upload(sid, absGzPath)
-		}
+		targetName := strings.Join([]string{replayDateDirName,
+			sid + session.ReplayFileNameSuffix}, "/")
+		err = replayStorage.Upload(absGzPath, targetName)
 		if err != nil {
 			logger.Errorf("Upload replay failed: %s", err)
+			reason := model.SessionReplayErrUploadFailed
+			if err1 := jmsService.SessionReplayFailed(sid, reason); err1 != nil {
+				logger.Errorf("Update Session[%s] status %s failed: %s", sid, reason, err1)
+			}
 			continue
 		}
 		logger.Infof("Upload remain session replay %s success", absGzPath)
