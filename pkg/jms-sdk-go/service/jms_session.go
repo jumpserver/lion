@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+
 	"lion/pkg/common"
 	"lion/pkg/jms-sdk-go/model"
 )
@@ -33,11 +34,20 @@ func (s *JMService) SessionSuccess(sid string) error {
 }
 
 func (s *JMService) SessionFailed(sid string, err error) error {
-	data := map[string]bool{
-		"is_success": false,
+	data := map[string]interface{}{
+		"is_success":   false,
+		"error_reason": model.SessionReplayErrConnectFailed,
 	}
 	return s.sessionPatch(sid, data)
 }
+
+func (s *JMService) SessionReplayFailed(sid string, err model.ReplayError) error {
+	data := map[string]interface{}{
+		"error_reason": err,
+	}
+	return s.sessionPatch(sid, data)
+}
+
 func (s *JMService) SessionDisconnect(sid string) error {
 	data := map[string]interface{}{
 		"is_finished": true,
