@@ -143,6 +143,10 @@ export default {
         {
           keys: ['65515'],
           name: 'Windows'
+        },
+        {
+          keys: ['65513', '65289'],
+          name: 'Alt+Tab'
         }
       ],
       scale: 1,
