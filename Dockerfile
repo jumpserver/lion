@@ -47,7 +47,7 @@ RUN --mount=type=cache,target=/root/.cache \
 
 RUN chmod +x entrypoint.sh
 
-FROM jumpserver/guacd:1.5.2
+FROM jumpserver/guacd:1.5.3-bullseye
 ARG TARGETARCH
 ENV LANG=zh_CN.UTF-8
 
