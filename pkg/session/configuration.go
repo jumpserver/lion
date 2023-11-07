@@ -16,8 +16,11 @@ type ConnectionConfiguration interface {
 	GetGuacdConfiguration() guacd.Configuration
 }
 
-var _ ConnectionConfiguration = RDPConfiguration{}
-var _ ConnectionConfiguration = VNCConfiguration{}
+var (
+	_ ConnectionConfiguration = RDPConfiguration{}
+	_ ConnectionConfiguration = VNCConfiguration{}
+	_ ConnectionConfiguration = VirtualAppConfiguration{}
+)
 
 type RDPConfiguration struct {
 	SessionId      string
@@ -142,10 +145,10 @@ type VNCConfiguration struct {
 	SessionId      string
 	Created        common.UTCTime
 	User           *model.User
-	Asset          *model.Asset          `json:"asset"`
-	Account        *model.Account        `json:"system_user"`
-	Platform       *model.Platform       `json:"platform"`
-	TerminalConfig *model.TerminalConfig `json:"terminal_config"`
+	Asset          *model.Asset
+	Account        *model.Account
+	Platform       *model.Platform
+	TerminalConfig *model.TerminalConfig
 	ActionsPerm    *ActionPermission
 }
 
@@ -206,4 +209,58 @@ func ConvertBoolToString(b bool) string {
 		return BoolTrue
 	}
 	return BoolFalse
+}
+
+type VirtualAppConfiguration struct {
+	SessionId      string
+	Created        common.UTCTime
+	User           *model.User
+	VirtualAppOpt  *model.VirtualAppContainer
+	TerminalConfig *model.TerminalConfig
+	ActionsPerm    *ActionPermission
+}
+
+func (r VirtualAppConfiguration) GetGuacdConfiguration() guacd.Configuration {
+	conf := guacd.NewConfiguration()
+	var (
+		username string
+		password string
+		ip       string
+		port     string
+	)
+	ip = r.VirtualAppOpt.Host
+	port = strconv.Itoa(r.VirtualAppOpt.Port)
+	username = r.VirtualAppOpt.Username
+	password = r.VirtualAppOpt.Password
+	conf.Protocol = vnc
+	conf.SetParameter(guacd.Hostname, ip)
+	conf.SetParameter(guacd.Port, port)
+
+	{
+		conf.SetParameter(guacd.VNCUsername, username)
+		conf.SetParameter(guacd.VNCPassword, password)
+		conf.SetParameter(guacd.VNCAutoretry, "10")
+	}
+	// 设置存储
+	replayCfg := r.TerminalConfig.ReplayStorage
+	if replayCfg.TypeName != "null" {
+		recordDirPath := filepath.Join(config.GlobalConfig.RecordPath, r.Created.Format(recordDirTimeFormat))
+		conf.SetParameter(guacd.RecordingPath, recordDirPath)
+		conf.SetParameter(guacd.CreateRecordingPath, BoolTrue)
+		conf.SetParameter(guacd.RecordingName, r.SessionId)
+	}
+	{
+		for key, value := range VNCDisplay.GetDisplayParams() {
+			conf.SetParameter(key, value)
+		}
+	}
+
+	// 粘贴复制
+	{
+		disableCopy := ConvertBoolToString(!r.ActionsPerm.EnableCopy)
+		disablePaste := ConvertBoolToString(!r.ActionsPerm.EnablePaste)
+		conf.SetParameter(guacd.DisableCopy, disableCopy)
+		conf.SetParameter(guacd.DisablePaste, disablePaste)
+	}
+	return conf
 }
