@@ -22,6 +22,7 @@ import (
 	"lion/pkg/config"
 	"lion/pkg/jms-sdk-go/model"
 	"lion/pkg/jms-sdk-go/service"
+	"lion/pkg/jms-sdk-go/service/panda"
 	"lion/pkg/jms-sdk-go/service/videoworker"
 	"lion/pkg/logger"
 	"lion/pkg/middleware"
@@ -61,6 +62,7 @@ func main() {
 	logger.SetupLogger(config.GlobalConfig)
 	jmsService := MustJMService()
 	videoWorkerClient := NewWorkerClient(*config.GlobalConfig)
+	pandaClient := NewPandaClient(*config.GlobalConfig)
 	bootstrap(jmsService)
 	tunnelService := tunnel.GuacamoleTunnelServer{
 		Cache: &tunnel.GuaTunnelCacheManager{
@@ -71,7 +73,8 @@ func main() {
 		},
 		JmsService: jmsService,
 		SessionService: &session.Server{JmsService: jmsService,
-			VideoWorkerClient: videoWorkerClient},
+			VideoWorkerClient: videoWorkerClient,
+			PandaClient:       pandaClient},
 	}
 	eng := registerRouter(jmsService, &tunnelService)
 	go runHeartTask(jmsService, tunnelService.Cache)
@@ -522,6 +525,15 @@ func NewWorkerClient(cfg config.Config) *videoworker.Client {
 	return workClient
 }
 
+func NewPandaClient(cfg config.Config) *panda.Client {
+	pandaHost := cfg.PandaHost
+	var key model.AccessKey
+	if err := key.LoadFromFile(cfg.AccessKeyFilePath); err != nil {
+		logger.Errorf("Create panda client failed: loading access key err %s", err)
+		return nil
+	}
+	return panda.NewClient(pandaHost, key, cfg.IgnoreVerifyCerts)
+}
 func KeepWsConnect(s *videoworker.Client) {
 	if err := s.Login(); err != nil {
 		logger.Errorf("Worker Ws client login failed: %s, try next 10s", err)

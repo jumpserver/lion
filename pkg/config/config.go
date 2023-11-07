@@ -50,6 +50,8 @@ type Config struct {
 	EnableVideoWorker bool   `mapstructure:"ENABLE_VIDEO_WORKER"`
 	VideoWorkerHost   string `mapstructure:"VIDEO_WORKER_HOST"`
 	IgnoreVerifyCerts bool   `mapstructure:"IGNORE_VERIFY_CERTS"`
+	PandaHost         string `mapstructure:"PANDA_HOST"`
+	EnablePanda       bool   `mapstructure:"ENABLE_PANDA"`
 }
 
 func Setup(configPath string) {
@@ -101,6 +103,7 @@ func getDefaultConfig() Config {
 		EnableRemoteAppUpDownLoad: false,
 		EnableRemoteAPPCopyPaste:  false,
 		CleanDriveScheduleTime:    1,
+		PandaHost:                 "http://localhost:9001",
 	}
 
 }
