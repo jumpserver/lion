@@ -25,6 +25,8 @@ type TunnelSession struct {
 	AppletOpts *model.AppletOption `json:"-"`
 	AuthInfo   *model.ConnectToken `json:"-"`
 
+	VirtualAppOpts *model.VirtualAppContainer `json:"-"`
+
 	ConnectedCallback        func() error          `json:"-"`
 	ConnectedSuccessCallback func() error          `json:"-"`
 	ConnectedFailedCallback  func(err error) error `json:"-"`
@@ -43,6 +45,9 @@ const (
 func (s TunnelSession) GuaConfiguration() guacd.Configuration {
 	if s.AppletOpts != nil {
 		return s.configurationRemoteAppRDP()
+	}
+	if s.VirtualAppOpts != nil {
+		return s.configurationVirtualApp()
 	}
 	switch s.Protocol {
 	case vnc:
@@ -103,6 +108,18 @@ func (s TunnelSession) configurationRemoteAppRDP() guacd.Configuration {
 		conf.SetParameter(guacd.RDPRemoteAppArgs, remoteAPP.CmdLine)
 	}
 	return conf
+}
+
+func (s TunnelSession) configurationVirtualApp() guacd.Configuration {
+	vncConf := VirtualAppConfiguration{
+		SessionId:      s.ID,
+		Created:        s.Created,
+		User:           s.User,
+		VirtualAppOpt:  s.VirtualAppOpts,
+		TerminalConfig: s.TerminalConfig,
+		ActionsPerm:    s.ActionPerm,
+	}
+	return vncConf.GetGuacdConfiguration()
 }
 
 const (

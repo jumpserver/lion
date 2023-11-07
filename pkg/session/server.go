@@ -15,6 +15,7 @@ import (
 	"lion/pkg/guacd"
 	"lion/pkg/jms-sdk-go/model"
 	"lion/pkg/jms-sdk-go/service"
+	"lion/pkg/jms-sdk-go/service/panda"
 	"lion/pkg/jms-sdk-go/service/videoworker"
 	"lion/pkg/logger"
 	"lion/pkg/storage"
@@ -26,12 +27,15 @@ const (
 	TypeRemoteApp = "remoteapp"
 
 	connectApplet = "applet"
+
+	connectVirtualAPP = "virtual_app"
 )
 
 const loginFrom = "WT"
 
 var (
-	ErrAPIService = errors.New("connect API core err")
+	ErrAPIService      = errors.New("connect API core err")
+	ErrPandaAPIService = errors.New("connect Panda API core err")
 	//ErrUnSupportedType     = errors.New("unsupported type")
 
 	ErrUnSupportedProtocol = errors.New("unsupported protocol")
@@ -42,6 +46,8 @@ type Server struct {
 	JmsService *service.JMService
 
 	VideoWorkerClient *videoworker.Client
+
+	PandaClient *panda.Client
 }
 
 func (s *Server) CreatByToken(ctx *gin.Context, token string) (TunnelSession, error) {
@@ -67,10 +73,11 @@ func (s *Server) CreatByToken(ctx *gin.Context, token string) (TunnelSession, er
 	opts = append(opts, WithPlatform(&connectToken.Platform))
 	opts = append(opts, WithGateway(connectToken.Gateway))
 	opts = append(opts, WithTerminalConfig(&cfg))
-	if connectToken.ConnectMethod.Type == connectApplet {
-		appletOptions, err := s.JmsService.GetConnectTokenAppletOption(token)
-		if err != nil {
-			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
+	switch connectToken.ConnectMethod.Type {
+	case connectApplet:
+		appletOptions, err1 := s.JmsService.GetConnectTokenAppletOption(token)
+		if err1 != nil {
+			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err1.Error())
 		}
 		appletOpt := &appletOptions
 		opts = append(opts, WithAppletOption(appletOpt))
@@ -78,6 +85,29 @@ func (s *Server) CreatByToken(ctx *gin.Context, token string) (TunnelSession, er
 			appletOpt.Host.String(), appletOpt.Account.String())
 		// 连接发布机，需要使用发布机的网关
 		opts = append(opts, WithGateway(appletOptions.Gateway))
+	case connectVirtualAPP:
+		virtualApp, err1 := s.JmsService.GetConnectTokenVirtualAppOption(token)
+		if err1 != nil {
+			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err1.Error())
+		}
+		appOpt := model.VirtualAppOption{
+			ImageName:     virtualApp.ImageName,
+			ImageProtocol: virtualApp.ImageProtocol,
+			ImagePort:     virtualApp.ImagePort,
+		}
+		virtualContainer, err2 := s.PandaClient.CreateContainer(token, appOpt)
+		if err2 != nil {
+			return TunnelSession{}, fmt.Errorf("%w: %s", ErrPandaAPIService, err2.Error())
+		}
+		logger.Infof("Create container %s success", virtualContainer.ContainerId)
+		opts = append(opts, WithVirtualAppOption(&virtualContainer))
+		logger.Infof("Connect applet(%s) use virtual app %s", connectToken.Asset.String(),
+			virtualContainer.String())
+		// 连接虚拟应用，不需要使用虚拟应用的网关
+		opts = append(opts, WithGateway(nil))
+
+	default:
+
 	}
 	return s.Create(ctx, opts...)
 }
@@ -140,6 +170,12 @@ func WithAppletOption(appletOpt *model.AppletOption) TunnelOption {
 	}
 }
 
+func WithVirtualAppOption(virtualAppOpt *model.VirtualAppContainer) TunnelOption {
+	return func(tunnel *tunnelOption) {
+		tunnel.virtualAppOPt = virtualAppOpt
+	}
+}
+
 func WithUser(user *model.User) TunnelOption {
 	return func(tunnel *tunnelOption) {
 		tunnel.User = user
@@ -160,6 +196,7 @@ type tunnelOption struct {
 	authInfo       *model.ConnectToken
 	TerminalConfig *model.TerminalConfig
 	appletOpt      *model.AppletOption
+	virtualAppOPt  *model.VirtualAppContainer
 }
 
 type TunnelOption func(*tunnelOption)
@@ -171,9 +208,10 @@ func (s *Server) Create(ctx *gin.Context, opts ...TunnelOption) (sess TunnelSess
 	}
 	targetType := TypeRDP
 	sessionProtocol := opt.Protocol
-	if opt.authInfo.ConnectMethod.Type == connectApplet {
+	switch opt.authInfo.ConnectMethod.Type {
+	case connectApplet, connectVirtualAPP:
 		targetType = TypeRemoteApp
-	} else {
+	default:
 		switch opt.Protocol {
 		case TypeRDP:
 			targetType = TypeRDP
@@ -193,6 +231,7 @@ func (s *Server) Create(ctx *gin.Context, opts ...TunnelOption) (sess TunnelSess
 	}
 	perm := opt.Actions.Permission()
 	sess.AppletOpts = opt.appletOpt
+	sess.VirtualAppOpts = opt.virtualAppOPt
 	sess.AuthInfo = opt.authInfo
 	if opt.appletOpt != nil {
 		sess.RemoteApp = &opt.appletOpt.Applet
@@ -222,10 +261,14 @@ func (s *Server) Create(ctx *gin.Context, opts ...TunnelOption) (sess TunnelSess
 	sess.DisConnectedCallback = s.RegisterDisConnectedCallback(jmsSession)
 	sess.FinishReplayCallback = s.RegisterFinishReplayCallback(sess)
 	sess.ReleaseAppletAccount = func() error {
-		if opt.appletOpt == nil {
-			return nil
+		if opt.appletOpt != nil {
+			return s.JmsService.ReleaseAppletAccount(opt.appletOpt.ID)
 		}
-		return s.JmsService.ReleaseAppletAccount(opt.appletOpt.ID)
+		if opt.virtualAppOPt != nil {
+			return s.PandaClient.ReleaseContainer(opt.virtualAppOPt.ContainerId)
+		}
+		return nil
+
 	}
 	return
 }
