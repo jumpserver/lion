@@ -53,7 +53,12 @@ type Server struct {
 func (s *Server) CreatByToken(ctx *gin.Context, token string) (TunnelSession, error) {
 	connectToken, err := s.JmsService.GetConnectTokenInfo(token)
 	if err != nil {
-		return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
+		msg := err.Error()
+		logger.Errorf("Get connect token err: %s", err.Error())
+		if connectToken.Error != "" {
+			msg = connectToken.Error
+		}
+		return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, msg)
 	}
 	cfg, err := s.JmsService.GetTerminalConfig()
 	if err != nil {
@@ -77,7 +82,12 @@ func (s *Server) CreatByToken(ctx *gin.Context, token string) (TunnelSession, er
 	case connectApplet:
 		appletOptions, err1 := s.JmsService.GetConnectTokenAppletOption(token)
 		if err1 != nil {
-			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err1.Error())
+			msg := err1.Error()
+			logger.Errorf("Get applet option err: %s", err1.Error())
+			if appletOptions.Error != "" {
+				msg = appletOptions.Error
+			}
+			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, msg)
 		}
 		appletOpt := &appletOptions
 		opts = append(opts, WithAppletOption(appletOpt))
@@ -88,7 +98,12 @@ func (s *Server) CreatByToken(ctx *gin.Context, token string) (TunnelSession, er
 	case connectVirtualAPP:
 		virtualApp, err1 := s.JmsService.GetConnectTokenVirtualAppOption(token)
 		if err1 != nil {
-			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err1.Error())
+			msg := err1.Error()
+			logger.Errorf("Get virtual app err: %s", err1.Error())
+			if virtualApp.Error != "" {
+				msg = virtualApp.Error
+			}
+			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, msg)
 		}
 		appOpt := model.VirtualAppOption{
 			ImageName:     virtualApp.ImageName,

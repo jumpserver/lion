@@ -14,6 +14,7 @@ type AppletOption struct {
 	Account         Account                `json:"account"`
 	Gateway         *Gateway               `json:"gateway"`
 	RemoteAppOption RemoteAppCommandOption `json:"remote_app_option"`
+	Error           string                 `json:"error"`
 }
 
 type RemoteAppCommandOption struct {
@@ -48,4 +49,5 @@ type VirtualApp struct {
 	ImageName     string `json:"image_name"`
 	ImageProtocol string `json:"image_protocol"`
 	ImagePort     int    `json:"image_port"`
+	Error         string `json:"error"`
 }
