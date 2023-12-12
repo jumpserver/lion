@@ -30,6 +30,7 @@ export function ConvertAPIError(errMsg) {
 
 export const APIErrorType = {
   'connect API core err': 'JMSErrAPIFailed',
+  'connect Panda API core err': 'JMSErrAPIFailed',
   'unsupported type': 'JMSErrBadParams',
   'unsupported protocol': 'JMSErrBadParams',
   'permission deny': 'JMSErrPermission'
