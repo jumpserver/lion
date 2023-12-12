@@ -24,6 +24,7 @@ type ConnectToken struct {
 
 	Code   string `json:"code"`
 	Detail string `json:"detail"`
+	Error  string `json:"error"`
 }
 
 type ConnectMethod struct {
