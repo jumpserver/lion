@@ -99,7 +99,7 @@ func (r *FTPFileRecorder) Record(ftpLog *model.FTPLog, reader io.Reader) (err er
 }
 
 func (r *FTPFileRecorder) isNullStorage() bool {
-	return r.storage.TypeName() == "null"
+	return r.storage.TypeName() == "null" || r.MaxStoreFileSize == 0
 }
 
 func (r *FTPFileRecorder) exceedFileMaxSize(info *FTPFileInfo) bool {
