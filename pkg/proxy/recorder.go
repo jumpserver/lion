@@ -174,7 +174,7 @@ func (r *FTPFileRecorder) RecordWrite(ftpLog *model.FTPLog, p []byte) (err error
 		logger.Errorf("FTP file %s is exceeds the max limit and discard it", ftpLog.ID)
 		return nil
 	}
-	return info.WriteChunk(p, info.writtenBytes)
+	return info.WriteChunk(p)
 }
 
 func (r *FTPFileRecorder) FinishFTPFile(id string) {
@@ -232,16 +232,8 @@ type FTPFileInfo struct {
 	writtenBytes   int64
 }
 
-func (f *FTPFileInfo) WriteChunk(p []byte, off int64) error {
-	var (
-		nw  int
-		err error
-	)
-	_, err = f.fd.Seek(off, io.SeekStart)
-	if err != nil {
-		return err
-	}
-	nw, err = f.fd.Write(p)
+func (f *FTPFileInfo) WriteChunk(p []byte) error {
+	nw, err := f.fd.Write(p)
 	if nw > 0 {
 		f.writtenBytes += int64(nw)
 	}
