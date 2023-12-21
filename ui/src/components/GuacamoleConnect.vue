@@ -226,7 +226,8 @@ export default {
     }).catch(err => {
       const message = err.message || err
       vm.$log.debug('err ', message)
-      vm.$error(vm.$t(ConvertAPIError(message)))
+      const errArray = message.split(':')
+      vm.$error(vm.$t(ConvertAPIError(message)) + ': ' + errArray.slice(1).join(':'))
       vm.loading = false
     })
     window.addEventListener('message', this.handleEventFromLuna, false)

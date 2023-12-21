@@ -1,5 +1,7 @@
 package model
 
+import "fmt"
+
 type Applet struct {
 	Id   string `json:"id"`
 	Name string `json:"name"`
@@ -12,6 +14,7 @@ type AppletOption struct {
 	Account         Account                `json:"account"`
 	Gateway         *Gateway               `json:"gateway"`
 	RemoteAppOption RemoteAppCommandOption `json:"remote_app_option"`
+	Error           string                 `json:"error"`
 }
 
 type RemoteAppCommandOption struct {
@@ -19,4 +22,32 @@ type RemoteAppCommandOption struct {
 	Name    string `json:"remoteapplicationname:s"`
 	Shell   string `json:"alternate shell:s"`
 	CmdLine string `json:"remoteapplicationcmdline:s"`
+}
+
+type VirtualAppContainer struct {
+	ContainerId string `json:"container_id"`
+	Host        string `json:"host"`
+	Port        int    `json:"port"`
+	Protocol    string `json:"protocol"`
+	Username    string `json:"username"`
+	Password    string `json:"password"`
+}
+
+func (v VirtualAppContainer) String() string {
+	return fmt.Sprintf("%s://%s:%d",
+		v.Protocol, v.Host, v.Port)
+}
+
+type VirtualAppOption struct {
+	ImageName     string `json:"image_name"`
+	ImageProtocol string `json:"image_protocol"`
+	ImagePort     int    `json:"image_port"`
+}
+
+type VirtualApp struct {
+	Name          string `json:"name"`
+	ImageName     string `json:"image_name"`
+	ImageProtocol string `json:"image_protocol"`
+	ImagePort     int    `json:"image_port"`
+	Error         string `json:"error"`
 }

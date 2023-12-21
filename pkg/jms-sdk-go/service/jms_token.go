@@ -36,3 +36,11 @@ func (s *JMService) ReleaseAppletAccount(accountId string) (err error) {
 	_, err = s.authClient.Post(SuperConnectAppletHostAccountReleaseURL, data, nil)
 	return
 }
+
+func (s *JMService) GetConnectTokenVirtualAppOption(tokenId string) (resp model.VirtualApp, err error) {
+	data := map[string]string{
+		"id": tokenId,
+	}
+	_, err = s.authClient.Post(SuperConnectTokenVirtualAppOptionURL, data, &resp)
+	return
+}
