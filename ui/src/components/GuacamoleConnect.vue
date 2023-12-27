@@ -355,7 +355,8 @@ export default {
     },
     getKeyboardLayout() {
       const lunaSetting = localStorageGet('LunaSetting') || {}
-      const keyboardLayout = lunaSetting['keyboardLayout']
+      const graphics = lunaSetting['graphics'] || {}
+      const keyboardLayout = graphics['keyboard_layout']
       this.$log.debug('KeyboardLayout: ', keyboardLayout)
       if (!keyboardLayout) {
         return ''
