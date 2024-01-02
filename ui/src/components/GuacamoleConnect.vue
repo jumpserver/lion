@@ -15,7 +15,7 @@
         </div>
       </el-row>
     </el-main>
-    <RightPanel>
+    <RightPanel ref="panel">
       <Settings :settings="settings" :title="$t('Settings')">
         <el-button type="text" class="item-button el-icon-c-scale-to-original">
           {{ $t('Display') }}
@@ -304,6 +304,9 @@ export default {
           this.lunaId = msg.id
           this.origin = evt.origin
           this.sendEventToLuna('PONG', null)
+          break
+        case 'OPEN':
+          this.$refs.panel.toggle()
           break
       }
       console.log('Lion got post msg: ', msg)
