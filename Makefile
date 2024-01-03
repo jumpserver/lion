@@ -5,6 +5,9 @@ BuildTime:=$(shell date -u '+%Y-%m-%d %I:%M:%S%p')
 COMMIT:=$(shell git rev-parse HEAD)
 GOVERSION:=$(shell go version)
 
+GOOS:=$(shell go env GOOS)
+GOARCH:=$(shell go env GOARCH)
+
 LDFLAGS=-w -s
 
 GOLDFLAGS=-X 'main.Version=$(VERSION)'
@@ -18,60 +21,54 @@ UIDIR=ui
 NPMINSTALL=yarn
 NPMBUILD=yarn build
 
-PLATFORM_LIST = \
-	darwin-amd64 \
-	linux-amd64 \
-	linux-arm64
+define make_artifact_full
+	GOOS=$(1) GOARCH=$(2) $(GOBUILD) -o $(BUILDDIR)/$(NAME)-$(1)-$(2)
+	mkdir -p $(BUILDDIR)/$(NAME)-$(VERSION)-$(1)-$(2)/$(UIDIR)/dist/
+	cp $(BUILDDIR)/$(NAME)-$(1)-$(2) $(BUILDDIR)/$(NAME)-$(VERSION)-$(1)-$(2)/$(NAME)
+	-cp config_example.yml $(BUILDDIR)/$(NAME)-$(VERSION)-$(1)-$(2)/config_example.yml
+	cp -r $(UIDIR)/dist/* $(BUILDDIR)/$(NAME)-$(VERSION)-$(1)-$(2)/$(UIDIR)/dist/
+	cd $(BUILDDIR) && tar -czvf $(NAME)-$(VERSION)-$(1)-$(2).tar.gz $(NAME)-$(VERSION)-$(1)-$(2)
+	rm -rf $(BUILDDIR)/$(NAME)-$(VERSION)-$(1)-$(2) $(BUILDDIR)/$(NAME)-$(1)-$(2)
+endef
 
-WINDOWS_ARCH_LIST = \
-	windows-amd64
+build:
+	GOARCH=$(GOARCH) GOOS=$(GOOS) $(GO_BUILD) -o $(BUILDDIR)/$(NAME) .
 
-all-arch: $(PLATFORM_LIST) $(WINDOWS_ARCH_LIST)
+all: lion-ui
+	$(call make_artifact_full,darwin,amd64)
+	$(call make_artifact_full,darwin,arm64)
+	$(call make_artifact_full,linux,amd64)
+	$(call make_artifact_full,linux,arm64)
+	$(call make_artifact_full,linux,ppc64le)
+	$(call make_artifact_full,linux,s390x)
+	$(call make_artifact_full,linux,riscv64)
 
-darwin-amd64:lion-ui
-	GOARCH=amd64 GOOS=darwin $(GOBUILD) -o $(BUILDDIR)/$(NAME)-$@
-	mkdir -p $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(UIDIR)/dist/
-	cp $(BUILDDIR)/$(NAME)-$@ $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(NAME)
-	-cp config_example.yml $(BUILDDIR)/$(NAME)-$(VERSION)-$@/config_example.yml
-	cp -r $(UIDIR)/dist/* $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(UIDIR)/dist/
-	cd $(BUILDDIR) && tar -czvf $(NAME)-$(VERSION)-$@.tar.gz $(NAME)-$(VERSION)-$@
-	rm -rf $(BUILDDIR)/$(NAME)-$(VERSION)-$@ $(BUILDDIR)/$(NAME)-$@
+local: lion-ui
+	$(call make_artifact_full,$(shell go env GOOS),$(shell go env GOARCH))
 
-linux-amd64:lion-ui
-	GOARCH=amd64 GOOS=linux $(GOBUILD) -o $(BUILDDIR)/$(NAME)-$@
-	mkdir -p $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(UIDIR)/dist/
-	cp $(BUILDDIR)/$(NAME)-$@ $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(NAME)
-	-cp config_example.yml $(BUILDDIR)/$(NAME)-$(VERSION)-$@/config_example.yml
-	cp -r $(UIDIR)/dist/* $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(UIDIR)/dist/
-	cd $(BUILDDIR) && tar -czvf $(NAME)-$(VERSION)-$@.tar.gz $(NAME)-$(VERSION)-$@
-	rm -rf $(BUILDDIR)/$(NAME)-$(VERSION)-$@ $(BUILDDIR)/$(NAME)-$@
+darwin-amd64: lion-ui
+	$(call make_artifact_full,darwin,amd64)
 
-linux-arm64:lion-ui
-	GOARCH=arm64 GOOS=linux $(GOBUILD) -o $(BUILDDIR)/$(NAME)-$@
-	mkdir -p $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(UIDIR)/dist/
-	cp $(BUILDDIR)/$(NAME)-$@ $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(NAME)
-	-cp config_example.yml $(BUILDDIR)/$(NAME)-$(VERSION)-$@/config_example.yml
-	cp -r $(UIDIR)/dist/* $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(UIDIR)/dist/
-	cd $(BUILDDIR) && tar -czvf $(NAME)-$(VERSION)-$@.tar.gz $(NAME)-$(VERSION)-$@
-	rm -rf $(BUILDDIR)/$(NAME)-$(VERSION)-$@ $(BUILDDIR)/$(NAME)-$@
+darwin-arm64: lion-ui
+	$(call make_artifact_full,darwin,arm64)
 
-linux-loong64:lion-ui
-	GOARCH=loong64 GOOS=linux $(GOBUILD) -o $(BUILDDIR)/$(NAME)-$@
-	mkdir -p $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(UIDIR)/dist/
-	cp $(BUILDDIR)/$(NAME)-$@ $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(NAME)
-	-cp config_example.yml $(BUILDDIR)/$(NAME)-$(VERSION)-$@/config_example.yml
-	cp -r $(UIDIR)/dist/* $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(UIDIR)/dist/
-	cd $(BUILDDIR) && tar -czvf $(NAME)-$(VERSION)-$@.tar.gz $(NAME)-$(VERSION)-$@
-	rm -rf $(BUILDDIR)/$(NAME)-$(VERSION)-$@ $(BUILDDIR)/$(NAME)-$@
+linux-amd64: lion-ui
+	$(call make_artifact_full,linux,amd64)
 
-windows-amd64:lion-ui
-	GOARCH=amd64 GOOS=windows $(GOBUILD) -o $(BUILDDIR)/$(NAME)-$@.exe
-	mkdir -p $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(UIDIR)/dist/
-	cp $(BUILDDIR)/$(NAME)-$@.exe $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(NAME).exe
-	-cp config_example.yml $(BUILDDIR)/$(NAME)-$(VERSION)-$@/config_example.yml
-	cp -r $(UIDIR)/dist/* $(BUILDDIR)/$(NAME)-$(VERSION)-$@/$(UIDIR)/dist/
-	cd $(BUILDDIR) && tar -czvf $(NAME)-$(VERSION)-$@.tar.gz $(NAME)-$(VERSION)-$@
-	rm -rf $(BUILDDIR)/$(NAME)-$(VERSION)-$@ $(BUILDDIR)/$(NAME)-$@.exe
+linux-arm64: lion-ui
+	$(call make_artifact_full,linux,arm64)
+
+linux-loong64: lion-ui
+	$(call make_artifact_full,linux,loong64)
+
+linux-ppc64le: lion-ui
+	$(call make_artifact_full,linux,ppc64le)
+
+linux-s390x: lion-ui
+	$(call make_artifact_full,linux,s390x)
+
+linux-riscv64: lion-ui
+	$(call make_artifact_full,linux,riscv64)
 
 .PHONY: docker
 docker:
