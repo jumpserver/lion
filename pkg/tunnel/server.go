@@ -191,11 +191,14 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 		if err = tunnelSession.DisConnectedCallback(); err != nil {
 			logger.Errorf("Session DisConnectedCallback err: %+v", err)
 		}
+		reason := model.SessionLifecycleLog{Reason: err.Error()}
+		g.RecordLifecycleLog(sessionId, model.AssetConnectFinished, reason)
 		return
 	}
 	defer tunnel.Close()
-	if err := tunnelSession.ConnectedSuccessCallback(); err != nil {
-		logger.Errorf("Update session connect status failed %+v", err)
+	g.RecordLifecycleLog(sessionId, model.AssetConnectSuccess, model.EmptyLifecycleLog)
+	if err1 := tunnelSession.ConnectedSuccessCallback(); err1 != nil {
+		logger.Errorf("Update session connect status failed %+v", err1)
 	}
 	logger.Infof("Session[%s] use resolution (%d*%d)",
 		sessionId, info.OptimalScreenWidth, info.OptimalScreenHeight)
@@ -261,6 +264,13 @@ func (g *GuacamoleTunnelServer) CreateSession(ctx *gin.Context) {
 	}
 	g.SessCache.Add(&connectSession)
 	ctx.JSON(http.StatusCreated, SuccessResponse(connectSession))
+}
+
+func (g *GuacamoleTunnelServer) RecordLifecycleLog(sid string, event model.LifecycleEvent,
+	logObj model.SessionLifecycleLog) {
+	if err := g.JmsService.RecordSessionLifecycleLog(sid, event, logObj); err != nil {
+		logger.Errorf("Record session %s lifecycle %s log err: %s", sid, event, err)
+	}
 }
 
 func (g *GuacamoleTunnelServer) TokenSession(ctx *gin.Context) {
@@ -454,6 +464,8 @@ func (g *GuacamoleTunnelServer) Monitor(ctx *gin.Context) {
 		Id:          sessionId,
 		guacdTunnel: tunnelCon,
 		ws:          ws,
+		Service:     g,
+		User:        user,
 	}
 	logger.Infof("User %s start to monitor session %s", user, sessionId)
 	_ = conn.Run(ctx.Request.Context())
