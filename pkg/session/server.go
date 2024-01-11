@@ -364,6 +364,8 @@ func (s *Server) RegisterFinishReplayCallback(tunnel TunnelSession) func(guacd.C
 		storageType := replayConfig.TypeName
 		if storageType == "null" {
 			logger.Error("录像存储设置为 null，无存储")
+			reason := model.SessionLifecycleLog{Reason: string(model.ReasonErrNullStorage)}
+			s.RecordLifecycleLog(tunnel.ID, model.ReplayUploadFailure, reason)
 			return nil
 		}
 		var replayErrReason model.ReplayError
@@ -405,6 +407,7 @@ func (s *Server) RegisterFinishReplayCallback(tunnel TunnelSession) func(guacd.C
 			logger.Infof("Upload replay file to video worker: %s", dstReplayFilePath)
 			return nil
 		}
+		s.RecordLifecycleLog(tunnel.ID, model.ReplayUploadStart, model.EmptyLifecycleLog)
 		defaultStorage := storage.ServerStorage{StorageType: "server", JmsService: s.JmsService}
 		logger.Infof("Upload record file: %s, type: %s", dstReplayFilePath, storageType)
 		if replayStorage := storage.NewReplayStorage(s.JmsService, replayConfig); replayStorage != nil {
@@ -422,13 +425,22 @@ func (s *Server) RegisterFinishReplayCallback(tunnel TunnelSession) func(guacd.C
 		if err != nil {
 			logger.Errorf("Upload replay failed: %s", err.Error())
 			replayErrReason = model.SessionReplayErrUploadFailed
+			reason := model.SessionLifecycleLog{Reason: err.Error()}
+			s.RecordLifecycleLog(tunnel.ID, model.ReplayUploadFailure, reason)
 			return err
 		}
 		// 上传成功，删除压缩文件
 		defer os.Remove(dstReplayFilePath)
 		// 通知core上传完成
 		err = s.JmsService.FinishReply(tunnel.ID)
+		s.RecordLifecycleLog(tunnel.ID, model.ReplayUploadSuccess, model.EmptyLifecycleLog)
 		return err
+	}
+}
+
+func (s *Server) RecordLifecycleLog(sid string, event model.LifecycleEvent, logObj model.SessionLifecycleLog) {
+	if err := s.JmsService.RecordSessionLifecycleLog(sid, event, logObj); err != nil {
+		logger.Errorf("Record session %s lifecycle %s log err: %s", sid, event, err)
 	}
 }
 

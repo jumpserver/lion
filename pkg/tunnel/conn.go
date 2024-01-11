@@ -64,6 +64,8 @@ type Connection struct {
 
 	lockedStatus atomic.Bool
 	operatorUser atomic.Value
+
+	recordStatus atomic.Bool
 }
 
 func (t *Connection) SendWsMessage(msg guacd.Instruction) error {
@@ -277,10 +279,16 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 		select {
 		case err = <-exit:
 			logger.Infof("Session[%s] Connection exit %+v", t, err)
+			if !t.recordStatus.Load() {
+				reason := model.SessionLifecycleLog{Reason: string(model.ReasonErrConnectDisconnect)}
+				t.Service.RecordLifecycleLog(t.Sess.ID, model.AssetConnectFinished, reason)
+			}
 			return err
 		case <-ctx.Request.Context().Done():
 			_ = t.ws.Close()
 			_ = t.guacdTunnel.Close()
+			reason := model.SessionLifecycleLog{Reason: string(model.ReasonErrConnectDisconnect)}
+			t.Service.RecordLifecycleLog(t.Sess.ID, model.AssetConnectFinished, reason)
 			logger.Errorf("Session[%s] request ctx done", t)
 			return nil
 		case <-activeChan:
@@ -291,6 +299,8 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 				_ = t.SendWsMessage(errSession.Instruction())
 				logger.Errorf("Session[%s] terminated by max session time %d hour",
 					t, maxSessionTimeInt)
+				reason := model.SessionLifecycleLog{Reason: string(model.ReasonErrMaxSessionTimeout)}
+				t.Service.RecordLifecycleLog(t.Sess.ID, model.AssetConnectFinished, reason)
 				return nil
 			}
 			if detectTime.After(latestActive.Add(maxIdleMinutes)) {
@@ -298,11 +308,15 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 				_ = t.SendWsMessage(errIdle.Instruction())
 				logger.Errorf("Session[%s] terminated by %d min timeout",
 					t, maxIndexTime)
+				reason := model.SessionLifecycleLog{Reason: string(model.ReasonErrIdleDisconnect)}
+				t.Service.RecordLifecycleLog(t.Sess.ID, model.AssetConnectFinished, reason)
 				return nil
 			}
 			if t.IsPermissionExpired(detectTime) {
 				_ = t.SendWsMessage(ErrPermissionExpired.Instruction())
 				logger.Errorf("Session[%s] permission has expired", t)
+				reason := model.SessionLifecycleLog{Reason: string(model.ReasonErrPermissionExpired)}
+				t.Service.RecordLifecycleLog(t.Sess.ID, model.AssetConnectFinished, reason)
 				return nil
 			}
 		}
@@ -331,9 +345,12 @@ func (t *Connection) HandleTask(task *model.TerminalTask) error {
 		ins := NewJmsEventInstruction("session_pause", string(p))
 		_ = t.SendWsMessage(ins)
 	case model.TaskKillSession:
+		t.recordStatus.Store(true)
 		username := task.Kwargs.TerminatedBy
 		ins := NewJMSGuacamoleError(1005, username)
 		_ = t.SendWsMessage(ins.Instruction())
+		reason := model.SessionLifecycleLog{Reason: string(model.ReasonErrAdminTerminate)}
+		t.Service.RecordLifecycleLog(t.Sess.ID, model.AssetConnectFinished, reason)
 	default:
 		return fmt.Errorf("unknown task %s", task.Name)
 	}
