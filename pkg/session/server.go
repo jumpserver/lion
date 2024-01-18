@@ -51,7 +51,7 @@ type Server struct {
 }
 
 func (s *Server) CreatByToken(ctx *gin.Context, token string) (TunnelSession, error) {
-	connectToken, err := s.JmsService.GetConnectTokenInfo(token)
+	connectToken, err := s.JmsService.GetConnectTokenInfo(token, false)
 	if err != nil {
 		msg := err.Error()
 		logger.Errorf("Get connect token err: %s", err.Error())
@@ -122,7 +122,9 @@ func (s *Server) CreatByToken(ctx *gin.Context, token string) (TunnelSession, er
 		opts = append(opts, WithGateway(nil))
 
 	default:
-
+		if _, err1 := s.JmsService.GetConnectTokenInfo(token, true); err1 != nil {
+			logger.Errorf("Try to expire connect token err: %s", err1.Error())
+		}
 	}
 	return s.Create(ctx, opts...)
 }
