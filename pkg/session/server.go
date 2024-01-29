@@ -278,15 +278,13 @@ func (s *Server) RegisterDisConnectedCallback(sess model.Session) func() error {
 
 const ReplayFileNameSuffix = ".replay.gz"
 
-func (s *Server) UploadReplayToVideoWorker(tunnel TunnelSession, info guacd.ClientInformation) bool {
-	recordDirPath := filepath.Join(config.GlobalConfig.RecordPath,
-		tunnel.Created.Format(recordDirTimeFormat))
-	originReplayFilePath := filepath.Join(recordDirPath, tunnel.ID)
-	task, err := s.VideoWorkerClient.CreateReplayTask(tunnel.ID, originReplayFilePath,
+func (s *Server) UploadReplayToVideoWorker(tunnel TunnelSession, info guacd.ClientInformation,
+	dstReplayFilePath string) bool {
+	task, err := s.VideoWorkerClient.CreateReplayTask(tunnel.ID, dstReplayFilePath,
 		videoworker.ReplayMeta{
 			SessionId:     tunnel.ID,
 			ComponentType: "lion",
-			FileType:      ".replay",
+			FileType:      ".gz",
 			SessionDate:   tunnel.Created.Format("2006-01-02"),
 			Width:         info.OptimalScreenWidth,
 			Height:        info.OptimalScreenHeight,
@@ -321,12 +319,6 @@ func (s *Server) RegisterFinishReplayCallback(tunnel TunnelSession) func(guacd.C
 			_ = os.Remove(originReplayFilePath)
 			return s.JmsService.SessionFailed(tunnel.ID, err)
 		}
-		if s.VideoWorkerClient != nil && s.UploadReplayToVideoWorker(tunnel, info) {
-			logger.Infof("Upload replay file to video worker: %s", originReplayFilePath)
-			_ = os.Remove(originReplayFilePath)
-			return nil
-		}
-
 		// 压缩文件
 		err = common.CompressToGzipFile(originReplayFilePath, dstReplayFilePath)
 		if err != nil {
@@ -335,6 +327,11 @@ func (s *Server) RegisterFinishReplayCallback(tunnel TunnelSession) func(guacd.C
 		}
 		// 压缩完成则删除源文件
 		defer os.Remove(originReplayFilePath)
+
+		if s.VideoWorkerClient != nil && s.UploadReplayToVideoWorker(tunnel, info, dstReplayFilePath) {
+			logger.Infof("Upload replay file to video worker: %s", dstReplayFilePath)
+			return nil
+		}
 		defaultStorage := storage.ServerStorage{StorageType: "server", JmsService: s.JmsService}
 		logger.Infof("Upload record file: %s, type: %s", dstReplayFilePath, storageType)
 		if replayStorage := storage.NewReplayStorage(s.JmsService, replayConfig); replayStorage != nil {
