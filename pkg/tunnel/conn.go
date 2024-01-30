@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -138,6 +139,9 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 	}
 	exit := make(chan error, 2)
 	activeChan := make(chan struct{})
+	noNopTime := time.Now()
+	maxNopTimeout := time.Minute * 5
+	var requiredErr guacd.Instruction
 	go func(t *Connection) {
 		for {
 			instruction, err := t.readTunnelInstruction()
@@ -156,6 +160,27 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 				case activeChan <- struct{}{}:
 				default:
 				}
+			}
+
+			switch instruction.Opcode {
+			case guacd.InstructionClientNop:
+				if time.Now().Sub(noNopTime) > maxNopTimeout {
+					logger.Errorf("Session[%s] guacamole server nop timeout", t)
+					if requiredErr.Opcode != "" {
+						logger.Errorf("Session[%s] send guacamole server required err: %s", t,
+							requiredErr.String())
+						_ = t.writeWsMessage([]byte(requiredErr.String()))
+						requiredErr = guacd.Instruction{}
+						continue
+					}
+
+				}
+			case guacd.InstructionRequired:
+				msg := fmt.Sprintf("required: %s", strings.Join(instruction.Args, ","))
+				logger.Infof("Session[%s] receive guacamole server required: %s", t, msg)
+				requiredErr = guacd.NewInstruction(guacd.InstructionServerError, msg)
+			default:
+				noNopTime = time.Now()
 			}
 
 			if err = t.writeWsMessage([]byte(instruction.String())); err != nil {
