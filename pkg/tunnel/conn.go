@@ -165,17 +165,15 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 			switch instruction.Opcode {
 			case guacd.InstructionClientNop:
 				if time.Now().Sub(noNopTime) > maxNopTimeout {
-					errInstruction := guacd.NewInstruction(guacd.InstructionServerError, "nop timeout")
-					var errMsg string
-					errMsg = errInstruction.String()
 					logger.Errorf("Session[%s] guacamole server nop timeout", t)
 					if requiredErr.Opcode != "" {
 						logger.Errorf("Session[%s] send guacamole server required err: %s", t,
 							requiredErr.String())
-						errMsg = requiredErr.String()
+						_ = t.writeWsMessage([]byte(requiredErr.String()))
+						requiredErr = guacd.Instruction{}
+						continue
 					}
-					_ = t.writeWsMessage([]byte(errMsg))
-					continue
+
 				}
 			case guacd.InstructionRequired:
 				msg := fmt.Sprintf("required: %s", strings.Join(instruction.Args, ","))
