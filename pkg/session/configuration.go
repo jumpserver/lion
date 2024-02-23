@@ -154,6 +154,8 @@ type VNCConfiguration struct {
 
 const recordDirTimeFormat = "2006-01-02"
 
+const nullUsername = "null"
+
 func (r VNCConfiguration) GetGuacdConfiguration() guacd.Configuration {
 	conf := guacd.NewConfiguration()
 	var (
@@ -166,6 +168,9 @@ func (r VNCConfiguration) GetGuacdConfiguration() guacd.Configuration {
 	port = strconv.Itoa(r.Asset.ProtocolPort("vnc"))
 	username = r.Account.Username
 	password = r.Account.Secret
+	if username == nullUsername {
+		username = ""
+	}
 	conf.Protocol = vnc
 	conf.SetParameter(guacd.Hostname, ip)
 	conf.SetParameter(guacd.Port, port)
