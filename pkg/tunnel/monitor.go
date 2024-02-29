@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/gorilla/websocket"
+	"lion/pkg/jms-sdk-go/model"
 
 	"lion/pkg/guacd"
 	"lion/pkg/logger"
@@ -18,6 +19,9 @@ type MonitorCon struct {
 
 	wsLock    sync.Mutex
 	guacdLock sync.Mutex
+
+	Service *GuacamoleTunnelServer
+	User    *model.User
 }
 
 func (m *MonitorCon) SendWsMessage(msg guacd.Instruction) error {
@@ -97,7 +101,11 @@ func (m *MonitorCon) Run(ctx context.Context) (err error) {
 		}
 		_ = t.guacdTunnel.Close()
 	}(m)
-
+	logObj := model.SessionLifecycleLog{User: m.User.String()}
+	m.Service.RecordLifecycleLog(m.Id, model.AdminJoinMonitor, logObj)
+	defer func() {
+		m.Service.RecordLifecycleLog(m.Id, model.AdminExitMonitor, logObj)
+	}()
 	for {
 		select {
 		case err = <-exit:
