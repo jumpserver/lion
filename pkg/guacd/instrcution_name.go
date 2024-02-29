@@ -47,7 +47,7 @@ const (
 	InstructionClientSync       = "sync"
 )
 
-// 	Server control instructions
+// Server control instructions
 const (
 	InstructionServerDisconnect = "disconnect"
 	InstructionServerError      = "error"
@@ -60,4 +60,8 @@ const (
 	InstructionKey   = "key"
 	InstructionMouse = "mouse"
 	InstructionSize  = "size"
+)
+
+const (
+	InstructionRequired = "required"
 )

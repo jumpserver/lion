@@ -15,7 +15,7 @@
         </div>
       </el-row>
     </el-main>
-    <RightPanel>
+    <RightPanel ref="panel">
       <Settings :settings="settings" :title="$t('Settings')">
         <el-button type="text" class="item-button el-icon-c-scale-to-original">
           {{ $t('Display') }}
@@ -305,6 +305,9 @@ export default {
           this.origin = evt.origin
           this.sendEventToLuna('PONG', null)
           break
+        case 'OPEN':
+          this.$refs.panel.toggle()
+          break
       }
       console.log('Lion got post msg: ', msg)
     },
@@ -547,7 +550,7 @@ export default {
       // Do not attempt to handle mouse state changes if the client
       // or display are not yet available
       if (!this.client || !this.display) { return }
-
+      this.sendEventToLuna('MOUSEEVENT', '')
       // Send mouse state, show cursor if necessary
       this.display.showCursor(!this.localCursor)
       this.sendScaledMouseState(mouseState)
@@ -784,9 +787,11 @@ export default {
       // Keyboard
       const keyboard = new Guacamole.Keyboard(sink.getElement())
       keyboard.onkeydown = (keysym) => {
+        this.sendEventToLuna('KEYBOARDEVENT', '')
         this.client.sendKeyEvent(1, keysym)
       }
       keyboard.onkeyup = (keysym) => {
+        this.sendEventToLuna('KEYBOARDEVENT', '')
         this.client.sendKeyEvent(0, keysym)
       }
       this.keyboard = keyboard

@@ -24,6 +24,8 @@ const (
 	FTPLogListURL       = "/api/v1/audits/ftp-logs/" // 上传 ftp日志
 	FTPLogFileURL       = "/api/v1/audits/ftp-logs/%s/upload/"
 	FTPLogUpdateURL     = "/api/v1/audits/ftp-logs/%s/"
+
+	SessionLifecycleLogURL = "/api/v1/terminal/sessions/%s/lifecycle_log/"
 )
 
 // 各资源详情相关API
