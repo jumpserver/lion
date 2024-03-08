@@ -180,7 +180,8 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	}
 
 	var tunnel *guacd.Tunnel
-	guacdAddr := net.JoinHostPort(config.GlobalConfig.GuaHost, config.GlobalConfig.GuaPort)
+	guacdAddr := config.GlobalConfig.SelectGuacdAddr()
+
 	tunnel, err = guacd.NewTunnel(guacdAddr, conf, info)
 	if err != nil {
 		logger.Errorf("Connect tunnel err: %+v", err)
@@ -204,6 +205,7 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 		sessionId, info.OptimalScreenWidth, info.OptimalScreenHeight)
 
 	conn := Connection{
+		guacdAddr:   guacdAddr,
 		Sess:        tunnelSession,
 		guacdTunnel: tunnel,
 		Service:     g.SessionService,
