@@ -3,6 +3,8 @@ package config
 import (
 	"fmt"
 	"log"
+	"math/rand"
+	"net"
 	"os"
 	"path/filepath"
 	"strings"
@@ -29,6 +31,8 @@ type Config struct {
 	HTTPPort       string `mapstructure:"HTTPD_PORT"`
 	LogLevel       string `mapstructure:"LOG_LEVEL"`
 
+	GuacdAddrs string `mapstructure:"GUACD_ADDRS"`
+
 	GuaHost                   string `mapstructure:"GUA_HOST"`
 	GuaPort                   string `mapstructure:"GUA_PORT"`
 	DisableAllCopyPaste       bool   `mapstructure:"JUMPSERVER_DISABLE_ALL_COPY_PASTE"`
@@ -52,6 +56,14 @@ type Config struct {
 	IgnoreVerifyCerts bool   `mapstructure:"IGNORE_VERIFY_CERTS"`
 	PandaHost         string `mapstructure:"PANDA_HOST"`
 	EnablePanda       bool   `mapstructure:"ENABLE_PANDA"`
+}
+
+func (c *Config) SelectGuacdAddr() string {
+	if len(c.GuacdAddrs) == 0 {
+		return net.JoinHostPort(c.GuaHost, c.GuaPort)
+	}
+	addresses := strings.Split(c.GuacdAddrs, ",")
+	return addresses[rand.Intn(len(addresses))]
 }
 
 func Setup(configPath string) {
