@@ -1,0 +1,12 @@
+{
+  "guacamole_host": "127.0.0.1",
+  "guacamole_port": 4822,
+  "protocol": "vnc",
+  "hostname": "10.1.14.16",
+  "port": 5901,
+  "username": "root",
+  "password": "root123",
+  "autoretry": "3",
+  "security": "any",
+  "ignore-cert": "true"
+}

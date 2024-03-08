@@ -1,0 +1,13 @@
+{
+  "guacamole_host": "wuhan6.kokossh.site",
+  "guacamole_port": 4823,
+  "guacamole_address": ["localhost:4823"],
+  "protocol": "rdp",
+  "hostname": "172.17.200.23",
+  "port": 3389,
+  "username": "administrator",
+  "password": "woCalong@2015",
+  "autoretry": "3",
+  "security": "any",
+  "ignore-cert": "true"
+}

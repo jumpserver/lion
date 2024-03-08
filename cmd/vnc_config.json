@@ -1,0 +1,12 @@
+{
+  "guacamole_host": "wuhan6.kokossh.site",
+  "guacamole_port": 4823,
+  "protocol": "vnc",
+  "hostname": "172.17.200.11",
+  "port": 5902,
+  "username": "",
+  "password": "",
+  "autoretry": "3",
+  "security": "any",
+  "ignore-cert": "true"
+}
