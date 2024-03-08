@@ -3,7 +3,6 @@ package tunnel
 import (
 	"encoding/json"
 	"fmt"
-	"net"
 	"sort"
 	"strings"
 	"sync"
@@ -14,7 +13,6 @@ import (
 	"github.com/gorilla/websocket"
 
 	"lion/pkg/common"
-	"lion/pkg/config"
 	"lion/pkg/guacd"
 	"lion/pkg/jms-sdk-go/model"
 	"lion/pkg/logger"
@@ -47,6 +45,8 @@ type Connection struct {
 	Sess        *session.TunnelSession
 	guacdTunnel *guacd.Tunnel
 	Service     *session.Server
+
+	guacdAddr string
 
 	ws *websocket.Conn
 
@@ -370,8 +370,7 @@ func (t *Connection) CloneMonitorTunnel() (*guacd.Tunnel, error) {
 	info := guacd.NewClientInformation()
 	conf := guacd.NewConfiguration()
 	conf.ConnectionID = t.guacdTunnel.UUID
-	guacdAddr := net.JoinHostPort(config.GlobalConfig.GuaHost,
-		config.GlobalConfig.GuaPort)
+	guacdAddr := t.guacdAddr
 	monitorTunnel, err := guacd.NewTunnel(guacdAddr, conf, info)
 	if err != nil {
 		return nil, err
