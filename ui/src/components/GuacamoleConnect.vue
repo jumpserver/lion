@@ -149,6 +149,12 @@ export default {
           name: 'Alt+Tab'
         }
       ],
+      remoteAppCombinationKeys: [
+        {
+          keys: ['65513', '65289'],
+          name: 'Alt+Tab'
+        }
+      ],
       scale: 1,
       timeout: null,
       origin: null,
@@ -198,8 +204,16 @@ export default {
         settings.push({
           title: this.$t('Shortcuts'),
           icon: 'el-icon-position',
-          disabled: () => (this.menuDisable || this.isRemoteApp),
+          disabled: () => (this.menuDisable),
           content: this.combinationKeys,
+          itemClick: (keys) => (this.handleKeys(keys))
+        })
+      } else {
+        settings.push({
+          title: this.$t('Shortcuts'),
+          icon: 'el-icon-position',
+          disabled: () => (this.menuDisable),
+          content: this.remoteAppCombinationKeys,
           itemClick: (keys) => (this.handleKeys(keys))
         })
       }
