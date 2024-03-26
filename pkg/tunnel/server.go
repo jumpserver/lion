@@ -185,6 +185,7 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	tunnel, err = guacd.NewTunnel(guacdAddr, conf, info)
 	if err != nil {
 		logger.Errorf("Connect tunnel err: %+v", err)
+		msg := fmt.Sprintf("Connect guacd server %s failed", guacdAddr)
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrGuacamoleServer.String()))
 		if err = tunnelSession.ConnectedFailedCallback(err); err != nil {
 			logger.Errorf("Update session connect status failed %+v", err)
@@ -192,7 +193,7 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 		if err = tunnelSession.DisConnectedCallback(); err != nil {
 			logger.Errorf("Session DisConnectedCallback err: %+v", err)
 		}
-		reason := model.SessionLifecycleLog{Reason: err.Error()}
+		reason := model.SessionLifecycleLog{Reason: msg}
 		g.RecordLifecycleLog(sessionId, model.AssetConnectFinished, reason)
 		return
 	}
