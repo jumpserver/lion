@@ -198,7 +198,11 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 		for {
 			_, message, err1 := t.ws.ReadMessage()
 			if err1 != nil {
-				logger.Errorf("Session[%s] web client read err: %+v", t, err1)
+				if websocket.IsCloseError(err1, websocket.CloseNoStatusReceived) {
+					logger.Warnf("Session[%s] web client read err: %+v", t, err1)
+				} else {
+					logger.Errorf("Session[%s] web client read err: %+v", t, err1)
+				}
 				exit <- err1
 				break
 			}
@@ -249,7 +253,7 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 					guacd.InstructionClientNop,
 					guacd.InstructionStreamingAck:
 				case guacd.InstructionClientDisconnect:
-					logger.Errorf("Session[%s] receive web client disconnect opcode", t)
+					logger.Infof("Session[%s] receive web client disconnect opcode", t)
 				default:
 					select {
 					case activeChan <- struct{}{}:
