@@ -252,7 +252,7 @@ export default {
               // Warn of lack of permission of a proxy rejects the upload
               else if (xhr.status >= 400 && xhr.status < 500) {
                 vm.$log.debug('Upload failed: ', xhr.status)
-                reject(xhr.status)
+                reject({ status: xhr.status, message: xhr.responseText })
                 // eslint-disable-next-line brace-style
               }
               // Assume internal error for all other cases
