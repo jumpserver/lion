@@ -682,6 +682,7 @@ export default {
       // 监听guacamole display的变化
       this.$log.debug('Display resize: ', width, height)
       const scale = this.getPropScale()
+      this.scale = scale
       this.display.scale(scale)
     },
 
