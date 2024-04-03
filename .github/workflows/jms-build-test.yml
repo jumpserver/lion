@@ -18,13 +18,28 @@ jobs:
         sed -i 's@registry.npmmirror.com@registry.yarnpkg.com@g' ui/yarn.lock
         sed -i 's@registry.fit2cloud.com/@@g' Dockerfile
 
-    - name: Build Image
+    - name: Build CE Image
       uses: docker/build-push-action@v5
       with:
         context: .
         push: false
         file: Dockerfile
-        tags: jumpserver/lion:test
+        tags: jumpserver/lion-ce:test
+        platforms: linux/amd64
+        build-args: |
+          GOPROXY=direct
+          APT_MIRROR=http://deb.debian.org
+          NPM_REGISTRY=https://registry.yarnpkg.com
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Build EE Image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: false
+        file: Dockerfile-ee
+        tags: jumpserver/lion-ee:test
         platforms: linux/amd64
         build-args: |
           GOPROXY=direct
