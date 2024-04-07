@@ -521,7 +521,6 @@ func NewWorkerClient(cfg config.Config) *videoworker.Client {
 		logger.Errorf("Create video worker client failed: worker url %s", workerURL)
 		return nil
 	}
-	go KeepWsConnect(workClient)
 	return workClient
 }
 
@@ -533,60 +532,4 @@ func NewPandaClient(cfg config.Config) *panda.Client {
 		return nil
 	}
 	return panda.NewClient(pandaHost, key, cfg.IgnoreVerifyCerts)
-}
-func KeepWsConnect(s *videoworker.Client) {
-	if err := s.Login(); err != nil {
-		logger.Errorf("Worker Ws client login failed: %s, try next 10s", err)
-		time.Sleep(10 * time.Second)
-		go KeepWsConnect(s)
-		return
-	}
-	wsCon, err := s.GetWsClient()
-	if err != nil {
-		time.Sleep(10 * time.Second)
-		go KeepWsConnect(s)
-		return
-	}
-	defer wsCon.Close()
-	logger.Info("Start worker ws client beat success")
-	done := make(chan struct{}, 2)
-	go func() {
-		defer close(done)
-		for {
-			msgType, message, err2 := wsCon.ReadMessage()
-			if err2 != nil {
-				logger.Errorf("Worker Ws client read err: %s", err2)
-				return
-			}
-			switch msgType {
-			case websocket.PingMessage,
-				websocket.PongMessage:
-				logger.Debug("Worker Ws client ping/pong Message")
-				continue
-			case websocket.CloseMessage:
-				logger.Debug("Worker Ws client close Message")
-				return
-			}
-			logger.Debugf("Worker Ws client read message: %s", message)
-		}
-	}()
-	beatTicker := time.NewTicker(time.Second * 30)
-	defer beatTicker.Stop()
-	pingEvent := map[string]string{
-		"event": "ping",
-	}
-	for {
-		select {
-		case <-done:
-			logger.Error("Worker Ws heart beat closed, try reconnect after 10s")
-			time.Sleep(10 * time.Second)
-			go KeepWsConnect(s)
-			return
-		case <-beatTicker.C:
-			if err1 := wsCon.WriteJSON(pingEvent); err1 != nil {
-				logger.Errorf("Ws client write stat data failed: %s", err1)
-				continue
-			}
-		}
-	}
 }
