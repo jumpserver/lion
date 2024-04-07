@@ -1,15 +1,10 @@
 package videoworker
 
 import (
-	"crypto/tls"
 	"fmt"
-	"net/http"
-	"net/url"
 	"reflect"
 	"strconv"
 	"time"
-
-	"github.com/gorilla/websocket"
 
 	"lion/pkg/jms-sdk-go/httplib"
 	"lion/pkg/jms-sdk-go/model"
@@ -29,34 +24,21 @@ func NewClient(baseUrl string, key model.AccessKey, Insecure bool) *Client {
 	if err != nil {
 		return nil
 	}
-	sign := httplib.SigAuth{
+	sign := ProfileAuth{
 		KeyID:    key.ID,
 		SecretID: key.Secret,
 	}
 	client.SetAuthSign(&sign)
 	client.SetHeader(orgHeaderKey, orgHeaderValue)
-	wsDialer := createWsClientDialer(Insecure)
-	wsDialer.Jar = client.Jar
-	return &Client{BaseURL: baseUrl, client: client, wsDialer: wsDialer}
+	return &Client{BaseURL: baseUrl, client: client}
 }
 
 type Client struct {
-	BaseURL  string
-	sign     httplib.AuthSign
-	client   *httplib.Client
-	wsDialer *websocket.Dialer
+	BaseURL string
+	sign    httplib.AuthSign
+	client  *httplib.Client
 
 	cacheToken map[string]interface{}
-}
-
-func (s *Client) Login() error {
-	var res map[string]interface{}
-	_, err := s.client.Get(ProfileURL, &res)
-	if err != nil {
-		return err
-	}
-	s.cacheToken = res
-	return nil
 }
 
 func (s *Client) CreateReplayTask(sessionId string, file string, meta ReplayMeta) (model.Task, error) {
@@ -132,48 +114,5 @@ func StructToMapString(m interface{}) map[string]string {
 }
 
 const (
-	ProfileURL    = "/api/v1/users/profile/"
 	ReplayFileURL = "/api/v2/replay/sessions/%s/task/"
-	wsURL         = "ws/events/"
 )
-
-func (s *Client) GetWsClient() (*websocket.Conn, error) {
-	u, err := url.Parse(s.BaseURL)
-	if err != nil {
-		return nil, err
-	}
-	scheme := "ws"
-	switch u.Scheme {
-	case "http":
-		scheme = "ws"
-	case "https":
-		scheme = "wss"
-	default:
-		scheme = "ws"
-	}
-	wsReqURL := url.URL{Scheme: scheme, Host: u.Host, Path: wsURL}
-	req, err := http.NewRequest(http.MethodGet, wsReqURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	header := req.Header
-	c, _, err := s.wsDialer.Dial(wsReqURL.String(), header)
-	if err != nil {
-		return nil, err
-	}
-	return c, nil
-}
-
-func createWsClientDialer(insecure bool) *websocket.Dialer {
-	var tlsCfg *tls.Config
-	if insecure {
-		tlsCfg = &tls.Config{InsecureSkipVerify: true}
-	}
-	dialer := &websocket.Dialer{
-		Proxy:            http.ProxyFromEnvironment,
-		HandshakeTimeout: 45 * time.Second,
-		TLSClientConfig:  tlsCfg,
-		Subprotocols:     []string{"JMS-Video-Worker"},
-	}
-	return dialer
-}
