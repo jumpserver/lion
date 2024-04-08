@@ -356,7 +356,8 @@ export default {
 
     getGuaSize() {
       const lunaSetting = localStorageGet('LunaSetting') || {}
-      const solution = lunaSetting['rdpResolution']
+      const graphics = lunaSetting['graphics'] || {}
+      const solution = graphics['rdp_resolution']
       if (!solution || solution.toLowerCase() === 'auto' || solution.indexOf('x') === -1) {
         this.$log.debug('Solution invalid: ', solution)
         return this.getAutoSize()
