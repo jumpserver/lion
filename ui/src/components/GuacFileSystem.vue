@@ -193,7 +193,7 @@ export default {
         this.$message(files[0].name + ' ' + this.$t('UploadSuccess'))
       }).catch(status => {
         let msg = status.message
-        if (getLanguage() === 'cn') {
+        if (['zh-CN', 'zh-Hant'].includes(getLanguage())) {
           msg = this.$t(ErrorStatusCodes[status.code]) || status.message
         }
         this.$warning(msg)
@@ -324,7 +324,7 @@ export default {
         fileObj.onError(err)
         this.$log.debug('Upload error: ', err)
         let msg = err.message
-        if (getLanguage() === 'cn') {
+        if (['zh-CN', 'zh-Hant'].includes(getLanguage())) {
           msg = this.$t(ErrorStatusCodes[err.code]) || err.message
         }
         this.$warning(msg)
