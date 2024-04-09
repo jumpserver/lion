@@ -5,7 +5,7 @@ import { getCookie } from '@/utils'
 Vue.use(VueI18n)
 
 // 直接加载翻译的语言文件
-const LOADED_LANGUAGES = ['cn', 'en']
+const LOADED_LANGUAGES = ['zh-CN', 'en', 'zh-Hant']
 const LANG_FILES = require.context('./lang', true, /\.js$/)
 // 自动加载lang目录下语言文件，默认只加载LOADED_LANGUAGES中规定的语言文件，其他的语言动态加载
 const messages = LANG_FILES.keys().reduce((messages, path) => {
@@ -26,15 +26,17 @@ export const getLanguage = () => {
   }
   if (language.indexOf('en') >= 0) {
     language = 'en'
+  } else if (language.indexOf('zh-cn') >= 0) {
+    language = 'zh-CN'
   } else {
-    language = 'cn'
+    language = 'zh-Hant'
   }
   return language
 }
 
 const i18n = new VueI18n({
   locale: getLanguage(),
-  fallbackLocale: 'cn',
+  fallbackLocale: 'zh-CN',
   messages
 })
 
