@@ -84,16 +84,17 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 		return
 	}
 	defer ws.Close()
-	sessionId, ok := ctx.GetQuery("SESSION_ID")
-	if !ok {
-		logger.Error("No session id params")
-		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrBadParams.String()))
-		return
-	}
 	userItem, ok := ctx.Get(config.GinCtxUserKey)
 	if !ok {
 		logger.Error("No auth user found")
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrAuthUser.String()))
+		return
+	}
+	user := userItem.(*model.User)
+	sessionId, ok := ctx.GetQuery("TOKEN")
+	if !ok {
+		logger.Error("No TOKEN id params")
+		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrBadParams.String()))
 		return
 	}
 
@@ -109,7 +110,7 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 
 		}
 	}()
-	if user := userItem.(*model.User); user.ID != tunnelSession.User.ID {
+	if user.ID != tunnelSession.User.ID {
 		logger.Error("No valid auth user found")
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrAuthUser.String()))
 		return

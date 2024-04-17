@@ -253,17 +253,6 @@ func registerRouter(jmsService *service.JMService, tunnelService *tunnel.Guacamo
 			ctx.File("./ui/dist/index.html")
 		})
 	}
-	// token 使用 lion 自带认证
-
-	{
-		tokenGroup := lionGroup.Group("/token")
-		tokenGroup.Use(middleware.SessionAuth(jmsService))
-		tokenGroup.POST("/session", tunnelService.TokenSession)
-		tokenGroup.DELETE("/sessions/:sid/", tunnelService.DeleteSession)
-		tokenTunnels := tokenGroup.Group("/tunnels")
-		tokenTunnels.GET("/:tid/streams/:index/:filename", tunnelService.DownloadFile)
-		tokenTunnels.POST("/:tid/streams/:index/:filename", tunnelService.UploadFile)
-	}
 
 	// ws的设置
 	wsGroup := lionGroup.Group("/ws")
