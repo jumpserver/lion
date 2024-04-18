@@ -193,7 +193,7 @@ export default {
         this.$message(files[0].name + ' ' + this.$t('UploadSuccess'))
       }).catch(status => {
         let msg = status.message
-        if (getLanguage() === 'cn') {
+        if (['zh-CN', 'zh-Hant'].includes(getLanguage())) {
           msg = this.$t(ErrorStatusCodes[status.code]) || status.message
         }
         this.$warning(msg)
@@ -252,7 +252,7 @@ export default {
               // Warn of lack of permission of a proxy rejects the upload
               else if (xhr.status >= 400 && xhr.status < 500) {
                 vm.$log.debug('Upload failed: ', xhr.status)
-                reject(xhr.status)
+                reject({ status: xhr.status, message: xhr.responseText })
                 // eslint-disable-next-line brace-style
               }
               // Assume internal error for all other cases
@@ -324,7 +324,7 @@ export default {
         fileObj.onError(err)
         this.$log.debug('Upload error: ', err)
         let msg = err.message
-        if (getLanguage() === 'cn') {
+        if (['zh-CN', 'zh-Hant'].includes(getLanguage())) {
           msg = this.$t(ErrorStatusCodes[err.code]) || err.message
         }
         this.$warning(msg)
