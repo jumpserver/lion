@@ -3,7 +3,6 @@ package tunnel
 import (
 	"encoding/json"
 	"fmt"
-	"net"
 	"sort"
 	"strings"
 	"sync"
@@ -14,7 +13,6 @@ import (
 	"github.com/gorilla/websocket"
 
 	"lion/pkg/common"
-	"lion/pkg/config"
 	"lion/pkg/guacd"
 	"lion/pkg/jms-sdk-go/model"
 	"lion/pkg/logger"
@@ -47,6 +45,8 @@ type Connection struct {
 	Sess        *session.TunnelSession
 	guacdTunnel *guacd.Tunnel
 	Service     *session.Server
+
+	guacdAddr string
 
 	ws *websocket.Conn
 
@@ -198,7 +198,11 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 		for {
 			_, message, err1 := t.ws.ReadMessage()
 			if err1 != nil {
-				logger.Errorf("Session[%s] web client read err: %+v", t, err1)
+				if websocket.IsCloseError(err1, websocket.CloseNoStatusReceived) {
+					logger.Warnf("Session[%s] web client read err: %+v", t, err1)
+				} else {
+					logger.Errorf("Session[%s] web client read err: %+v", t, err1)
+				}
 				exit <- err1
 				break
 			}
@@ -249,7 +253,7 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 					guacd.InstructionClientNop,
 					guacd.InstructionStreamingAck:
 				case guacd.InstructionClientDisconnect:
-					logger.Errorf("Session[%s] receive web client disconnect opcode", t)
+					logger.Infof("Session[%s] receive web client disconnect opcode", t)
 				default:
 					select {
 					case activeChan <- struct{}{}:
@@ -370,8 +374,7 @@ func (t *Connection) CloneMonitorTunnel() (*guacd.Tunnel, error) {
 	info := guacd.NewClientInformation()
 	conf := guacd.NewConfiguration()
 	conf.ConnectionID = t.guacdTunnel.UUID
-	guacdAddr := net.JoinHostPort(config.GlobalConfig.GuaHost,
-		config.GlobalConfig.GuaPort)
+	guacdAddr := t.guacdAddr
 	monitorTunnel, err := guacd.NewTunnel(guacdAddr, conf, info)
 	if err != nil {
 		return nil, err
