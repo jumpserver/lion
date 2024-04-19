@@ -149,6 +149,12 @@ export default {
           name: 'Alt+Tab'
         }
       ],
+      remoteAppCombinationKeys: [
+        {
+          keys: ['65513', '65289'],
+          name: 'Alt+Tab'
+        }
+      ],
       scale: 1,
       timeout: null,
       origin: null,
@@ -199,8 +205,16 @@ export default {
         settings.push({
           title: this.$t('Shortcuts'),
           icon: 'el-icon-position',
-          disabled: () => (this.menuDisable || this.isRemoteApp),
+          disabled: () => (this.menuDisable),
           content: this.combinationKeys,
+          itemClick: (keys) => (this.handleKeys(keys))
+        })
+      } else {
+        settings.push({
+          title: this.$t('Shortcuts'),
+          icon: 'el-icon-position',
+          disabled: () => (this.menuDisable),
+          content: this.remoteAppCombinationKeys,
           itemClick: (keys) => (this.handleKeys(keys))
         })
       }
@@ -820,9 +834,15 @@ export default {
       // Keyboard
       const keyboard = new Guacamole.Keyboard(sink.getElement())
       keyboard.onkeydown = (keysym) => {
+        if (this.isRemoteApp && keysym === 65511) {
+          return
+        }
         this.client.sendKeyEvent(1, keysym)
       }
       keyboard.onkeyup = (keysym) => {
+        if (this.isRemoteApp && keysym === 65511) {
+          return
+        }
         this.client.sendKeyEvent(0, keysym)
       }
       this.keyboard = keyboard
