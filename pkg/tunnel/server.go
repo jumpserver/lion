@@ -102,7 +102,12 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 
 	// 查询缓存的 connection，未找到则创建新的 connection
 	if tun := g.Cache.Get(sessionId); tun != nil {
-		// 释放资源
+		p, _ := json.Marshal(tun.Sess)
+		ins := NewJmsEventInstruction("session", string(p))
+		if err = ws.WriteMessage(websocket.TextMessage, []byte(ins.String())); err != nil {
+			logger.Errorf("Write message err: %+v", err)
+			return
+		}
 		logger.Errorf("Session %s already connected", sessionId)
 		tun.ReConnect(ws)
 		return
