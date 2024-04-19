@@ -84,6 +84,15 @@ export function localStorageGet(key) {
   return data
 }
 
+export function localStorageSet(key, value) {
+  if (typeof value === 'object') {
+    value = JSON.stringify(value)
+    localStorage.setItem(key, value)
+  } else {
+    localStorage.setItem(key, value)
+  }
+}
+
 export function getCookie(name) {
   const match = document.cookie.match(new RegExp(name + '=([^;]+)'))
   return match ? match[1] : undefined

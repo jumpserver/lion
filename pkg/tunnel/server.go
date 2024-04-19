@@ -1,6 +1,7 @@
 package tunnel
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -91,17 +92,27 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 		return
 	}
 	user := userItem.(*model.User)
-	sessionId, ok := ctx.GetQuery("TOKEN")
+	tokenId, ok := ctx.GetQuery("TOKEN")
 	if !ok {
 		logger.Error("No TOKEN id params")
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrBadParams.String()))
 		return
 	}
+	sessionId, _ := ctx.GetQuery("TUNNEL")
 
-	tunnelSession := g.SessCache.Pop(sessionId)
-	if tunnelSession == nil {
-		logger.Error("No session found")
-		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrNoSession.String()))
+	// 查询缓存的 connection，未找到则创建新的 connection
+	if tun := g.Cache.Get(sessionId); tun != nil {
+		// 释放资源
+		logger.Errorf("Session %s already connected", sessionId)
+		tun.ReConnect(ws)
+		return
+	}
+
+	logger.Infof("User %s start to connect session %s", user, sessionId)
+	tunnelSession, err := g.SessionService.CreatByToken(ctx, tokenId)
+	if err != nil {
+		logger.Errorf("Create token session err: %+v", err)
+		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrAPIFailed.String()))
 		return
 	}
 	defer func() {
@@ -110,6 +121,8 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 
 		}
 	}()
+	sessionId = tunnelSession.ID
+
 	if user.ID != tunnelSession.User.ID {
 		logger.Error("No valid auth user found")
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrAuthUser.String()))
@@ -119,6 +132,12 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	if err = tunnelSession.ConnectedCallback(); err != nil {
 		logger.Errorf("Session connect callback err %v", err)
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrAPIFailed.String()))
+		return
+	}
+	p, _ := json.Marshal(tunnelSession)
+	ins := NewJmsEventInstruction("session", string(p))
+	if err = ws.WriteMessage(websocket.TextMessage, []byte(ins.String())); err != nil {
+		logger.Errorf("Write message err: %+v", err)
 		return
 	}
 	if tunnelSession.AuthInfo.Ticket != nil {
@@ -202,12 +221,13 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 		sessionId, info.OptimalScreenWidth, info.OptimalScreenHeight)
 
 	conn := Connection{
-		Sess:        tunnelSession,
+		Sess:        &tunnelSession,
 		guacdTunnel: tunnel,
 		Service:     g.SessionService,
 		ws:          ws,
 		done:        make(chan struct{}),
 	}
+
 	outFilter := OutputStreamInterceptingFilter{
 		acknowledgeBlobs: true,
 		tunnel:           &conn,

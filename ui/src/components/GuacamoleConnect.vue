@@ -55,14 +55,14 @@ import Guacamole from 'guacamole-common-js'
 import { getSupportedMimetypes } from '@/utils/image'
 import { getSupportedGuacAudios } from '@/utils/audios'
 import { getSupportedGuacVideos } from '@/utils/video'
-import { getCurrentConnectParams } from '@/utils/common'
-import { createSession, deleteSession } from '@/api/session'
+import { getCurrentConnectParams, getURLParams, localStorageSet } from '@/utils/common'
+import { deleteSession } from '@/api/session'
 import GuacClipboard from './GuacClipboard'
 import GuacFileSystem from './GuacFileSystem'
 import RightPanel from './RightPanel'
 import Settings from './Settings'
 import { default as i18n, getLanguage } from '@/i18n'
-import { ErrorStatusCodes, ConvertAPIError, ConvertGuacamoleError } from '@/utils'
+import { ErrorStatusCodes, ConvertGuacamoleError } from '@/utils'
 import { localStorageGet } from '@/utils/common'
 
 const pixelDensity = 1
@@ -154,7 +154,8 @@ export default {
       origin: null,
       lunaId: null,
       display: null,
-      autoFit: true
+      autoFit: true,
+      sync_time: null
     }
   },
   computed: {
@@ -217,19 +218,9 @@ export default {
     const result = getCurrentConnectParams()
     this.apiPrefix = result['api']
     this.wsPrefix = result['ws']
-    const vm = this
-    createSession(result['api'], result['data']).then(res => {
-      window.addEventListener('beforeunload', e => this.beforeunloadFn(e))
-      window.addEventListener('unload', e => this.beforeunloadFn(e))
-      this.session = res.data
-      this.startConnect()
-    }).catch(err => {
-      const message = err.message || err
-      vm.$log.debug('err ', message)
-      const errArray = message.split(':')
-      vm.$error(vm.$t(ConvertAPIError(message)) + ': ' + errArray.slice(1).join(':'))
-      vm.loading = false
-    })
+    window.addEventListener('beforeunload', e => this.beforeunloadFn(e))
+    window.addEventListener('unload', e => this.beforeunloadFn(e))
+    this.startConnect()
     window.addEventListener('message', this.handleEventFromLuna, false)
   },
   methods: {
@@ -279,7 +270,9 @@ export default {
       this.removeSession()
     },
     startConnect() {
-      this.getConnectString(this.session.id).then(connectionParams => {
+      const params = getURLParams()
+      const token_id = params.get('token')
+      this.getConnectString(token_id).then(connectionParams => {
         this.connectGuacamole(connectionParams, this.wsPrefix)
       })
     },
@@ -364,11 +357,12 @@ export default {
       return keyboardLayout
     },
 
-    getConnectString(sessionId) {
+    getConnectString(token) {
       // Calculate optimal width/height for display
       const [optimalWidth, optimalHeight] = this.getGuaSize()
       const keyboardLayout = this.getKeyboardLayout()
       const optimalDpi = pixelDensity * 96
+      const sessionId = this.getCacheSessionId()
       return new Promise((resolve, reject) => {
         Promise.all([
           getSupportedMimetypes(),
@@ -380,7 +374,8 @@ export default {
           const supportAudios = values[1]
           const supportVideos = values[2]
           let connectString =
-              'SESSION_ID=' + encodeURIComponent(sessionId) +
+              'TOKEN=' + encodeURIComponent(token) +
+              '&TUNNEL=' + encodeURIComponent(sessionId) +
               '&GUAC_WIDTH=' + Math.floor(optimalWidth) +
               '&GUAC_HEIGHT=' + Math.floor(optimalHeight) +
               '&GUAC_DPI=' + Math.floor(optimalDpi) +
@@ -539,6 +534,33 @@ export default {
         }
       })
     },
+
+    getCacheSessionId() {
+      const params = getURLParams()
+      const token_id = params.get('token')
+      const item = localStorageGet(token_id)
+      if (!item) {
+        return ''
+      }
+      const now = new Date()
+      if (now.getTime() > item.expiry) {
+        // 如果已超时，删除该项并返回 null
+        localStorage.removeItem(token_id)
+        return ''
+      }
+      return item.value
+    },
+
+    setCacheSessionId(token_id, value) {
+      const now = new Date()
+      const expiry = now.getTime() + 1000 * 60 * 5
+      const item = {
+        value: value,
+        expiry: expiry
+      }
+      localStorageSet(token_id, item)
+    },
+
     onCursor(canvas, x, y) {
       this.localCursor = true
     },
@@ -677,6 +699,15 @@ export default {
 
     onsync: function(timestamp) {
       // this.$log.debug('onsync==> ', timestamp)
+      if (this.sync_time === null) {
+        return
+      }
+      const now = Date.now()
+      const diff = now - this.sync_time
+      if (diff < 1000 * 60) {
+        return
+      }
+      this.sync_time = now
     },
 
     handleKeys(keys) {
@@ -700,6 +731,7 @@ export default {
       tunnel.onuuid = (uuid) => {
         vm.$log.debug('Tunnel assigned UUID: ', uuid)
         vm.tunnel.uuid = uuid
+        vm.setCacheSessionId(getURLParams().get('token'), uuid)
       }
       tunnel.onstatechange = vm.onTunnelStateChanged
       const oninstruction = tunnel.oninstruction
@@ -725,6 +757,10 @@ export default {
         case 'session_resume': {
           const msg = `${dataObj.user} ${this.$t('ResumeSession')}`
           this.$message.info(msg)
+          break
+        }
+        case 'session': {
+          this.session = dataObj
           break
         }
         default:

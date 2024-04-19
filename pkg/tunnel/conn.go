@@ -63,6 +63,12 @@ type Connection struct {
 
 	lockedStatus atomic.Bool
 	operatorUser atomic.Value
+
+	recordStatus         atomic.Bool
+	activeChan           chan struct{}
+	userInputMessageChan chan *session.Message
+
+	guacdConnect sync.Map
 }
 
 func (t *Connection) SendWsMessage(msg guacd.Instruction) error {
@@ -121,12 +127,12 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 	}
 
 	parser := t.Service.GetFilterParser(t.Sess)
-	userInputMessageChan := make(chan *session.Message, 1)
+	t.userInputMessageChan = make(chan *session.Message, 1)
 	defer func() {
 		parser.Close()
 	}()
 	// 处理数据流
-	parser.ParseStream(userInputMessageChan)
+	parser.ParseStream(t.userInputMessageChan)
 	// 记录命令
 	cmdChan := parser.CommandRecordChan()
 	go t.recordCommand(cmdChan)
@@ -136,14 +142,14 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 		User:    t.Sess.User.String(),
 		Created: common.NewNowUTCTime().String(),
 	}
-	exit := make(chan error, 2)
-	activeChan := make(chan struct{})
+	t.activeChan = make(chan struct{})
+	t.guacdConnect = sync.Map{}
+	t.guacdConnect.Store(t.guacdTunnel, struct{}{})
 	go func(t *Connection) {
 		for {
 			instruction, err := t.readTunnelInstruction()
 			if err != nil {
 				logger.Errorf("Session[%s] guacamole server read err: %+v", t, err)
-				exit <- err
 				break
 			}
 
@@ -153,26 +159,29 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 				logger.Infof("Session[%s] receive guacamole server disconnect: %s", t, instruction.String())
 			case guacd.InstructionStreamingAck:
 				select {
-				case activeChan <- struct{}{}:
+				case t.activeChan <- struct{}{}:
 				default:
 				}
 			}
 
 			if err = t.writeWsMessage([]byte(instruction.String())); err != nil {
 				logger.Errorf("Session[%s] send web client err: %+v", t, err)
-				exit <- err
 				break
 			}
 		}
 		_ = t.ws.Close()
+		t.guacdConnect.Delete(t.guacdTunnel)
 	}(t)
 
 	go func(t *Connection) {
 		for {
 			_, message, err1 := t.ws.ReadMessage()
 			if err1 != nil {
-				logger.Errorf("Session[%s] web client read err: %+v", t, err1)
-				exit <- err1
+				if websocket.IsCloseError(err1, websocket.CloseNoStatusReceived) {
+					logger.Warnf("Session[%s] web client read err: %+v", t, err1)
+				} else {
+					logger.Errorf("Session[%s] web client read err: %+v", t, err1)
+				}
 				break
 			}
 
@@ -191,7 +200,7 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 						guacd.InstructionStreamingAck:
 					default:
 						select {
-						case activeChan <- struct{}{}:
+						case t.activeChan <- struct{}{}:
 						default:
 						}
 						logger.Infof("Session[%s] in locked status drop receive web client message opcode[%s]",
@@ -201,7 +210,6 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 					_, err4 := t.writeTunnelMessage(message)
 					if err4 != nil {
 						logger.Errorf("Session[%s] guacamole server write err: %+v", t, err2)
-						exit <- err4
 						break
 					}
 					logger.Debugf("Session[%s] send guacamole server message when locked status", t)
@@ -210,7 +218,7 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 
 				switch ret.Opcode {
 				case guacd.InstructionKey:
-					userInputMessageChan <- &session.Message{
+					t.userInputMessageChan <- &session.Message{
 						Opcode: ret.Opcode, Body: ret.Args,
 						Meta: meta}
 				default:
@@ -222,10 +230,11 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 					guacd.InstructionClientNop,
 					guacd.InstructionStreamingAck:
 				case guacd.InstructionClientDisconnect:
-					logger.Errorf("Session[%s] receive web client disconnect opcode", t)
+					//logger.Errorf("Session[%s] receive web client disconnect opcode", t)
+					continue
 				default:
 					select {
-					case activeChan <- struct{}{}:
+					case t.activeChan <- struct{}{}:
 					default:
 					}
 				}
@@ -235,7 +244,6 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 			_, err = t.writeTunnelMessage(message)
 			if err != nil {
 				logger.Errorf("Session[%s] guacamole server write err: %+v", t, err)
-				exit <- err
 				break
 			}
 		}
@@ -250,15 +258,7 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 	latestActive := time.Now()
 	for {
 		select {
-		case err = <-exit:
-			logger.Infof("Session[%s] Connection exit %+v", t, err)
-			return err
-		case <-ctx.Request.Context().Done():
-			_ = t.ws.Close()
-			_ = t.guacdTunnel.Close()
-			logger.Errorf("Session[%s] request ctx done", t)
-			return nil
-		case <-activeChan:
+		case <-t.activeChan:
 			latestActive = time.Now()
 		case detectTime := <-activeDetectTicker.C:
 			if detectTime.After(maxSessionTime) {
@@ -402,4 +402,89 @@ func (t *Connection) generateCommandResult(item *session.ExecutedCommand) *model
 		riskLevel = model.NormalLevel
 	}
 	return t.Service.GenerateCommandItem(t.Sess, user, input, output, riskLevel, item.CreatedDate)
+}
+
+func (t *Connection) ReConnect(ws *websocket.Conn) {
+	// 重新连接 guacamole server
+	conf := guacd.NewConfiguration()
+	conf.ConnectionID = t.guacdTunnel.UUID
+	guacdAddr := net.JoinHostPort(config.GlobalConfig.GuaHost, config.GlobalConfig.GuaPort)
+	newTunnel, err := guacd.NewTunnel(guacdAddr, conf, guacd.NewClientInformation())
+	if err != nil {
+		logger.Errorf("Session[%s] reconnect guacamole server err: %+v", t, err)
+		return
+	}
+
+	logger.Errorf("Session[%s] reconnect guacamole server success", t)
+	ints := guacd.NewInstruction(INTERNALDATAOPCODE, t.guacdTunnel.UUID)
+	_ = ws.WriteMessage(websocket.TextMessage, []byte(ints.String()))
+	lock := sync.Mutex{}
+	wsWrite := func(p []byte) error {
+		lock.Lock()
+		defer lock.Unlock()
+		return ws.WriteMessage(websocket.TextMessage, p)
+
+	}
+	t.guacdConnect.Store(newTunnel, struct{}{})
+
+	go func() {
+		for {
+			instruction, err1 := newTunnel.ReadInstruction()
+			if err1 != nil {
+				logger.Errorf("Session[%s] reconnect read guacamole server err: %+v", t, err1)
+				break
+			}
+			switch instruction.Opcode {
+			case guacd.InstructionServerDisconnect,
+				guacd.InstructionServerError:
+				logger.Infof("Session[%s] receive guacamole server disconnect: %s", t, instruction.String())
+			case guacd.InstructionStreamingAck:
+				select {
+				case t.activeChan <- struct{}{}:
+				default:
+				}
+			}
+
+			if err2 := wsWrite([]byte(instruction.String())); err2 != nil {
+				logger.Errorf("Session[%s] reconnect write ws message err: %+v", t, err2)
+			}
+		}
+		t.guacdConnect.Delete(newTunnel)
+	}()
+
+	for {
+		_, message, err2 := ws.ReadMessage()
+		if err2 != nil {
+			logger.Errorf("Session[%s] reconnect read ws message err: %+v", t, err2)
+			break
+		}
+		if ret, err2 := guacd.ParseInstructionString(string(message)); err2 == nil {
+			if ret.Opcode == INTERNALDATAOPCODE && len(ret.Args) >= 2 && ret.Args[0] == PINGOPCODE {
+				pingInt := guacd.NewInstruction(INTERNALDATAOPCODE, PINGOPCODE)
+				if err3 := wsWrite([]byte(pingInt.String())); err3 != nil {
+					logger.Errorf("Session[%s] unable to send 'ping' response for WebSocket tunnel: %+v",
+						t, err3)
+				}
+				continue
+			}
+			switch ret.Opcode {
+			case guacd.InstructionClientSync,
+				guacd.InstructionClientNop,
+				guacd.InstructionStreamingAck:
+			case guacd.InstructionClientDisconnect:
+				logger.Infof("Session[%s] receive web client disconnect opcode", t)
+				continue
+			default:
+				select {
+				case t.activeChan <- struct{}{}:
+				default:
+				}
+			}
+		}
+
+		if _, err1 := newTunnel.WriteAndFlush(message); err1 != nil {
+			logger.Errorf("Session[%s] reconnect write guacamole server err: %+v", t, err1)
+			break
+		}
+	}
 }
