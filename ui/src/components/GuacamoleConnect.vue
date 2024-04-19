@@ -567,7 +567,7 @@ export default {
 
     setCacheSessionId(token_id, value) {
       const now = new Date()
-      const expiry = now.getTime() + 1000 * 60 * 5
+      const expiry = now.getTime() + 1000 * 60 * 720
       const item = {
         value: value,
         expiry: expiry

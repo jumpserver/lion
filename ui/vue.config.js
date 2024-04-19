@@ -22,6 +22,12 @@ module.exports = {
       }
     }
   },
-  chainWebpack(config) {
+  chainWebpack: config => {
+    config
+      .plugin('html')
+      .tap(args => {
+        args[0].title = '远程监查系统'
+        return args
+      })
   }
 }
