@@ -95,6 +95,8 @@ func (s *Server) CreatByToken(ctx *gin.Context, token string) (TunnelSession, er
 			appletOpt.Host.String(), appletOpt.Account.String())
 		// 连接发布机，需要使用发布机的网关
 		opts = append(opts, WithGateway(appletOptions.Gateway))
+		// 替换成 发布机的 platform 信息
+		opts = append(opts, WithPlatform(appletOptions.Platform))
 	case connectVirtualAPP:
 		virtualApp, err1 := s.JmsService.GetConnectTokenVirtualAppOption(token)
 		if err1 != nil {
