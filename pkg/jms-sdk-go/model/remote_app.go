@@ -13,6 +13,7 @@ type AppletOption struct {
 	Host            Asset                  `json:"host"`
 	Account         Account                `json:"account"`
 	Gateway         *Gateway               `json:"gateway"`
+	Platform        *Platform              `json:"platform"`
 	RemoteAppOption RemoteAppCommandOption `json:"remote_app_option"`
 	Error           string                 `json:"error"`
 }
