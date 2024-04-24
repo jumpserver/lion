@@ -64,6 +64,7 @@ import Settings from './Settings'
 import { default as i18n, getLanguage } from '@/i18n'
 import { ErrorStatusCodes, ConvertGuacamoleError } from '@/utils'
 import { localStorageGet } from '@/utils/common'
+import { canvasWaterMark } from '@/utils/watermark'
 
 const pixelDensity = 1
 const sideWidth = 0
@@ -775,6 +776,13 @@ export default {
         }
         case 'session': {
           this.session = dataObj
+          let watermark
+          if (this.isRemoteApp) {
+            watermark = `${this.session.user.name}(${this.session.user.username})\n${this.session.remote_app.name}`
+          } else {
+            watermark = `${this.session.user.name}(${this.session.user.username})\n${this.session.asset.name}`
+          }
+          canvasWaterMark({ container: document.body, content: watermark })
           break
         }
         default:
