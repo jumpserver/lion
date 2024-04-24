@@ -348,8 +348,8 @@ export default {
     },
 
     getAutoSize() {
-      const width = this.displayWidth
-      const height = this.displayHeight
+      const width = window.innerWidth - sideWidth
+      const height = window.innerHeight
       this.$log.debug('auto size:', width, height)
       return [width, height]
     },
@@ -682,8 +682,7 @@ export default {
     displayResize(width, height) {
       // 监听guacamole display的变化
       this.$log.debug('Display resize: ', width, height)
-      const scale = this.getPropScale()
-      this.display.scale(scale)
+      this.updateDisplayScale()
     },
 
     onWindowFocus() {
