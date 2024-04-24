@@ -348,8 +348,8 @@ export default {
     },
 
     getAutoSize() {
-      const width = this.displayWidth
-      const height = this.displayHeight
+      const width = window.innerWidth - sideWidth
+      const height = window.innerHeight
       this.$log.debug('auto size:', width, height)
       return [width, height]
     },
