@@ -776,12 +776,7 @@ export default {
         }
         case 'session': {
           this.session = dataObj
-          let watermark
-          if (this.isRemoteApp) {
-            watermark = `${this.session.user.name}(${this.session.user.username})\n${this.session.remote_app.name}`
-          } else {
-            watermark = `${this.session.user.name}(${this.session.user.username})\n${this.session.asset.name}`
-          }
+          const watermark = `${this.session.user.name}(${this.session.user.username})\n${this.session.asset.name}`
           canvasWaterMark({ container: document.body, content: watermark })
           break
         }
