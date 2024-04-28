@@ -52,6 +52,8 @@ type Config struct {
 	IgnoreVerifyCerts bool   `mapstructure:"IGNORE_VERIFY_CERTS"`
 	PandaHost         string `mapstructure:"PANDA_HOST"`
 	EnablePanda       bool   `mapstructure:"ENABLE_PANDA"`
+
+	MaxInActiveTime int `mapstructure:"MaxInActiveTime"`
 }
 
 func Setup(configPath string) {
@@ -104,6 +106,7 @@ func getDefaultConfig() Config {
 		EnableRemoteAPPCopyPaste:  false,
 		CleanDriveScheduleTime:    1,
 		PandaHost:                 "http://localhost:9001",
+		MaxInActiveTime:           1,
 	}
 
 }

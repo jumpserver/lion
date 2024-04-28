@@ -66,6 +66,7 @@ type Connection struct {
 
 	recordStatus         atomic.Bool
 	activeChan           chan struct{}
+	inactiveChan         chan struct{}
 	userInputMessageChan chan *session.Message
 
 	guacdConnect sync.Map
@@ -143,6 +144,7 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 		Created: common.NewNowUTCTime().String(),
 	}
 	t.activeChan = make(chan struct{})
+	t.inactiveChan = make(chan struct{})
 	t.guacdConnect = sync.Map{}
 	t.guacdConnect.Store(t.guacdTunnel, struct{}{})
 	go func(t *Connection) {
@@ -222,7 +224,6 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 						Opcode: ret.Opcode, Body: ret.Args,
 						Meta: meta}
 				default:
-
 				}
 
 				switch ret.Opcode {
@@ -230,7 +231,11 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 					guacd.InstructionClientNop,
 					guacd.InstructionStreamingAck:
 				case guacd.InstructionClientDisconnect:
-					//logger.Errorf("Session[%s] receive web client disconnect opcode", t)
+					logger.Errorf("Session[%s] receive web client disconnect opcode", t)
+					select {
+					case t.inactiveChan <- struct{}{}:
+					default:
+					}
 					continue
 				default:
 					select {
@@ -253,13 +258,18 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 	maxSessionDuration := time.Duration(maxSessionTimeInt) * time.Hour
 	maxSessionTime := time.Now().Add(maxSessionDuration)
 	maxIdleMinutes := time.Duration(maxIndexTime) * time.Minute
+	maxInActiveMinutes := time.Duration(config.GlobalConfig.MaxInActiveTime) * time.Minute
 	activeDetectTicker := time.NewTicker(time.Minute)
 	defer activeDetectTicker.Stop()
 	latestActive := time.Now()
+	var latestInActive time.Time
 	for {
 		select {
 		case <-t.activeChan:
 			latestActive = time.Now()
+			latestInActive = time.Now().Add(maxSessionDuration)
+		case <-t.inactiveChan:
+			latestInActive = time.Now()
 		case detectTime := <-activeDetectTicker.C:
 			if detectTime.After(maxSessionTime) {
 				errSession := NewJMSMaxSessionTimeError(t.Sess.TerminalConfig.MaxSessionTime)
@@ -273,6 +283,11 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 				_ = t.SendWsMessage(errIdle.Instruction())
 				logger.Errorf("Session[%s] terminated by %d min timeout",
 					t, maxIndexTime)
+				return nil
+			}
+			if detectTime.After(latestInActive.Add(maxInActiveMinutes)) {
+				errIdle := NewJMSIdleTimeOutError(config.GlobalConfig.MaxInActiveTime)
+				_ = t.SendWsMessage(errIdle.Instruction())
 				return nil
 			}
 			if t.IsPermissionExpired(detectTime) {
@@ -472,7 +487,11 @@ func (t *Connection) ReConnect(ws *websocket.Conn) {
 				guacd.InstructionClientNop,
 				guacd.InstructionStreamingAck:
 			case guacd.InstructionClientDisconnect:
-				logger.Infof("Session[%s] receive web client disconnect opcode", t)
+				logger.Errorf("Session[%s] receive web client disconnect opcode", t)
+				select {
+				case t.inactiveChan <- struct{}{}:
+				default:
+				}
 				continue
 			default:
 				select {

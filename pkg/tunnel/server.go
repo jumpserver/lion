@@ -110,6 +110,14 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 		}
 		logger.Errorf("Session %s already connected", sessionId)
 		tun.ReConnect(ws)
+		//if err = tun.Sess.DisConnectedCallback(); err != nil {
+		//	logger.Errorf("Session DisConnectedCallback err: %+v", err)
+		//}
+		//info := g.getClientInfo(ctx)
+		//if err = tun.Sess.FinishReplayCallback(info); err != nil {
+		//	logger.Errorf("Session Replay upload err: %+v", err)
+		//}
+		//logger.Infof("Session[%s] disconnect", sessionId)
 		return
 	}
 
