@@ -155,7 +155,7 @@ export default {
           name: 'Alt+Tab'
         }
       ],
-      scale: 1,
+      scale: 0.1,
       timeout: null,
       origin: null,
       lunaId: null,
