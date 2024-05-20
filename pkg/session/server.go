@@ -405,6 +405,7 @@ func (s *Server) RegisterFinishReplayCallback(tunnel TunnelSession) func(guacd.C
 
 		if s.VideoWorkerClient != nil && s.UploadReplayToVideoWorker(tunnel, info, dstReplayFilePath) {
 			logger.Infof("Upload replay file to video worker: %s", dstReplayFilePath)
+			_ = os.Remove(dstReplayFilePath)
 			return nil
 		}
 		s.RecordLifecycleLog(tunnel.ID, model.ReplayUploadStart, model.EmptyLifecycleLog)
