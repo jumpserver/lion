@@ -56,6 +56,12 @@ type Config struct {
 	IgnoreVerifyCerts bool   `mapstructure:"IGNORE_VERIFY_CERTS"`
 	PandaHost         string `mapstructure:"PANDA_HOST"`
 	EnablePanda       bool   `mapstructure:"ENABLE_PANDA"`
+
+	SecretEncryptKey string `mapstructure:"SECRET_ENCRYPT_KEY"`
+}
+
+func (c *Config) UpdateRedisPassword(val string) {
+	c.RedisPassword = val
 }
 
 func (c *Config) SelectGuacdAddr() string {
