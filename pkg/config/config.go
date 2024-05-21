@@ -58,7 +58,12 @@ type Config struct {
 	PandaHost         string `mapstructure:"PANDA_HOST"`
 	EnablePanda       bool   `mapstructure:"ENABLE_PANDA"`
 
-	ReplayMaxSize int `mapstructure:"REPLAY_MAX_SIZE"`
+	ReplayMaxSize    int    `mapstructure:"REPLAY_MAX_SIZE"`
+	SecretEncryptKey string `mapstructure:"SECRET_ENCRYPT_KEY"`
+}
+
+func (c *Config) UpdateRedisPassword(val string) {
+	c.RedisPassword = val
 }
 
 func (c *Config) SelectGuacdAddr() string {
