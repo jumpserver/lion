@@ -55,14 +55,14 @@ import Guacamole from 'guacamole-common-js'
 import { getSupportedMimetypes } from '@/utils/image'
 import { getSupportedGuacAudios } from '@/utils/audios'
 import { getSupportedGuacVideos } from '@/utils/video'
-import { getCurrentConnectParams } from '@/utils/common'
-import { createSession, deleteSession } from '@/api/session'
+import { getCurrentConnectParams, getURLParams } from '@/utils/common'
+import { deleteSession } from '@/api/session'
 import GuacClipboard from './GuacClipboard'
 import GuacFileSystem from './GuacFileSystem'
 import RightPanel from './RightPanel'
 import Settings from './Settings'
 import { default as i18n, getLanguage } from '@/i18n'
-import { ErrorStatusCodes, ConvertAPIError, ConvertGuacamoleError } from '@/utils'
+import { ErrorStatusCodes, ConvertGuacamoleError } from '@/utils'
 import { localStorageGet } from '@/utils/common'
 
 const pixelDensity = 1
@@ -231,19 +231,7 @@ export default {
     const result = getCurrentConnectParams()
     this.apiPrefix = result['api']
     this.wsPrefix = result['ws']
-    const vm = this
-    createSession(result['api'], result['data']).then(res => {
-      window.addEventListener('beforeunload', e => this.beforeunloadFn(e))
-      window.addEventListener('unload', e => this.beforeunloadFn(e))
-      this.session = res.data
-      this.startConnect()
-    }).catch(err => {
-      const message = err.message || err
-      vm.$log.debug('err ', message)
-      const errArray = message.split(':')
-      vm.$error(vm.$t(ConvertAPIError(message)) + ': ' + errArray.slice(1).join(':'))
-      vm.loading = false
-    })
+    this.startConnect()
     window.addEventListener('message', this.handleEventFromLuna, false)
   },
   methods: {
@@ -288,12 +276,15 @@ export default {
         this.$log.debug(this.session.permission)
         this.clipboardInited = hasClipboardPermission
       }
+      this.$log.debug('Clipboard inited: ', this.clipboardInited)
     },
     beforeunloadFn(e) {
       this.removeSession()
     },
     startConnect() {
-      this.getConnectString(this.session.id).then(connectionParams => {
+      const params = getURLParams()
+      const tokenId = params.get('token')
+      this.getConnectString(tokenId).then(connectionParams => {
         this.connectGuacamole(connectionParams, this.wsPrefix)
       })
     },
@@ -382,7 +373,7 @@ export default {
       return keyboardLayout
     },
 
-    getConnectString(sessionId) {
+    getConnectString(tokenId) {
       // Calculate optimal width/height for display
       const [optimalWidth, optimalHeight] = this.getGuaSize()
       const keyboardLayout = this.getKeyboardLayout()
@@ -398,7 +389,7 @@ export default {
           const supportAudios = values[1]
           const supportVideos = values[2]
           let connectString =
-              'SESSION_ID=' + encodeURIComponent(sessionId) +
+              'TOKEN_ID=' + encodeURIComponent(tokenId) +
               '&GUAC_WIDTH=' + Math.floor(optimalWidth) +
               '&GUAC_HEIGHT=' + Math.floor(optimalHeight) +
               '&GUAC_DPI=' + Math.floor(optimalDpi) +
@@ -430,8 +421,6 @@ export default {
         case Guacamole.Tunnel.State.OPEN:
           this.tunnelState = 'OPEN'
           this.$log.debug('Tunnel state change to Tunnel.State.OPEN ')
-          this.initFileSystem()
-          this.initClipboard()
           break
 
           // Connection is established but misbehaving
@@ -742,6 +731,12 @@ export default {
         case 'session_resume': {
           const msg = `${dataObj.user} ${this.$t('ResumeSession')}`
           this.$message.info(msg)
+          break
+        }
+        case 'session': {
+          this.session = dataObj
+          this.initFileSystem()
+          this.initClipboard()
           break
         }
         default:
