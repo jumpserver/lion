@@ -68,9 +68,6 @@ func main() {
 		Cache: &tunnel.GuaTunnelCacheManager{
 			GuaTunnelCache: NewGuaTunnelCache(),
 		},
-		SessCache: &tunnel.SessionCache{
-			Sessions: make(map[string]*session.TunnelSession),
-		},
 		JmsService: jmsService,
 		SessionService: &session.Server{JmsService: jmsService,
 			VideoWorkerClient: videoWorkerClient,
@@ -258,8 +255,6 @@ func registerRouter(jmsService *service.JMService, tunnelService *tunnel.Guacamo
 	{
 		tokenGroup := lionGroup.Group("/token")
 		tokenGroup.Use(middleware.SessionAuth(jmsService))
-		tokenGroup.POST("/session", tunnelService.TokenSession)
-		tokenGroup.DELETE("/sessions/:sid/", tunnelService.DeleteSession)
 		tokenTunnels := tokenGroup.Group("/tunnels")
 		tokenTunnels.GET("/:tid/streams/:index/:filename", tunnelService.DownloadFile)
 		tokenTunnels.POST("/:tid/streams/:index/:filename", tunnelService.UploadFile)
@@ -280,8 +275,6 @@ func registerRouter(jmsService *service.JMService, tunnelService *tunnel.Guacamo
 	{
 		apiGroup := lionGroup.Group("/api")
 		apiGroup.Use(middleware.JmsCookieAuth(jmsService))
-		apiGroup.POST("/session", tunnelService.CreateSession)
-		apiGroup.DELETE("/sessions/:sid/", tunnelService.DeleteSession)
 		apiGroup.GET("/tunnels/:tid/streams/:index/:filename", tunnelService.DownloadFile)
 		apiGroup.POST("/tunnels/:tid/streams/:index/:filename", tunnelService.UploadFile)
 	}
