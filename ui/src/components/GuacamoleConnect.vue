@@ -192,7 +192,7 @@ export default {
         {
           title: this.$t('Clipboard'),
           icon: 'el-icon-document-copy',
-          disabled: () => (this.menuDisable || !this.clipboardInited),
+          disabled: () => ((!this.clipboardInited) || this.menuDisable),
           click: () => (this.toggleClipboard())
         },
         {
@@ -277,7 +277,6 @@ export default {
       if (this.session && this.session.permission) {
         const actions = this.session.action_permission
         const hasClipboardPermission = actions.enable_copy || actions.enable_paste
-        this.$log.debug(this.session.permission)
         this.clipboardInited = hasClipboardPermission
       }
     },
@@ -422,8 +421,6 @@ export default {
         case Guacamole.Tunnel.State.OPEN:
           this.tunnelState = 'OPEN'
           this.$log.debug('Tunnel state change to Tunnel.State.OPEN ')
-          this.initFileSystem()
-          this.initClipboard()
           break
 
           // Connection is established but misbehaving
@@ -778,6 +775,8 @@ export default {
           this.session = dataObj
           const watermark = `${this.session.user.name}(${this.session.user.username})\n${this.session.asset.name}`
           canvasWaterMark({ container: document.body, content: watermark })
+          this.initFileSystem()
+          this.initClipboard()
           break
         }
         default:
