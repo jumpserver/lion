@@ -9,11 +9,11 @@ RUN set -ex \
 
 WORKDIR /opt/lion/ui
 ADD ui/package.json ui/yarn.lock .
-RUN --mount=type=cache,target=/usr/local/share/.cache/yarn,sharing=locked,id=lion \
+RUN --mount=type=cache,target=/usr/local/share/.cache/yarn,sharing=locked \
     yarn install
 
 ADD ui .
-RUN --mount=type=cache,target=/usr/local/share/.cache/yarn,sharing=locked,id=lion \
+RUN --mount=type=cache,target=/usr/local/share/.cache/yarn,sharing=locked \
     yarn build
 
 FROM golang:1.22-bullseye as stage-build
@@ -58,7 +58,7 @@ RUN --mount=type=cache,target=/root/.cache \
 
 RUN chmod +x entrypoint.sh
 
-FROM registry.fit2cloud.com/jumpserver/guacd:1.5.3-bullseye
+FROM registry.fit2cloud.com/jumpserver/guacd:1.5.5-bullseye
 ARG TARGETARCH
 ENV LANG=en_US.UTF-8
 
@@ -69,9 +69,12 @@ ARG DEPENDENCIES="                    \
         supervisor"
 
 ARG APT_MIRROR=http://mirrors.ustc.edu.cn
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=lion-apt \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked,id=lion-apt \
-    sed -i "s@http://.*.debian.org@${APT_MIRROR}@g" /etc/apt/sources.list \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    set -ex \
+    && rm -f /etc/apt/apt.conf.d/docker-clean \
+    && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache \
+    && sed -i "s@http://.*.debian.org@${APT_MIRROR}@g" /etc/apt/sources.list \
     && ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
     && apt-get update \
     && apt-get install -y --no-install-recommends ${DEPENDENCIES} \
@@ -90,5 +93,12 @@ COPY --from=stage-build /opt/lion/supervisord.conf /etc/supervisor/conf.d/superv
 ARG VERSION
 ENV VERSION=$VERSION
 
+VOLUME /opt/lion/data
+
+ENTRYPOINT ["./entrypoint.sh"]
+
 EXPOSE 8081
-CMD ["./entrypoint.sh"]
+
+STOPSIGNAL SIGQUIT
+
+CMD [ "supervisord", "-c", "/etc/supervisor/supervisord.conf" ]
