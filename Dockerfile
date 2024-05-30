@@ -8,12 +8,14 @@ RUN set -ex \
     && yarn config set registry ${NPM_REGISTRY}
 
 WORKDIR /opt/lion/ui
-ADD ui/package.json ui/yarn.lock .
-RUN --mount=type=cache,target=/usr/local/share/.cache/yarn,sharing=locked \
+
+RUN --mount=type=cache,target=/usr/local/share/.cache/yarn,sharing=locked,id=lion \
+    --mount=type=bind,source=ui/package.json,target=package.json \
+    --mount=type=bind,source=ui/yarn.lock,target=yarn.lock \
     yarn install
 
 ADD ui .
-RUN --mount=type=cache,target=/usr/local/share/.cache/yarn,sharing=locked \
+RUN --mount=type=cache,target=/usr/local/share/.cache/yarn,sharing=locked,id=lion \
     yarn build
 
 FROM golang:1.22-bullseye as stage-build
@@ -31,25 +33,23 @@ RUN set -ex \
     && chmod 755 /usr/local/bin/check \
     && rm -f check-${CHECK_VERSION}-linux-${TARGETARCH}.tar.gz
 
-WORKDIR /opt/lion
-
-ADD go.mod go.sum .
-
 ARG GOPROXY=https://goproxy.io
 ENV CGO_ENABLED=0
 ENV GO111MODULE=on
-ENV GOOS=linux
 
-RUN --mount=type=cache,target=/root/.cache \
-    --mount=type=cache,target=/go/pkg/mod \
-    go mod download -x
+WORKDIR /opt/lion
+
+RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked,id=lion \
+    --mount=type=bind,source=go.mod,target=go.mod \
+    --mount=type=bind,source=go.sum,target=go.sum \
+    go mod download
 
 COPY . .
+
 ARG VERSION
 ENV VERSION=$VERSION
 
-RUN --mount=type=cache,target=/root/.cache \
-    --mount=type=cache,target=/go/pkg/mod \
+RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked,id=lion \
     export GOFlAGS="-X 'main.Buildstamp=`date -u '+%Y-%m-%d %I:%M:%S%p'`'" \
     && export GOFlAGS="${GOFlAGS} -X 'main.Githash=`git rev-parse HEAD`'" \
     && export GOFlAGS="${GOFlAGS} -X 'main.Goversion=`go version`'" \
@@ -58,7 +58,7 @@ RUN --mount=type=cache,target=/root/.cache \
 
 RUN chmod +x entrypoint.sh
 
-FROM registry.fit2cloud.com/jumpserver/guacd:1.5.5-bullseye
+FROM jumpserver/guacd:1.5.5-bullseye
 ARG TARGETARCH
 ENV LANG=en_US.UTF-8
 
@@ -69,8 +69,8 @@ ARG DEPENDENCIES="                    \
         supervisor"
 
 ARG APT_MIRROR=http://mirrors.ustc.edu.cn
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=lion \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked,id=lion \
     set -ex \
     && rm -f /etc/apt/apt.conf.d/docker-clean \
     && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache \
