@@ -773,8 +773,26 @@ export default {
         }
         case 'session': {
           this.session = dataObj
+          const match = this.session.asset.name.match(/alpha:(\d+\.\d+)/)
+          let number
+          if (match) {
+            number = match[1]
+          } else {
+            number = 0.1
+          }
           const watermark = `${this.session.user.name}(${this.session.user.username})\n${this.session.asset.name}`
-          canvasWaterMark({ container: document.body, content: watermark })
+          canvasWaterMark({ container: document.body, content: watermark, settings: {
+            width: 300,
+            height: 300,
+            textAlign: 'center',
+            textBaseline: 'middle',
+            alpha: number,
+            font: '20px monaco, microsoft yahei',
+            fillStyle: 'rgba(184, 184, 184, 0.8)',
+            rotate: -45,
+            zIndex: 1000
+          }
+          })
           this.initFileSystem()
           this.initClipboard()
           break
