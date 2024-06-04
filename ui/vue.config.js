@@ -26,7 +26,7 @@ module.exports = {
     config
       .plugin('html')
       .tap(args => {
-        args[0].title = '远程监查系统'
+        args[0].title = '远程监查溯源系统'
         return args
       })
   }
