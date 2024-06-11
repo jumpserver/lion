@@ -117,7 +117,7 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 	defer t.releaseMonitorTunnel()
 	// 需要发送 uuid 返回给 guacamole tunnel
 	err = t.SendWsMessage(guacd.NewInstruction(
-		INTERNALDATAOPCODE, t.guacdTunnel.UUID))
+		INTERNALDATAOPCODE, t.guacdTunnel.UUID()))
 	if err != nil {
 		logger.Error("Run err: ", err)
 		return err
@@ -373,7 +373,7 @@ func (t *Connection) IsPermissionExpired(now time.Time) bool {
 func (t *Connection) CloneMonitorTunnel() (*guacd.Tunnel, error) {
 	info := guacd.NewClientInformation()
 	conf := guacd.NewConfiguration()
-	conf.ConnectionID = t.guacdTunnel.UUID
+	conf.ConnectionID = t.guacdTunnel.UUID()
 	guacdAddr := t.guacdAddr
 	monitorTunnel, err := guacd.NewTunnel(guacdAddr, conf, info)
 	if err != nil {

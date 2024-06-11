@@ -8,6 +8,7 @@ import (
 )
 
 type Tunneler interface {
+	UUID() string
 	WriteAndFlush(p []byte) (int, error)
 	ReadInstruction() (guacd.Instruction, error)
 	Close() error
