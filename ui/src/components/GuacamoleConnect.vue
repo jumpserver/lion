@@ -814,7 +814,7 @@ export default {
       const displayRef = document.getElementById('display')
       const tunnel = new Guacamole.WebSocketTunnel(wsURL)
       // 连接资产耗时，造成的 ws 超时断开问题 默认 15s 改成 60s
-      tunnel.receiveTimeout = 60 * 1000
+      tunnel.receiveTimeout = 5 * 60 * 1000
       const client = new Guacamole.Client(tunnel)
       this.client = client
       this.tunnel = tunnel
