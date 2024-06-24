@@ -4,6 +4,7 @@ const message = {
   Shortcuts: 'Shortcuts',
   Clipboard: 'Clipboard',
   Files: 'Files',
+  WebSocketError: 'WebSocket connect failed, please check network',
   UploadFile: 'Upload File',
   ClearDone: 'Clear done',
   Connecting: 'Connecting',
