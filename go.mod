@@ -16,7 +16,7 @@ require (
 	github.com/huaweicloud/huaweicloud-sdk-go-obs v3.21.8+incompatible
 	github.com/shirou/gopsutil/v3 v3.23.3
 	github.com/spf13/viper v1.15.0
-	golang.org/x/crypto v0.23.0
+	golang.org/x/crypto v0.24.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 )
 
@@ -68,8 +68,8 @@ require (
 	go.opentelemetry.io/otel/trace v0.19.0 // indirect
 	golang.org/x/arch v0.3.0 // indirect
 	golang.org/x/net v0.21.0 // indirect
-	golang.org/x/sys v0.20.0 // indirect
-	golang.org/x/text v0.15.0 // indirect
+	golang.org/x/sys v0.21.0 // indirect
+	golang.org/x/text v0.16.0 // indirect
 	golang.org/x/time v0.1.0 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
