@@ -1,5 +1,5 @@
 <template>
-  <Connection :ws-url="wsUrl" :params="params" />
+  <Connection :ws-url="wsUrl" :params="params" :readonly="readonly" />
 </template>
 
 <script>
@@ -12,7 +12,7 @@ export default {
   },
   data() {
     return {
-      readonly: false,
+      readonly: true,
       wsUrl: '/lion/ws/monitor/',
       params: {
         'type': 'monitor',
