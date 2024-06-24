@@ -17,6 +17,11 @@ export const allRoleRoutes = [
   {
     path: '/monitor',
     component: () => import('../components/GuacamoleMonitor')
+  },
+  {
+    path: '/share/:id/',
+    name: 'Share',
+    component: () => import('../components/GuacamoleShare')
   }
 ]
 

@@ -21,13 +21,13 @@ type GuaTunnelLocalCache struct {
 func (g *GuaTunnelLocalCache) Add(t *Connection) {
 	g.Lock()
 	defer g.Unlock()
-	g.Tunnels[t.guacdTunnel.UUID] = t
+	g.Tunnels[t.guacdTunnel.UUID()] = t
 }
 
 func (g *GuaTunnelLocalCache) Delete(t *Connection) {
 	g.Lock()
 	defer g.Unlock()
-	delete(g.Tunnels, t.guacdTunnel.UUID)
+	delete(g.Tunnels, t.guacdTunnel.UUID())
 }
 
 func (g *GuaTunnelLocalCache) Get(tid string) *Connection {

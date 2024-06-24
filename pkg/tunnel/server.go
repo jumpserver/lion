@@ -413,6 +413,9 @@ func (g *GuacamoleTunnelServer) Monitor(ctx *gin.Context) {
 		return
 	}
 	defer tunnelCon.Close()
+
+	ints := guacd.NewInstruction(INTERNALDATAOPCODE, tunnelCon.UUID())
+	_ = ws.WriteMessage(websocket.TextMessage, []byte(ints.String()))
 	conn := MonitorCon{
 		Id:          sessionId,
 		guacdTunnel: tunnelCon,
@@ -424,4 +427,123 @@ func (g *GuacamoleTunnelServer) Monitor(ctx *gin.Context) {
 	_ = conn.Run(ctx.Request.Context())
 	g.Cache.RemoveMonitorTunneler(sessionId, tunnelCon)
 	logger.Infof("User %s stop to monitor session %s", user, sessionId)
+}
+
+func (g *GuacamoleTunnelServer) CreateShare(ctx *gin.Context) {
+	var params struct {
+		SessionId   string   `json:"session_id"`
+		ExpiredTime int      `json:"expired_time"`
+		Users       []string `json:"users"`
+		ActionPerm  string   `json:"action_perm"`
+	}
+	if err := ctx.BindJSON(&params); err != nil {
+		logger.Errorf("Bind share params err: %s", err)
+		ctx.JSON(http.StatusBadRequest, ErrorResponse(err))
+		return
+	}
+	shareReq := model.SharingSessionRequest{
+		SessionID:  params.SessionId,
+		ExpireTime: params.ExpiredTime,
+		Users:      params.Users,
+		ActionPerm: params.ActionPerm,
+	}
+	logger.Debugf("Create share room %v", shareReq)
+	if resp, err := g.JmsService.CreateShareRoom(shareReq); err != nil {
+		logger.Errorf("Create share room err: %s", err)
+		ctx.JSON(http.StatusBadRequest, ErrorResponse(err))
+	} else {
+		ctx.JSON(http.StatusOK, resp)
+		g.RecordLifecycleLog(params.SessionId, model.CreateShareLink,
+			model.EmptyLifecycleLog)
+	}
+}
+
+func (g *GuacamoleTunnelServer) GetShare(ctx *gin.Context) {
+	var params struct {
+		Code string `json:"code"`
+	}
+	if err := ctx.BindJSON(&params); err != nil {
+		logger.Errorf("Bind share params err: %s", err)
+		ctx.JSON(http.StatusBadRequest, ErrorResponse(err))
+		return
+	}
+	shareId := ctx.Param("id")
+	userItem, ok := ctx.Get(config.GinCtxUserKey)
+	if !ok {
+		err1 := fmt.Errorf("not auth user")
+		ctx.JSON(http.StatusBadRequest, ErrorResponse(err1))
+		return
+	}
+	user := userItem.(*model.User)
+	data := model.SharePostData{
+		ShareId:    shareId,
+		Code:       params.Code,
+		UserId:     user.ID,
+		RemoteAddr: ctx.ClientIP(),
+	}
+	recordRet, err := g.JmsService.JoinShareRoom(data)
+	if err != nil {
+		logger.Errorf("Validate join session err: %s", err)
+		ctx.JSON(http.StatusBadRequest, ErrorResponse(err))
+		return
+	}
+	if recordRet.Err != nil {
+		logger.Errorf("Join share room err: %s", recordRet.Err)
+		ctx.JSON(http.StatusBadRequest, recordRet.Err)
+		return
+	}
+	ctx.JSON(http.StatusOK, recordRet)
+}
+
+func (g *GuacamoleTunnelServer) Share(ctx *gin.Context) {
+	ws, err := upGrader.Upgrade(ctx.Writer, ctx.Request, ctx.Writer.Header())
+	if err != nil {
+		logger.Errorf("Websocket Upgrade err: %+v", err)
+		ctx.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	defer ws.Close()
+	userItem, ok := ctx.Get(config.GinCtxUserKey)
+	if !ok {
+		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrAuthUser.String()))
+		return
+	}
+	user := userItem.(*model.User)
+	if user.ID == "" {
+		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrAuthUser.String()))
+		return
+	}
+	recordId := ctx.Param("SHARE_ID")
+	sessionId, ok := ctx.GetQuery("SESSION_ID")
+	if !ok {
+		logger.Error("No session param found")
+		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrBadParams.String()))
+		return
+	}
+	logger.Debugf("User %s start to share session %s", user, sessionId)
+	tunnelCon := g.Cache.GetMonitorTunnelerBySessionId(sessionId)
+	if tunnelCon == nil {
+		logger.Error("No session tunnel found")
+		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrNoSession.String()))
+		return
+	}
+	defer tunnelCon.Close()
+	g.RecordLifecycleLog(sessionId, model.UserJoinSession, model.EmptyLifecycleLog)
+	ints := guacd.NewInstruction(INTERNALDATAOPCODE, tunnelCon.UUID())
+	_ = ws.WriteMessage(websocket.TextMessage, []byte(ints.String()))
+	conn := MonitorCon{
+		Id:          sessionId,
+		guacdTunnel: tunnelCon,
+		ws:          ws,
+		Service:     g,
+		User:        user,
+	}
+	logger.Infof("User %s start to share session %s", user, sessionId)
+	_ = conn.Run(ctx.Request.Context())
+	g.Cache.RemoveMonitorTunneler(sessionId, tunnelCon)
+	logger.Infof("User %s stop to share session %s", user, sessionId)
+	if err := g.JmsService.FinishShareRoom(recordId); err != nil {
+		logger.Errorf("Finish share room err: %s", err)
+	}
+	g.RecordLifecycleLog(sessionId, model.UserLeaveSession, model.EmptyLifecycleLog)
 }

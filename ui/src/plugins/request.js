@@ -1,8 +1,8 @@
 import axios from 'axios'
-import { BaseURL } from '@/utils/common'
+import { BASE_URL } from '@/utils/common'
 
 const instance = axios.create({
-  baseURL: BaseURL, // url = base url + request url
+  baseURL: BASE_URL, // url = base url + request url
   withCredentials: true
 })
 
@@ -27,11 +27,7 @@ const promise = (request, loading = {}) => {
   return new Promise((resolve, reject) => {
     loading.status = true
     request.then(response => {
-      if (response.data.success) {
-        resolve(response.data)
-      } else {
-        reject(response.data)
-      }
+      resolve(response.data)
       loading.status = false
     }).catch(error => {
       reject(error)

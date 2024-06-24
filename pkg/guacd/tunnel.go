@@ -122,7 +122,7 @@ func NewTunnel(address string, config Configuration, info ClientInformation) (tu
 		return nil, err
 	}
 
-	tunnel.UUID = ready.Args[0]
+	tunnel.uuid = ready.Args[0]
 	tunnel.IsOpen = true
 	return tunnel, nil
 }
@@ -131,9 +131,13 @@ type Tunnel struct {
 	rw   *bufio.ReadWriter
 	conn net.Conn
 
-	UUID   string
+	uuid   string
 	Config Configuration
 	IsOpen bool
+}
+
+func (t *Tunnel) UUID() string {
+	return t.uuid
 }
 
 func (t *Tunnel) WriteInstructionAndFlush(instruction Instruction) (err error) {

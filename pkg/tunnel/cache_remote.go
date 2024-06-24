@@ -297,6 +297,7 @@ func (r *GuaTunnelRedisCache) run() {
 								req.ReqId, err)
 							continue
 						}
+						successReq.UUID = guacdTunnel.UUID()
 						err = r.publishRequest(&successReq)
 						if err != nil {
 							_ = guacdTunnel.Close()
@@ -359,6 +360,7 @@ func (r *GuaTunnelRedisCache) run() {
 					readChannel := fmt.Sprintf("%s.read", req.Prefix)
 					pubSub := r.rdb.Subscribe(context.TODO(), readChannel)
 					conn := RedisConn{
+						uuid:             res.Req.UUID,
 						reqId:            req.ReqId,
 						sessionId:        req.SessionId,
 						readChannelName:  readChannel,
@@ -419,6 +421,7 @@ func (r *GuaTunnelRedisCache) run() {
 type RedisConn struct {
 	reqId     string
 	sessionId string
+	uuid      string
 
 	readChannelName  string
 	writeChannelName string
@@ -428,6 +431,10 @@ type RedisConn struct {
 	pubSub           *redis.PubSub
 
 	done chan struct{}
+}
+
+func (r *RedisConn) UUID() string {
+	return r.uuid
 }
 
 func (r *RedisConn) run() {
@@ -517,6 +524,7 @@ type subscribeRequest struct {
 	SessionId string `json:"session_id"`
 	Event     string `json:"event"`
 	Prefix    string `json:"prefix"`
+	UUID      string `json:"uuid"`
 	Channel   string `json:"-"`
 }
 
@@ -541,6 +549,10 @@ type RedisGuacProxy struct {
 	tunnel *guacd.Tunnel
 
 	once sync.Once
+}
+
+func (r *RedisGuacProxy) UUID() string {
+	return r.tunnel.UUID()
 }
 
 func (r *RedisGuacProxy) run() {
