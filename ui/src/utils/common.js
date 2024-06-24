@@ -18,12 +18,15 @@ if (!window.location.origin) {
 } else {
   streamOrigin = window.location.origin
 }
+const scheme = document.location.protocol === 'https:' ? 'wss' : 'ws'
+const port = document.location.port ? ':' + document.location.port : ''
+const BASE_WS_URL = scheme + '://' + document.location.hostname + port
+const BASE_URL = document.location.protocol + '//' + document.location.hostname + port
+export { BASE_WS_URL, BASE_URL }
 
 export const OriginSite = streamOrigin
 
 export const BaseAPIURL = streamOrigin + '/lion/api'
-export const BaseURL = streamOrigin + '/lion'
-export const apiPrefix = '/api'
 
 const sessionBaseAPI = '/api'
 const wsURL = '/lion/ws/connect/'
@@ -118,4 +121,14 @@ export function removeClass(ele, cls) {
     const reg = new RegExp('(\\s|^)' + cls + '(\\s|$)')
     ele.className = ele.className.replace(reg, ' ')
   }
+}
+
+export function CopyTextToClipboard(text) {
+  const transfer = document.createElement('textarea')
+  document.body.appendChild(transfer)
+  transfer.value = text
+  transfer.focus()
+  transfer.select()
+  document.execCommand('copy')
+  document.body.removeChild(transfer)
 }

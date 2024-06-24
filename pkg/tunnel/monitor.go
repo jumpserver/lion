@@ -63,6 +63,7 @@ func (m *MonitorCon) Run(ctx context.Context) (err error) {
 				exit <- err
 				break
 			}
+			logger.Debugf("Monitor[%s] guacd tunnel read: %s", t.Id, instruction.String())
 			if err = t.writeWsMessage([]byte(instruction.String())); err != nil {
 				logger.Error(err)
 				exit <- err
@@ -81,6 +82,7 @@ func (m *MonitorCon) Run(ctx context.Context) (err error) {
 				exit <- err
 				break
 			}
+			logger.Debugf("Monitor[%s] ws read: %s", t.Id, message)
 
 			if ret, err := guacd.ParseInstructionString(string(message)); err == nil {
 				if ret.Opcode == INTERNALDATAOPCODE && len(ret.Args) >= 2 && ret.Args[0] == PINGOPCODE {
