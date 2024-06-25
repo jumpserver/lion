@@ -10,7 +10,7 @@
 
 <script>
 import Guacamole from 'guacamole-common-js'
-import i18n from '@/i18n'
+import i18n from '@/i18n/i18n'
 import { getSupportedMimetypes } from '@/utils/image'
 import { getSupportedGuacAudios } from '@/utils/audios'
 import { getSupportedGuacVideos } from '@/utils/video'

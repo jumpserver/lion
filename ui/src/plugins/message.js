@@ -1,5 +1,5 @@
 import { MessageBox, Message } from 'element-ui'
-import i18n from '@/i18n'
+import i18n from '@/i18n/i18n'
 
 export const $alert = (message, callback, options) => {
   const title = i18n.t('common.message_box.alert')
