@@ -424,6 +424,11 @@ func (g *GuacamoleTunnelServer) Monitor(ctx *gin.Context) {
 		User:        user,
 	}
 	logger.Infof("User %s start to monitor session %s", user, sessionId)
+	logObj := model.SessionLifecycleLog{User: user.String()}
+	g.RecordLifecycleLog(sessionId, model.AdminJoinMonitor, logObj)
+	defer func() {
+		g.RecordLifecycleLog(sessionId, model.AdminExitMonitor, logObj)
+	}()
 	_ = conn.Run(ctx.Request.Context())
 	g.Cache.RemoveMonitorTunneler(sessionId, tunnelCon)
 	logger.Infof("User %s stop to monitor session %s", user, sessionId)
