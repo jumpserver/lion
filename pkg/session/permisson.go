@@ -13,6 +13,7 @@ type ActionPermission struct {
 
 	EnableUpload   bool `json:"enable_upload"`
 	EnableDownload bool `json:"enable_download"`
+	EnableShare    bool `json:"enable_share"`
 }
 
 func NewActionPermission(perm *model.Permission, connectType string) *ActionPermission {
@@ -22,6 +23,7 @@ func NewActionPermission(perm *model.Permission, connectType string) *ActionPerm
 		EnablePaste:    perm.EnablePaste(),
 		EnableUpload:   perm.EnableUpload(),
 		EnableDownload: perm.EnableDownload(),
+		EnableShare:    perm.EnableShare(),
 	}
 	globConfig := config.GlobalConfig
 	switch connectType {
