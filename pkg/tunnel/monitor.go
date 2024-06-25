@@ -103,11 +103,6 @@ func (m *MonitorCon) Run(ctx context.Context) (err error) {
 		}
 		_ = t.guacdTunnel.Close()
 	}(m)
-	logObj := model.SessionLifecycleLog{User: m.User.String()}
-	m.Service.RecordLifecycleLog(m.Id, model.AdminJoinMonitor, logObj)
-	defer func() {
-		m.Service.RecordLifecycleLog(m.Id, model.AdminExitMonitor, logObj)
-	}()
 	for {
 		select {
 		case err = <-exit:

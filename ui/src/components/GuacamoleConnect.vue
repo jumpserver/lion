@@ -256,7 +256,8 @@ export default {
       userOptions: [],
       userLoading: false,
       shareCode: null,
-      shareLoading: false
+      shareLoading: false,
+      enableShare: true
     }
   },
   computed: {
@@ -298,8 +299,7 @@ export default {
         {
           title: this.$t('Share'),
           icon: 'el-icon-share',
-          // disabled: () => !this.enableShare,
-          disabled: () => false,
+          disabled: () => (this.menuDisable || !this.enableShare),
           click: () => (this.shareDialogVisible = !this.shareDialogVisible)
         }
       ]
@@ -900,6 +900,15 @@ export default {
         case 'session_resume': {
           const msg = `${dataObj.user} ${this.$t('ResumeSession')}`
           this.$message.info(msg)
+          break
+        }
+        case 'session': {
+          this.session = dataObj
+          this.initFileSystem()
+          this.initClipboard()
+          const actions = this.session.action_permission
+          this.$log.debug('Session actions: ', actions)
+          this.enableShare = actions.enable_share
           break
         }
         default:
