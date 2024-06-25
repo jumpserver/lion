@@ -49,7 +49,7 @@ import Guacamole from 'guacamole-common-js'
 import { BaseAPIURL, FileType, isDirectory, sanitizeFilename } from '@/utils/common'
 import GuacFile from './GuacFile'
 import { ErrorStatusCodes } from '@/utils/status'
-import { getLanguage } from '@/i18n'
+import { getLanguage } from '@/i18n/i18n'
 
 export default {
   name: 'GuacFileSystem',

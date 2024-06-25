@@ -19,7 +19,8 @@
     "vue-cookies": "^1.7.4",
     "vue-i18n": "^8.28.2",
     "vue-router": "^3.5.2",
-    "vuejs-logger": "^1.5.5"
+    "vuejs-logger": "^1.5.5",
+    "vuex": "^4.1.0"
   },
   "devDependencies": {
     "@vue/cli-plugin-babel": "^4.5.19",
