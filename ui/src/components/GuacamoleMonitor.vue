@@ -16,7 +16,7 @@ export default {
       wsUrl: '/lion/ws/monitor/',
       params: {
         'type': 'monitor',
-        'SESSION_ID': this.$route.query.id
+        'SESSION_ID': this.$route.query.session
       }
     }
   }
