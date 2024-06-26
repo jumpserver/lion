@@ -166,10 +166,6 @@ export default {
           this.keyboard.reset()
         }
       }
-      if (this.readonly) {
-        this.$log.debug('readonly')
-        return
-      }
       const display = document.getElementById('display')
       display.appendChild(this.client.getDisplay().getElement())
       display.appendChild(this.sink.getElement())
