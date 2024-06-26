@@ -44,4 +44,8 @@ axios.get(`${BASE_URL}/api/v1/settings/i18n/lion/?lang=${lang}&flat=0`)
     store.dispatch('setI18nLoaded', true)
   })
 
+export function getLanguage() {
+  return i18n.locale
+}
+
 export default i18n
