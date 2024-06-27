@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -212,7 +213,15 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	}
 	logger.Infof("Session[%s] use resolution (%d*%d)",
 		sessionId, info.OptimalScreenWidth, info.OptimalScreenHeight)
-
+	meta := MetaMessage{
+		ShareId:    user.ID,
+		UserId:     user.ID,
+		User:       user.String(),
+		Created:    time.Now().UTC().String(),
+		RemoteAddr: ctx.ClientIP(),
+		Primary:    true,
+		Writable:   true,
+	}
 	conn := Connection{
 		guacdAddr:   guacdAddr,
 		Sess:        &tunnelSession,
@@ -220,6 +229,10 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 		Service:     g.SessionService,
 		ws:          ws,
 		done:        make(chan struct{}),
+		Cache:       g.Cache,
+		meta:        &meta,
+
+		currentOnlineUsers: make(map[string]MetaMessage),
 	}
 	outFilter := OutputStreamInterceptingFilter{
 		acknowledgeBlobs: true,
@@ -518,13 +531,29 @@ func (g *GuacamoleTunnelServer) Share(ctx *gin.Context) {
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrAuthUser.String()))
 		return
 	}
-	recordId := ctx.Param("SHARE_ID")
-	sessionId, ok := ctx.GetQuery("SESSION_ID")
+	shareId, ok := ctx.GetQuery("SHARE_ID")
 	if !ok {
-		logger.Error("No session param found")
+		logger.Error("No share id params")
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrBadParams.String()))
 		return
 	}
+	recordId, ok := ctx.GetQuery("RECORD_ID")
+	if !ok {
+		logger.Error("No record id params")
+		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrBadParams.String()))
+		return
+	}
+	sessionId, ok := ctx.GetQuery("SESSION_ID")
+	if !ok {
+		logger.Error("No SESSION_ID found")
+		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrBadParams.String()))
+		return
+	}
+	writable := false
+	writePem, _ := ctx.GetQuery("Writable")
+	writable = strings.EqualFold(writePem, "true")
+	fmt.Println(writable)
+
 	logger.Debugf("User %s start to share session %s", user, sessionId)
 	tunnelCon := g.Cache.GetMonitorTunnelerBySessionId(sessionId)
 	if tunnelCon == nil {
@@ -536,19 +565,62 @@ func (g *GuacamoleTunnelServer) Share(ctx *gin.Context) {
 	g.RecordLifecycleLog(sessionId, model.UserJoinSession, model.EmptyLifecycleLog)
 	ints := guacd.NewInstruction(INTERNALDATAOPCODE, tunnelCon.UUID())
 	_ = ws.WriteMessage(websocket.TextMessage, []byte(ints.String()))
+	meta := MetaMessage{
+		ShareId:    shareId,
+		SessionId:  sessionId,
+		UserId:     user.ID,
+		User:       user.String(),
+		Created:    time.Now().UTC().String(),
+		RemoteAddr: ctx.ClientIP(),
+		Primary:    false,
+		Writable:   writable,
+	}
 	conn := MonitorCon{
 		Id:          sessionId,
 		guacdTunnel: tunnelCon,
 		ws:          ws,
 		Service:     g,
 		User:        user,
+		Meta:        &meta,
 	}
 	logger.Infof("User %s start to share session %s", user, sessionId)
 	_ = conn.Run(ctx.Request.Context())
 	g.Cache.RemoveMonitorTunneler(sessionId, tunnelCon)
 	logger.Infof("User %s stop to share session %s", user, sessionId)
-	if err := g.JmsService.FinishShareRoom(recordId); err != nil {
-		logger.Errorf("Finish share room err: %s", err)
+	if err1 := g.JmsService.FinishShareRoom(recordId); err1 != nil {
+		logger.Errorf("Finish share room err: %s", err1)
 	}
 	g.RecordLifecycleLog(sessionId, model.UserLeaveSession, model.EmptyLifecycleLog)
+}
+
+func (g *GuacamoleTunnelServer) DeleteShare(ctx *gin.Context) {
+	var params MetaMessage
+	if err := ctx.BindJSON(&params); err != nil {
+		logger.Errorf("Bind delete share params err: %s", err)
+		ctx.JSON(http.StatusBadRequest, ErrorResponse(err))
+		return
+	}
+	userItem, ok := ctx.Get(config.GinCtxUserKey)
+	if !ok {
+		ctx.JSON(http.StatusBadRequest, gin.H{"ok": false, "msg": "not auth user"})
+		return
+	}
+	user := userItem.(*model.User)
+	if user.ID == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"ok": false, "msg": "not auth user"})
+		return
+	}
+	var removeData struct {
+		User string      `json:"user"`
+		Meta MetaMessage `json:"meta"`
+	}
+	removeData.User = user.String()
+	removeData.Meta = params
+	jsonData, _ := json.Marshal(removeData)
+	logger.Infof("User %s remove share session %s", user, params.SessionId)
+	g.Cache.BroadcastSessionEvent(params.SessionId, &Event{
+		Type: ShareRemoveUser,
+		Data: jsonData,
+	})
+	ctx.JSON(http.StatusOK, gin.H{"ok": true})
 }

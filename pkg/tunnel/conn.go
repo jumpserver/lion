@@ -66,6 +66,11 @@ type Connection struct {
 	operatorUser atomic.Value
 
 	recordStatus atomic.Bool
+
+	Cache GuaTunnelCache
+	meta  *MetaMessage
+
+	currentOnlineUsers map[string]MetaMessage
 }
 
 func (t *Connection) SendWsMessage(msg guacd.Instruction) error {
@@ -122,6 +127,17 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 		logger.Error("Run err: ", err)
 		return err
 	}
+	eventChan := t.Cache.GetSessionEventChan(t.Sess.ID)
+	var jsonBuilder strings.Builder
+	_ = json.NewEncoder(&jsonBuilder).Encode(t.meta)
+	metaJsonStr := jsonBuilder.String()
+	currentUserInst := NewJmsEventInstruction("current_user", metaJsonStr)
+	_ = t.SendWsMessage(currentUserInst)
+	eventData := []byte(metaJsonStr)
+	t.Cache.BroadcastSessionEvent(t.Sess.ID, &Event{Type: ShareJoin, Data: eventData})
+	defer func() {
+		t.Cache.BroadcastSessionEvent(t.Sess.ID, &Event{Type: ShareExit, Data: eventData})
+	}()
 
 	parser := t.Service.GetFilterParser(t.Sess)
 	userInputMessageChan := make(chan *session.Message, 1)
@@ -279,8 +295,12 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 	activeDetectTicker := time.NewTicker(time.Minute)
 	defer activeDetectTicker.Stop()
 	latestActive := time.Now()
+
 	for {
 		select {
+		case event := <-eventChan.eventCh:
+			go t.handleEvent(event)
+			continue
 		case err = <-exit:
 			logger.Infof("Session[%s] Connection exit %+v", t, err)
 			if !t.recordStatus.Load() {
@@ -447,4 +467,50 @@ func (t *Connection) generateCommandResult(item *session.ExecutedCommand) *model
 		riskLevel = model.NormalLevel
 	}
 	return t.Service.GenerateCommandItem(t.Sess, user, input, output, riskLevel, item.CreatedDate)
+}
+
+func (t *Connection) handleEvent(eventMsg *Event) {
+	logger.Debugf("Session[%s] handle event: %s", t, eventMsg.Type)
+	switch eventMsg.Type {
+	case ShareJoin:
+		var meta MetaMessage
+		if err := json.Unmarshal(eventMsg.Data, &meta); err != nil {
+			logger.Errorf("Session[%s] unmarshal meta message err: %s", t, err)
+			return
+		}
+		key := meta.User + meta.Created
+		t.traceLock.Lock()
+		t.currentOnlineUsers[key] = meta
+		t.traceLock.Unlock()
+		defer t.notifyShareUsers()
+		if t.meta.ShareId == meta.ShareId {
+			logger.Info("Ignore self join event")
+			return
+		}
+	case ShareExit:
+		var meta MetaMessage
+		if err := json.Unmarshal(eventMsg.Data, &meta); err != nil {
+			logger.Errorf("Session[%s] unmarshal meta message err: %s", t, err)
+			return
+		}
+		key := meta.User + meta.Created
+		t.traceLock.Lock()
+		delete(t.currentOnlineUsers, key)
+		t.traceLock.Unlock()
+		defer t.notifyShareUsers()
+	case ShareUsers:
+	case ShareRemoveUser:
+		return
+	}
+	inst := NewJmsEventInstruction(eventMsg.Type, string(eventMsg.Data))
+	_ = t.SendWsMessage(inst)
+}
+func (t *Connection) notifyShareUsers() {
+	t.traceLock.Lock()
+	body, _ := json.Marshal(t.currentOnlineUsers)
+	t.traceLock.Unlock()
+	t.Cache.BroadcastSessionEvent(t.Sess.ID, &Event{
+		Type: ShareUsers,
+		Data: body,
+	})
 }

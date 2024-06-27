@@ -10,7 +10,7 @@
 
 <script>
 import Guacamole from 'guacamole-common-js'
-import i18n from '@/i18n/i18n'
+import i18n, { getLanguage } from '@/i18n/i18n'
 import { getSupportedMimetypes } from '@/utils/image'
 import { getSupportedGuacAudios } from '@/utils/audios'
 import { getSupportedGuacVideos } from '@/utils/video'
@@ -249,12 +249,33 @@ export default {
       this.$log.debug(status, i18n.locale)
       const code = status.code
       let msg = status.message
+      const currentLang = getLanguage()
       msg = ErrorStatusCodes[code] ? this.$t(ErrorStatusCodes[code]) : this.$t(ConvertGuacamoleError(status.message))
+      switch (code) {
+        case 1005:
+          // 管理员终断会话，特殊处理
+          if (currentLang === 'cn') {
+            msg = status.message + ' ' + msg
+          } else {
+            msg = msg + ' ' + status.message
+          }
+          break
+        case 1003:
+          msg = msg.replace('{PLACEHOLDER}', status.message)
+          break
+        case 1010:
+          msg = msg.replace('{PLACEHOLDER}', status.message)
+          break
+        case 1011:
+          msg = msg.replace('{PLACEHOLDER}', status.message)
+          break
+      }
       this.$alert(msg, this.$t('ErrTitle'), {
         confirmButtonText: this.$t('OK'),
         callback: action => {
           const display = document.getElementById('display')
           if (this.client) {
+            // display.removeChild(this.client.getDisplay().getElement())
             display.innerHTML = ''
           }
         }
@@ -361,6 +382,16 @@ export default {
         tunnel.uuid = uuid
       }
       tunnel.onstatechange = this.onTunnelStateChanged
+      const oninstruction = tunnel.oninstruction
+      tunnel.oninstruction = (opcode, argv) => {
+        if (oninstruction) {
+          oninstruction(opcode, argv)
+        }
+        if (opcode === 'jms_event') {
+          vm.onJmsEvent(argv[0], argv[1])
+          vm.$log.debug('Tunnel instruction: ', opcode, argv)
+        }
+      }
       this.client = client
       this.tunnel = tunnel
       this.display = this.client.getDisplay()
@@ -372,6 +403,9 @@ export default {
       window.onunload = function() {
         client.disconnect()
       }
+    },
+    onJmsEvent(event, data) {
+      this.$emit('jms-event', event, data)
     }
   }
 }

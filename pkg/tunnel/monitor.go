@@ -2,12 +2,14 @@ package tunnel
 
 import (
 	"context"
+	"encoding/json"
+	"strings"
 	"sync"
 
 	"github.com/gorilla/websocket"
-	"lion/pkg/jms-sdk-go/model"
 
 	"lion/pkg/guacd"
+	"lion/pkg/jms-sdk-go/model"
 	"lion/pkg/logger"
 )
 
@@ -22,6 +24,7 @@ type MonitorCon struct {
 
 	Service *GuacamoleTunnelServer
 	User    *model.User
+	Meta    *MetaMessage
 }
 
 func (m *MonitorCon) SendWsMessage(msg guacd.Instruction) error {
@@ -53,20 +56,33 @@ func (m *MonitorCon) readTunnelInstruction() (*guacd.Instruction, error) {
 }
 
 func (m *MonitorCon) Run(ctx context.Context) (err error) {
+	retChan := m.Service.Cache.GetSessionEventChan(m.Id)
+	if m.Meta != nil {
+		var jsonBuilder strings.Builder
+		_ = json.NewEncoder(&jsonBuilder).Encode(m.Meta)
+		metaJsonStr := jsonBuilder.String()
+		currentUserInst := NewJmsEventInstruction("current_user", metaJsonStr)
+		_ = m.SendWsMessage(currentUserInst)
+		eventData := []byte(metaJsonStr)
+		m.Service.Cache.BroadcastSessionEvent(m.Id, &Event{Type: ShareJoin, Data: eventData})
+		defer func() {
+			m.Service.Cache.BroadcastSessionEvent(m.Id, &Event{Type: ShareExit, Data: eventData})
+		}()
+	}
+
 	exit := make(chan error, 2)
 	go func(t *MonitorCon) {
 		for {
-			instruction, err := t.readTunnelInstruction()
-			if err != nil {
+			instruction, err1 := t.readTunnelInstruction()
+			if err1 != nil {
 				_ = t.writeWsMessage([]byte(ErrDisconnect.String()))
-				logger.Infof("Monitor[%s] guacd tunnel read err: %+v", t.Id, err)
-				exit <- err
+				logger.Infof("Monitor[%s] guacd tunnel read err: %+v", t.Id, err1)
+				exit <- err1
 				break
 			}
-			logger.Debugf("Monitor[%s] guacd tunnel read: %s", t.Id, instruction.String())
-			if err = t.writeWsMessage([]byte(instruction.String())); err != nil {
-				logger.Error(err)
-				exit <- err
+			if err2 := t.writeWsMessage([]byte(instruction.String())); err2 != nil {
+				logger.Error(err2)
+				exit <- err2
 				break
 			}
 		}
@@ -75,34 +91,33 @@ func (m *MonitorCon) Run(ctx context.Context) (err error) {
 
 	go func(t *MonitorCon) {
 		for {
-			_, message, err := t.ws.ReadMessage()
-			if err != nil {
-				logger.Infof("Monitor[%s] ws read err: %+v", t.Id, err)
+			_, message, err1 := t.ws.ReadMessage()
+			if err1 != nil {
+				logger.Infof("Monitor[%s] ws read err: %+v", t.Id, err1)
 
-				exit <- err
+				exit <- err1
 				break
 			}
-			logger.Debugf("Monitor[%s] ws read: %s", t.Id, message)
-
-			if ret, err := guacd.ParseInstructionString(string(message)); err == nil {
+			if ret, err2 := guacd.ParseInstructionString(string(message)); err2 == nil {
 				if ret.Opcode == INTERNALDATAOPCODE && len(ret.Args) >= 2 && ret.Args[0] == PINGOPCODE {
-					if err := t.SendWsMessage(guacd.NewInstruction(INTERNALDATAOPCODE, PINGOPCODE)); err != nil {
-						logger.Error(err)
+					if err3 := t.SendWsMessage(guacd.NewInstruction(INTERNALDATAOPCODE, PINGOPCODE)); err3 != nil {
+						logger.Error(err3)
 					}
 					continue
 				}
 			} else {
-				logger.Errorf("Monitor[%s] parse instruction err %s", t.Id, err)
+				logger.Errorf("Monitor[%s] parse instruction err %s", t.Id, err2)
 			}
-			_, err = t.writeTunnelMessage(message)
-			if err != nil {
-				logger.Errorf("Monitor[%s] guacamole tunnel write err: %+v", t.Id, err)
-				exit <- err
+			_, err3 := t.writeTunnelMessage(message)
+			if err3 != nil {
+				logger.Errorf("Monitor[%s] guacamole tunnel write err: %+v", t.Id, err3)
+				exit <- err3
 				break
 			}
 		}
 		_ = t.guacdTunnel.Close()
 	}(m)
+
 	for {
 		select {
 		case err = <-exit:
@@ -111,6 +126,47 @@ func (m *MonitorCon) Run(ctx context.Context) (err error) {
 		case <-ctx.Done():
 			logger.Info("Monitor[%s] done", m.Id)
 			return nil
+		case event := <-retChan.eventCh:
+			if m.Meta == nil {
+				logger.Debugf("Monitor[%s] do not need to handle event", m.Id)
+				continue
+			}
+			go m.handleEvent(event)
+			logger.Debugf("Monitor[%s] handle event: %s", m.Id, event.Type)
 		}
 	}
+}
+
+func (m *MonitorCon) handleEvent(eventMsg *Event) {
+	logger.Debugf("Monitor[%s] handle event: %s", m.Id, eventMsg.Type)
+	var inst guacd.Instruction
+	switch eventMsg.Type {
+	case ShareJoin:
+		var meta MetaMessage
+		_ = json.Unmarshal(eventMsg.Data, &meta)
+		if m.Meta.ShareId == meta.ShareId {
+			logger.Info("Ignore self join event")
+			return
+		}
+		inst = NewJmsEventInstruction(ShareJoin, string(eventMsg.Data))
+	case ShareExit:
+		inst = NewJmsEventInstruction(ShareExit, string(eventMsg.Data))
+	case ShareUsers:
+		inst = NewJmsEventInstruction(ShareUsers, string(eventMsg.Data))
+	case ShareRemoveUser:
+		var removeData struct {
+			User string      `json:"user"`
+			Meta MetaMessage `json:"meta"`
+		}
+		_ = json.Unmarshal(eventMsg.Data, &removeData)
+		if m.Meta.ShareId != removeData.Meta.ShareId {
+			logger.Info("Ignore not self remove user event")
+			return
+		}
+		errInst := NewJMSGuacamoleError(1011, removeData.User)
+		inst = errInst.Instruction()
+	default:
+		return
+	}
+	_ = m.SendWsMessage(inst)
 }

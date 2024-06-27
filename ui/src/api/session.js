@@ -7,3 +7,7 @@ export function createShareURL(data) {
 export function getShareSession(id, data) {
   return post(`/lion/api/share/${id}/`, data)
 }
+
+export function removeShareUser(data) {
+  return post(`/lion/api/share/remove/`, data)
+}

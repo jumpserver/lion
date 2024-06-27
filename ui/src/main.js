@@ -11,6 +11,22 @@ import router from './router'
 import store from './store'
 import '@/styles/index.css'
 
+import { library } from '@fortawesome/fontawesome-svg-core'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
+import {
+  faUser, faRightFromBracket,
+  faKeyboard, faTrashCan, faFilePen, faFile,
+  faFileCircleMinus, faEye
+} from '@fortawesome/free-solid-svg-icons'
+
+library.add(
+  faUser, faRightFromBracket,
+  faKeyboard, faTrashCan, faFilePen, faFile,
+  faFileCircleMinus,
+  faEye
+)
+Vue.component('FontAwesomeIcon', FontAwesomeIcon)
+
 Vue.use(VueRouter)
 Vue.use(ElementUI)
 Vue.use(Guacamole)

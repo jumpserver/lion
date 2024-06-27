@@ -25,6 +25,8 @@ const (
 
 	resultsChannel = "JUMPSERVER:LION:EVENTS:RESULT"
 
+	sessionEventsChannel = "JUMPSERVER:LION:EVENTS:SESSIONS"
+
 	sessionsChannelPrefix = "JUMPSERVER:LION:SESSIONS"
 )
 
@@ -146,6 +148,26 @@ type GuaTunnelRedisCache struct {
 
 	redisProxyExitChan chan string
 	redisConExitChan   chan string
+
+	roomLock    sync.Mutex
+	remoteRooms map[string]*Room
+}
+
+func (r *GuaTunnelRedisCache) BroadcastSessionEvent(sid string, event *Event) {
+	r.GuaTunnelLocalCache.BroadcastSessionEvent(sid, event)
+	r.broadcastSessionEventToRemote(sid, event)
+}
+
+func (r *GuaTunnelRedisCache) broadcastSessionEventToRemote(sid string, event *Event) {
+	msg := SessionRoomMessage{
+		Id:        r.ID,
+		SessionId: sid,
+		Event:     event,
+	}
+	eventBody, _ := json.Marshal(msg)
+	if err := r.publishCommand(sessionEventsChannel, eventBody); err != nil {
+		logger.Errorf("Redis cache broadcast session event %s err: %s", sid, err)
+	}
 }
 
 func (r *GuaTunnelRedisCache) GetMonitorTunnelerBySessionId(sid string) Tunneler {
@@ -265,6 +287,8 @@ func (r *GuaTunnelRedisCache) proxyTunnel(tunnelProxy *RedisGuacProxy) {
 func (r *GuaTunnelRedisCache) run() {
 	innerPubSub := r.rdb.Subscribe(context.TODO(), eventsChannel, resultsChannel)
 	subscribeEventsMsgCh := innerPubSub.Channel()
+	sessionPubSub := r.rdb.Subscribe(context.TODO(), sessionEventsChannel)
+	sessionEventsMsgCh := sessionPubSub.Channel()
 	requestsMap := make(map[string]chan *subscribeResponse)
 	proxyConnMap := make(map[string]*RedisGuacProxy)
 	localConnMap := make(map[string]*RedisConn)
@@ -382,6 +406,20 @@ func (r *GuaTunnelRedisCache) run() {
 			default:
 				continue
 			}
+		case redisSessionMsg := <-sessionEventsMsgCh:
+			var msg SessionRoomMessage
+			if err := json.Unmarshal([]byte(redisSessionMsg.Payload), &msg); err != nil {
+				logger.Errorf("Redis cache unmarshal session event msg err: %s", err)
+				continue
+			}
+			if msg.Id == r.ID {
+				logger.Debugf("Redis cache ignore self session event %s", msg.Event.Type)
+				continue
+			}
+			logger.Infof("Redis channel %s recv session event %s",
+				redisSessionMsg.Channel, msg.Event.Type)
+			r.GuaTunnelLocalCache.BroadcastSessionEvent(msg.SessionId, msg.Event)
+
 		case req := <-r.requestChan:
 			logger.Debugf("Redis cache publish request %s event %s", req.ReqId, req.Event)
 			responseChan := make(chan *subscribeResponse, 1)
