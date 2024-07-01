@@ -68,9 +68,9 @@ type Connection struct {
 	recordStatus atomic.Bool
 
 	Cache GuaTunnelCache
-	meta  *MetaMessage
+	meta  *MetaShareUserMessage
 
-	currentOnlineUsers map[string]MetaMessage
+	currentOnlineUsers map[string]MetaShareUserMessage
 }
 
 func (t *Connection) SendWsMessage(msg guacd.Instruction) error {
@@ -473,7 +473,7 @@ func (t *Connection) handleEvent(eventMsg *Event) {
 	logger.Debugf("Session[%s] handle event: %s", t, eventMsg.Type)
 	switch eventMsg.Type {
 	case ShareJoin:
-		var meta MetaMessage
+		var meta MetaShareUserMessage
 		if err := json.Unmarshal(eventMsg.Data, &meta); err != nil {
 			logger.Errorf("Session[%s] unmarshal meta message err: %s", t, err)
 			return
@@ -488,7 +488,7 @@ func (t *Connection) handleEvent(eventMsg *Event) {
 			return
 		}
 	case ShareExit:
-		var meta MetaMessage
+		var meta MetaShareUserMessage
 		if err := json.Unmarshal(eventMsg.Data, &meta); err != nil {
 			logger.Errorf("Session[%s] unmarshal meta message err: %s", t, err)
 			return

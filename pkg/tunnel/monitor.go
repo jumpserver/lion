@@ -24,7 +24,7 @@ type MonitorCon struct {
 
 	Service *GuacamoleTunnelServer
 	User    *model.User
-	Meta    *MetaMessage
+	Meta    *MetaShareUserMessage
 }
 
 func (m *MonitorCon) SendWsMessage(msg guacd.Instruction) error {
@@ -142,7 +142,7 @@ func (m *MonitorCon) handleEvent(eventMsg *Event) {
 	var inst guacd.Instruction
 	switch eventMsg.Type {
 	case ShareJoin:
-		var meta MetaMessage
+		var meta MetaShareUserMessage
 		_ = json.Unmarshal(eventMsg.Data, &meta)
 		if m.Meta.ShareId == meta.ShareId {
 			logger.Info("Ignore self join event")
@@ -155,8 +155,8 @@ func (m *MonitorCon) handleEvent(eventMsg *Event) {
 		inst = NewJmsEventInstruction(ShareUsers, string(eventMsg.Data))
 	case ShareRemoveUser:
 		var removeData struct {
-			User string      `json:"user"`
-			Meta MetaMessage `json:"meta"`
+			User string               `json:"user"`
+			Meta MetaShareUserMessage `json:"meta"`
 		}
 		_ = json.Unmarshal(eventMsg.Data, &removeData)
 		if m.Meta.ShareId != removeData.Meta.ShareId {

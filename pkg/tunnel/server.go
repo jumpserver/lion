@@ -213,7 +213,7 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	}
 	logger.Infof("Session[%s] use resolution (%d*%d)",
 		sessionId, info.OptimalScreenWidth, info.OptimalScreenHeight)
-	meta := MetaMessage{
+	meta := MetaShareUserMessage{
 		ShareId:    user.ID,
 		UserId:     user.ID,
 		User:       user.String(),
@@ -232,7 +232,7 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 		Cache:       g.Cache,
 		meta:        &meta,
 
-		currentOnlineUsers: make(map[string]MetaMessage),
+		currentOnlineUsers: make(map[string]MetaShareUserMessage),
 	}
 	outFilter := OutputStreamInterceptingFilter{
 		acknowledgeBlobs: true,
@@ -565,7 +565,7 @@ func (g *GuacamoleTunnelServer) Share(ctx *gin.Context) {
 	g.RecordLifecycleLog(sessionId, model.UserJoinSession, model.EmptyLifecycleLog)
 	ints := guacd.NewInstruction(INTERNALDATAOPCODE, tunnelCon.UUID())
 	_ = ws.WriteMessage(websocket.TextMessage, []byte(ints.String()))
-	meta := MetaMessage{
+	meta := MetaShareUserMessage{
 		ShareId:    shareId,
 		SessionId:  sessionId,
 		UserId:     user.ID,
@@ -594,7 +594,7 @@ func (g *GuacamoleTunnelServer) Share(ctx *gin.Context) {
 }
 
 func (g *GuacamoleTunnelServer) DeleteShare(ctx *gin.Context) {
-	var params MetaMessage
+	var params MetaShareUserMessage
 	if err := ctx.BindJSON(&params); err != nil {
 		logger.Errorf("Bind delete share params err: %s", err)
 		ctx.JSON(http.StatusBadRequest, ErrorResponse(err))
@@ -611,8 +611,8 @@ func (g *GuacamoleTunnelServer) DeleteShare(ctx *gin.Context) {
 		return
 	}
 	var removeData struct {
-		User string      `json:"user"`
-		Meta MetaMessage `json:"meta"`
+		User string               `json:"user"`
+		Meta MetaShareUserMessage `json:"meta"`
 	}
 	removeData.User = user.String()
 	removeData.Meta = params

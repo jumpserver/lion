@@ -1,6 +1,6 @@
 package tunnel
 
-type MetaMessage struct {
+type MetaShareUserMessage struct {
 	ShareId string `json:"share_id"`
 
 	SessionId  string `json:"session_id"`
