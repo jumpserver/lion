@@ -10,4 +10,8 @@ type MetaMessage struct {
 	UserId  string `json:"user_id"`
 	User    string `json:"user"`
 	Created string `json:"created"`
+
+	TerminalId string `json:"terminal_id"`
+	Primary    bool   `json:"primary"`
+	Writable   bool   `json:"writable"`
 }

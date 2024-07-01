@@ -1,8 +1,11 @@
 <template>
   <div>
     <div v-if="!codeDialog">
-      <Connection :readonly="readonly" :ws-url="wsUrl" :params="params" />
+      <Connection :readonly="readonly" :ws-url="wsUrl" :params="params" @jms-event="OnJmsEvent" />
     </div>
+    <RightPanel ref="panel">
+      <Settings :settings="settings" :title="$t('Settings')" />
+    </RightPanel>
     <el-dialog
       :title="$t('VerifyCode')"
       :visible.sync="codeDialog"
@@ -27,11 +30,15 @@
 <script>
 import Connection from './Connection'
 import { getShareSession } from '@/api/session'
+import Settings from '@/components/Settings.vue'
+import RightPanel from '@/components/RightPanel.vue'
 
 export default {
   name: 'GuacamoleShare',
   components: {
-    Connection
+    Connection,
+    RightPanel,
+    Settings
   },
   data() {
     return {
@@ -39,7 +46,10 @@ export default {
       wsUrl: '/lion/ws/share/',
       codeDialog: true,
       code: '',
-      sessionId: ''
+      sessionId: '',
+      onlineUsersMap: {},
+      share_id: '',
+      recordId: ''
     }
   },
   computed: {
@@ -47,8 +57,25 @@ export default {
       return {
         'type': 'share',
         'SESSION_ID': this.sessionId,
-        'SHARE_ID': this.$route.params.id
+        'SHARE_ID': this.$route.params.id,
+        'RECORD_ID': this.recordId
       }
+    },
+    settings() {
+      return [
+        {
+          title: this.$t('User'),
+          icon: 'el-icon-s-custom',
+          disabled: () => Object.keys(this.onlineUsersMap).length > 1,
+          content: Object.values(this.onlineUsersMap).map(item => {
+            item.name = (this.share_id !== item.share_id) ? item.user : item.user + ' [' + this.$t('Self') + ']'
+            item.faIcon = item.writable ? 'fa-solid fa-keyboard' : 'fa-solid fa-eye'
+            item.iconTip = item.writable ? this.$t('Writable') : this.$t('ReadOnly')
+            return item
+          }).sort((a, b) => new Date(a.created) - new Date(b.created)),
+          itemClick: () => {}
+        }
+      ]
     }
   },
   methods: {
@@ -66,12 +93,42 @@ export default {
         if (actionPerm['value'] === 'readonly') {
           this.readonly = true
         }
+        this.recordId = res.id
         this.sessionId = res.session.id
         this.codeDialog = false
       }).catch(err => {
         this.$log.error(err)
         this.$message.error(err)
       })
+    },
+    OnJmsEvent(event, data) {
+      this.$log.debug(event, data)
+      const dataObj = JSON.parse(data)
+      switch (event) {
+        case 'share_join': {
+          const key = dataObj.share_id
+          this.$set(this.onlineUsersMap, key, data)
+          this.$log.debug(this.onlineUsersMap)
+          if (dataObj.primary) {
+            this.$log.debug('primary user 不提醒')
+            break
+          }
+          const joinMsg = `${data.user} ${this.$t('JoinShare')}`
+          this.$message(joinMsg)
+          break
+        }
+        case 'share_exit': {
+          const key = dataObj.share_id
+          this.$delete(this.onlineUsersMap, key)
+          const leaveMsg = `${data.user} ${this.$t('LeaveShare')}`
+          this.$message(leaveMsg)
+          break
+        }
+        case 'share_users': {
+          this.userOptions = dataObj
+          break
+        }
+      }
     }
   }
 }

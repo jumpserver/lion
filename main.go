@@ -290,6 +290,7 @@ func registerRouter(jmsService *service.JMService, tunnelService *tunnel.Guacamo
 		apiGroup.GET("/tunnels/:tid/streams/:index/:filename", tunnelService.DownloadFile)
 		apiGroup.POST("/tunnels/:tid/streams/:index/:filename", tunnelService.UploadFile)
 		apiGroup.POST("/share/", tunnelService.CreateShare)
+		apiGroup.POST("/share/remove/", tunnelService.DeleteShare)
 		apiGroup.POST("/share/:id/", tunnelService.GetShare)
 	}
 
