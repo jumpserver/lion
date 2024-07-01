@@ -137,7 +137,7 @@ import Settings from './Settings'
 import { default as i18n, getLanguage } from '@/i18n'
 import { ErrorStatusCodes, ConvertGuacamoleError } from '@/utils'
 import { getUserInfo } from '@/api/user'
-import { createShareURL } from '@/api/session'
+import { createShareURL, removeShareUser } from '@/api/session'
 
 const pixelDensity = 1
 const sideWidth = 0
@@ -257,7 +257,8 @@ export default {
       userLoading: false,
       shareCode: null,
       shareLoading: false,
-      enableShare: true
+      enableShare: true,
+      onlineUsersMap: {}
     }
   },
   computed: {
@@ -320,6 +321,49 @@ export default {
           itemClick: (keys) => (this.handleKeys(keys))
         })
       }
+      settings.push({
+        title: this.$t('User'),
+        icon: 'el-icon-s-custom',
+        disabled: () => Object.keys(this.onlineUsersMap).length < 1,
+        content: Object.values(this.onlineUsersMap).map(item => {
+          item.name = item.user
+          item.faIcon = item.writable ? 'fa-solid fa-keyboard' : 'fa-solid fa-eye'
+          item.iconTip = item.writable ? this.$t('Writable') : this.$t('ReadOnly')
+          return item
+        }).sort((a, b) => new Date(a.created) - new Date(b.created)),
+        itemClick: () => {
+        },
+        itemActions: [
+          {
+            faIcon: 'fa-solid fa-trash-can',
+            tipText: this.$t('Remove'),
+            style: {
+              color: '#f56c6c'
+            },
+            hidden: (user) => {
+              return user.primary
+            },
+            click: (user) => {
+              if (user.primary) {
+                return
+              }
+              this.$confirm(this.$t('RemoveShareUserConfirm'))
+                .then(() => {
+                  this.$log.debug('Remove user', user)
+                  removeShareUser(user).then(response => {
+                    this.$log.debug('Remove user response: ', response)
+                  })
+                    .catch(() => {
+                      this.$log.debug('not Remove user', user)
+                    })
+                })
+                .catch(() => {
+                  this.$log.debug('not Remove user', user)
+                })
+            }
+          }
+        ]
+      })
       return settings
     },
     shareTitle() {
@@ -371,6 +415,7 @@ export default {
       this.loading = false
       this.shareId = null
       this.shareCode = null
+      this.shareDialogVisible = false
     },
     copyShareURL() {
       if (!this.shareId) {
@@ -909,6 +954,28 @@ export default {
           const actions = this.session.action_permission
           this.$log.debug('Session actions: ', actions)
           this.enableShare = actions.enable_share
+          break
+        }
+        case 'current_user': {
+          this.shareid = dataObj.share_id
+          break
+        }
+        case 'share_join': {
+          if (dataObj.primary) {
+            this.$log.debug('primary user 不提醒')
+            break
+          }
+          const joinMsg = `${dataObj.user} ${this.$t('JoinShare')}`
+          this.$message(joinMsg)
+          break
+        }
+        case 'share_exit': {
+          const leaveMsg = `${dataObj.user} ${this.$t('LeaveShare')}`
+          this.$message(leaveMsg)
+          break
+        }
+        case 'share_users': {
+          this.onlineUsersMap = dataObj
           break
         }
         default:
