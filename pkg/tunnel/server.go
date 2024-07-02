@@ -94,7 +94,8 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	tunnelSession, err := g.SessionService.CreatByToken(ctx, tokenId)
 	if err != nil {
 		logger.Errorf("Create token session err: %+v", err)
-		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrAPIFailed.String()))
+		errIns := NewJMSGuacamoleError(1006, err.Error())
+		_ = ws.WriteMessage(websocket.TextMessage, []byte(errIns.String()))
 		return
 	}
 	userItem, ok := ctx.Get(config.GinCtxUserKey)
@@ -120,7 +121,8 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	logger.Infof("User %s start to connect session %s", user, sessionId)
 	if err = tunnelSession.ConnectedCallback(); err != nil {
 		logger.Errorf("Session connect callback err %v", err)
-		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrAPIFailed.String()))
+		errIns := NewJMSGuacamoleError(1006, err.Error())
+		_ = ws.WriteMessage(websocket.TextMessage, []byte(errIns.String()))
 		return
 	}
 	p, _ := json.Marshal(tunnelSession)
