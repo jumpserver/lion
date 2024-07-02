@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/gorilla/websocket"
 
@@ -25,6 +26,8 @@ type MonitorCon struct {
 	Service *GuacamoleTunnelServer
 	User    *model.User
 	Meta    *MetaShareUserMessage
+
+	lockedStatus atomic.Bool
 }
 
 func (m *MonitorCon) SendWsMessage(msg guacd.Instruction) error {
@@ -105,6 +108,25 @@ func (m *MonitorCon) Run(ctx context.Context) (err error) {
 					}
 					continue
 				}
+				if t.lockedStatus.Load() {
+					switch ret.Opcode {
+					case guacd.InstructionClientSync,
+						guacd.InstructionClientNop,
+						guacd.InstructionStreamingAck:
+					default:
+						logger.Infof("Session[%s] in locked status drop receive web client message opcode[%s]",
+							t.Id, ret.Opcode)
+						continue
+					}
+					_, err4 := t.writeTunnelMessage(message)
+					if err4 != nil {
+						logger.Errorf("Session[%s] guacamole server write err: %+v", t.Id, err2)
+						exit <- err4
+						break
+					}
+					logger.Debugf("Session[%s] send guacamole server message when locked status", t.Id)
+					continue
+				}
 			} else {
 				logger.Errorf("Monitor[%s] parse instruction err %s", t.Id, err2)
 			}
@@ -165,6 +187,10 @@ func (m *MonitorCon) handleEvent(eventMsg *Event) {
 		}
 		errInst := NewJMSGuacamoleError(1011, removeData.User)
 		inst = errInst.Instruction()
+	case ShareSessionPause, ShareSessionResume:
+		inst = NewJmsEventInstruction(eventMsg.Type, string(eventMsg.Data))
+		locked := eventMsg.Type == ShareSessionPause
+		m.lockedStatus.Store(locked)
 	default:
 		return
 	}

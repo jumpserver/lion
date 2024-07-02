@@ -49,7 +49,8 @@ export default {
       sessionId: '',
       onlineUsersMap: {},
       share_id: '',
-      recordId: ''
+      recordId: '',
+      locked: false
     }
   },
   computed: {
@@ -122,6 +123,21 @@ export default {
         }
         case 'share_users': {
           this.onlineUsersMap = dataObj
+          break
+        }
+        case 'share_session_pause': {
+          if (this.locked) {
+            break
+          }
+          const msg = `${dataObj.user} ${this.$t('PauseSession')}`
+          this.$message.info(msg)
+          this.locked = true
+          break
+        }
+        case 'share_session_resume': {
+          const msg = `${dataObj.user} ${this.$t('ResumeSession')}`
+          this.$message.info(msg)
+          this.locked = false
           break
         }
       }

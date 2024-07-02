@@ -364,6 +364,7 @@ func (t *Connection) HandleTask(task *model.TerminalTask) error {
 		p, _ := json.Marshal(data)
 		ins := NewJmsEventInstruction("session_resume", string(p))
 		_ = t.SendWsMessage(ins)
+		t.notifySessionAction(ShareSessionResume, task.Kwargs.CreatedByUser)
 	case model.TaskLockSession:
 		t.lockedStatus.Store(true)
 		t.operatorUser.Store(task.Kwargs.CreatedByUser)
@@ -373,6 +374,7 @@ func (t *Connection) HandleTask(task *model.TerminalTask) error {
 		p, _ := json.Marshal(data)
 		ins := NewJmsEventInstruction("session_pause", string(p))
 		_ = t.SendWsMessage(ins)
+		t.notifySessionAction(ShareSessionPause, task.Kwargs.CreatedByUser)
 	case model.TaskKillSession:
 		t.recordStatus.Store(true)
 		username := task.Kwargs.TerminatedBy
@@ -492,6 +494,10 @@ func (t *Connection) handleEvent(eventMsg *Event) {
 			logger.Info("Ignore self join event")
 			return
 		}
+		if t.lockedStatus.Load() {
+			user := t.operatorUser.Load().(string)
+			defer t.notifySessionAction(ShareSessionPause, user)
+		}
 	case ShareExit:
 		var meta MetaShareUserMessage
 		if err := json.Unmarshal(eventMsg.Data, &meta); err != nil {
@@ -504,12 +510,15 @@ func (t *Connection) handleEvent(eventMsg *Event) {
 		t.traceLock.Unlock()
 		defer t.notifyShareUsers()
 	case ShareUsers:
-	case ShareRemoveUser:
+	case ShareRemoveUser,
+		ShareSessionPause,
+		ShareSessionResume:
 		return
 	}
 	inst := NewJmsEventInstruction(eventMsg.Type, string(eventMsg.Data))
 	_ = t.SendWsMessage(inst)
 }
+
 func (t *Connection) notifyShareUsers() {
 	t.traceLock.Lock()
 	body, _ := json.Marshal(t.currentOnlineUsers)
@@ -518,4 +527,13 @@ func (t *Connection) notifyShareUsers() {
 		Type: ShareUsers,
 		Data: body,
 	})
+}
+
+func (t *Connection) notifySessionAction(action string, user string) {
+	data := map[string]interface{}{
+		"user": user,
+	}
+	p, _ := json.Marshal(data)
+	t.Cache.BroadcastSessionEvent(t.Sess.ID,
+		&Event{Type: action, Data: p})
 }
