@@ -114,5 +114,7 @@ const (
 	ShareExit  = "share_exit"
 	ShareUsers = "share_users"
 
-	ShareRemoveUser = "share_remove_user"
+	ShareRemoveUser    = "share_remove_user"
+	ShareSessionPause  = "share_session_pause"
+	ShareSessionResume = "share_session_resume"
 )
