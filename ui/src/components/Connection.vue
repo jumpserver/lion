@@ -217,7 +217,13 @@ export default {
           var requestAudioStream = function requestAudioStream(client) {
             // Create new audio stream, associating it with an AudioRecorder
             const stream = client.createAudioStream(AUDIO_INPUT_MIMETYPE)
-            const recorder = Guacamole.AudioRecorder.getInstance(stream, AUDIO_INPUT_MIMETYPE)
+            let recorder
+            try {
+              recorder = Guacamole.AudioRecorder.getInstance(stream, AUDIO_INPUT_MIMETYPE)
+            } catch (e) {
+              console.log('Get audio recorder error, ignore')
+              recorder = null
+            }
 
             // If creation of the AudioRecorder failed, simply end the stream
             // eslint-disable-next-line brace-style
