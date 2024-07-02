@@ -521,8 +521,6 @@ func (g *GuacamoleTunnelServer) CreateShare(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, ErrorResponse(err))
 	} else {
 		ctx.JSON(http.StatusOK, resp)
-		g.RecordLifecycleLog(params.SessionId, model.CreateShareLink,
-			model.EmptyLifecycleLog)
 	}
 }
 
@@ -602,7 +600,6 @@ func (g *GuacamoleTunnelServer) Share(ctx *gin.Context) {
 	writable := false
 	writePem, _ := ctx.GetQuery("Writable")
 	writable = strings.EqualFold(writePem, "true")
-	fmt.Println(writable)
 
 	logger.Debugf("User %s start to share session %s", user, sessionId)
 	tunnelCon := g.Cache.GetMonitorTunnelerBySessionId(sessionId)
@@ -612,7 +609,12 @@ func (g *GuacamoleTunnelServer) Share(ctx *gin.Context) {
 		return
 	}
 	defer tunnelCon.Close()
-	g.RecordLifecycleLog(sessionId, model.UserJoinSession, model.EmptyLifecycleLog)
+
+	logObj := model.SessionLifecycleLog{User: user.String()}
+	g.RecordLifecycleLog(sessionId, model.UserJoinSession, logObj)
+	defer func() {
+		g.RecordLifecycleLog(sessionId, model.UserLeaveSession, logObj)
+	}()
 	ints := guacd.NewInstruction(INTERNALDATAOPCODE, tunnelCon.UUID())
 	_ = ws.WriteMessage(websocket.TextMessage, []byte(ints.String()))
 	meta := MetaShareUserMessage{
@@ -640,7 +642,6 @@ func (g *GuacamoleTunnelServer) Share(ctx *gin.Context) {
 	if err1 := g.JmsService.FinishShareRoom(recordId); err1 != nil {
 		logger.Errorf("Finish share room err: %s", err1)
 	}
-	g.RecordLifecycleLog(sessionId, model.UserLeaveSession, model.EmptyLifecycleLog)
 }
 
 func (g *GuacamoleTunnelServer) DeleteShare(ctx *gin.Context) {

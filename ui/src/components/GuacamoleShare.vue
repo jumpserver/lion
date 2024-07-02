@@ -106,26 +106,22 @@ export default {
       const dataObj = JSON.parse(data)
       switch (event) {
         case 'share_join': {
-          const key = dataObj.share_id
-          this.$set(this.onlineUsersMap, key, data)
           this.$log.debug(this.onlineUsersMap)
           if (dataObj.primary) {
             this.$log.debug('primary user 不提醒')
             break
           }
-          const joinMsg = `${data.user} ${this.$t('JoinShare')}`
+          const joinMsg = `${dataObj.user} ${this.$t('JoinShare')}`
           this.$message(joinMsg)
           break
         }
         case 'share_exit': {
-          const key = dataObj.share_id
-          this.$delete(this.onlineUsersMap, key)
-          const leaveMsg = `${data.user} ${this.$t('LeaveShare')}`
+          const leaveMsg = `${dataObj.user} ${this.$t('LeaveShare')}`
           this.$message(leaveMsg)
           break
         }
         case 'share_users': {
-          this.userOptions = dataObj
+          this.onlineUsersMap = dataObj
           break
         }
       }
