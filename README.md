@@ -1,21 +1,22 @@
 # Lion 
 
-## 介绍
+**English** · [简体中文](./README_zh-CN.md)
 
-该项目使用 Golang 和 Vue 重构了 JumpServer 的 Guacamole 组件，负责 RDP 和 VNC 的连接。 主要基于 [Apache Guacamole](http://guacamole.apache.org/)
-开发。
+## Introduction
 
-## 配置
+This project using Golang and Vue, handling RDP and VNC connections. It is mainly based on [Apache Guacamole](http://guacamole.apache.org/)
 
-启动的配置文件参考[config_example](config_example.yml)
+## Configuration
 
-## 构建镜像
+Refer to the configuration file for startup[config_example](config_example.yml)
+
+## Build the image
 
 ```shell
 docker build -t jumpserver/lion .
 ```
 
-## docker启动
+## Docker start
 
 ```shell
 docker run -d --name jms_lion -p 8081:8081 \
