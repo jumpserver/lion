@@ -4,11 +4,11 @@
 
 ## Introduction
 
-This project using Golang and Vue, handling RDP and VNC connections. It is mainly based on [Apache Guacamole](http://guacamole.apache.org/)
+This project uses Golang and Vue, handling RDP and VNC connections. It is mainly based on [Apache Guacamole](http://guacamole.apache.org/)
 
 ## Configuration
 
-Refer to the configuration file for startup[config_example](config_example.yml)
+Refer to the configuration file [config_example](config_example.yml)
 
 ## Build the image
 
