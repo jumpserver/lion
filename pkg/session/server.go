@@ -413,16 +413,16 @@ func (s *Server) RegisterFinishReplayCallback(tunnel TunnelSession) func(guacd.C
 		s.RecordLifecycleLog(tunnel.ID, model.ReplayUploadStart, model.EmptyLifecycleLog)
 		defaultStorage := storage.ServerStorage{StorageType: "server", JmsService: s.JmsService}
 		logger.Infof("Upload record file: %s, type: %s", dstReplayFilePath, storageType)
+		targetName := strings.Join([]string{tunnel.Created.Format(recordDirTimeFormat),
+			tunnel.ID + ReplayFileNameSuffix}, "/")
 		if replayStorage := storage.NewReplayStorage(s.JmsService, replayConfig); replayStorage != nil {
-			targetName := strings.Join([]string{tunnel.Created.Format(recordDirTimeFormat),
-				tunnel.ID + ReplayFileNameSuffix}, "/")
 			if err = replayStorage.Upload(dstReplayFilePath, targetName); err != nil {
 				logger.Errorf("Upload replay failed: %s", err)
 				logger.Errorf("Upload replay by type %s failed, try use default", storageType)
-				err = defaultStorage.Upload(tunnel.ID, dstReplayFilePath)
+				err = defaultStorage.Upload(dstReplayFilePath, targetName)
 			}
 		} else {
-			err = defaultStorage.Upload(tunnel.ID, dstReplayFilePath)
+			err = defaultStorage.Upload(dstReplayFilePath, targetName)
 		}
 		// 上传文件
 		if err != nil {

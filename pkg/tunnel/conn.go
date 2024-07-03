@@ -66,6 +66,11 @@ type Connection struct {
 	operatorUser atomic.Value
 
 	recordStatus atomic.Bool
+
+	Cache GuaTunnelCache
+	meta  *MetaShareUserMessage
+
+	currentOnlineUsers map[string]MetaShareUserMessage
 }
 
 func (t *Connection) SendWsMessage(msg guacd.Instruction) error {
@@ -117,11 +122,22 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 	defer t.releaseMonitorTunnel()
 	// 需要发送 uuid 返回给 guacamole tunnel
 	err = t.SendWsMessage(guacd.NewInstruction(
-		INTERNALDATAOPCODE, t.guacdTunnel.UUID))
+		INTERNALDATAOPCODE, t.guacdTunnel.UUID()))
 	if err != nil {
 		logger.Error("Run err: ", err)
 		return err
 	}
+	eventChan := t.Cache.GetSessionEventChan(t.Sess.ID)
+	var jsonBuilder strings.Builder
+	_ = json.NewEncoder(&jsonBuilder).Encode(t.meta)
+	metaJsonStr := jsonBuilder.String()
+	currentUserInst := NewJmsEventInstruction("current_user", metaJsonStr)
+	_ = t.SendWsMessage(currentUserInst)
+	eventData := []byte(metaJsonStr)
+	t.Cache.BroadcastSessionEvent(t.Sess.ID, &Event{Type: ShareJoin, Data: eventData})
+	defer func() {
+		t.Cache.BroadcastSessionEvent(t.Sess.ID, &Event{Type: ShareExit, Data: eventData})
+	}()
 
 	parser := t.Service.GetFilterParser(t.Sess)
 	userInputMessageChan := make(chan *session.Message, 1)
@@ -279,8 +295,12 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 	activeDetectTicker := time.NewTicker(time.Minute)
 	defer activeDetectTicker.Stop()
 	latestActive := time.Now()
+
 	for {
 		select {
+		case event := <-eventChan.eventCh:
+			go t.handleEvent(event)
+			continue
 		case err = <-exit:
 			logger.Infof("Session[%s] Connection exit %+v", t, err)
 			if !t.recordStatus.Load() {
@@ -339,6 +359,7 @@ func (t *Connection) HandleTask(task *model.TerminalTask) error {
 		p, _ := json.Marshal(data)
 		ins := NewJmsEventInstruction("session_resume", string(p))
 		_ = t.SendWsMessage(ins)
+		t.notifySessionAction(ShareSessionResume, task.Kwargs.CreatedByUser)
 	case model.TaskLockSession:
 		t.lockedStatus.Store(true)
 		t.operatorUser.Store(task.Kwargs.CreatedByUser)
@@ -348,6 +369,7 @@ func (t *Connection) HandleTask(task *model.TerminalTask) error {
 		p, _ := json.Marshal(data)
 		ins := NewJmsEventInstruction("session_pause", string(p))
 		_ = t.SendWsMessage(ins)
+		t.notifySessionAction(ShareSessionPause, task.Kwargs.CreatedByUser)
 	case model.TaskKillSession:
 		t.recordStatus.Store(true)
 		username := task.Kwargs.TerminatedBy
@@ -373,7 +395,7 @@ func (t *Connection) IsPermissionExpired(now time.Time) bool {
 func (t *Connection) CloneMonitorTunnel() (*guacd.Tunnel, error) {
 	info := guacd.NewClientInformation()
 	conf := guacd.NewConfiguration()
-	conf.ConnectionID = t.guacdTunnel.UUID
+	conf.ConnectionID = t.guacdTunnel.UUID()
 	guacdAddr := t.guacdAddr
 	monitorTunnel, err := guacd.NewTunnel(guacdAddr, conf, info)
 	if err != nil {
@@ -447,4 +469,66 @@ func (t *Connection) generateCommandResult(item *session.ExecutedCommand) *model
 		riskLevel = model.NormalLevel
 	}
 	return t.Service.GenerateCommandItem(t.Sess, user, input, output, riskLevel, item.CreatedDate)
+}
+
+func (t *Connection) handleEvent(eventMsg *Event) {
+	logger.Debugf("Session[%s] handle event: %s", t, eventMsg.Type)
+	switch eventMsg.Type {
+	case ShareJoin:
+		var meta MetaShareUserMessage
+		if err := json.Unmarshal(eventMsg.Data, &meta); err != nil {
+			logger.Errorf("Session[%s] unmarshal meta message err: %s", t, err)
+			return
+		}
+		key := meta.User + meta.Created
+		t.traceLock.Lock()
+		t.currentOnlineUsers[key] = meta
+		t.traceLock.Unlock()
+		defer t.notifyShareUsers()
+		if t.meta.ShareId == meta.ShareId {
+			logger.Info("Ignore self join event")
+			return
+		}
+		if t.lockedStatus.Load() {
+			user := t.operatorUser.Load().(string)
+			defer t.notifySessionAction(ShareSessionPause, user)
+		}
+	case ShareExit:
+		var meta MetaShareUserMessage
+		if err := json.Unmarshal(eventMsg.Data, &meta); err != nil {
+			logger.Errorf("Session[%s] unmarshal meta message err: %s", t, err)
+			return
+		}
+		key := meta.User + meta.Created
+		t.traceLock.Lock()
+		delete(t.currentOnlineUsers, key)
+		t.traceLock.Unlock()
+		defer t.notifyShareUsers()
+	case ShareUsers:
+	case ShareRemoveUser,
+		ShareSessionPause,
+		ShareSessionResume:
+		return
+	}
+	inst := NewJmsEventInstruction(eventMsg.Type, string(eventMsg.Data))
+	_ = t.SendWsMessage(inst)
+}
+
+func (t *Connection) notifyShareUsers() {
+	t.traceLock.Lock()
+	body, _ := json.Marshal(t.currentOnlineUsers)
+	t.traceLock.Unlock()
+	t.Cache.BroadcastSessionEvent(t.Sess.ID, &Event{
+		Type: ShareUsers,
+		Data: body,
+	})
+}
+
+func (t *Connection) notifySessionAction(action string, user string) {
+	data := map[string]interface{}{
+		"user": user,
+	}
+	p, _ := json.Marshal(data)
+	t.Cache.BroadcastSessionEvent(t.Sess.ID,
+		&Event{Type: action, Data: p})
 }

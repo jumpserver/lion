@@ -1,6 +1,6 @@
 module lion
 
-go 1.21
+go 1.22
 
 require (
 	github.com/Azure/azure-storage-blob-go v0.13.0

@@ -1,9 +1,13 @@
-import { del, post } from '../plugins/request'
+import { post } from '@/plugins/request'
 
-export function createSession(url, data) {
-  return post(url + '/session', data, {})
+export function createShareURL(data) {
+  return post(`/lion/api/share/`, data)
 }
 
-export function deleteSession(url, sid) {
-  return del(url + `/sessions/${sid}/`, {})
+export function getShareSession(id, data) {
+  return post(`/lion/api/share/${id}/`, data)
+}
+
+export function removeShareUser(data) {
+  return post(`/lion/api/share/remove/`, data)
 }

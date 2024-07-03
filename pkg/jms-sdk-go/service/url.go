@@ -49,3 +49,9 @@ const (
 
 	SuperConnectTokenVirtualAppOptionURL = "/api/v1/authentication/super-connection-token/virtual-app-option/"
 )
+
+const (
+	ShareCreateURL        = "/api/v1/terminal/session-sharings/"
+	ShareSessionJoinURL   = "/api/v1/terminal/session-join-records/"
+	ShareSessionFinishURL = "/api/v1/terminal/session-join-records/%s/finished/"
+)

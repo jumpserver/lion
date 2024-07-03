@@ -14,7 +14,8 @@ export const ErrorStatusCodes = {
   1007: 'JMSErrGatewayFailed',
   1008: 'JMSErrGuacamoleServer',
   1009: 'JMSErrDisconnected',
-  1010: 'JMSErrMaxSession'
+  1010: 'JMSErrMaxSession',
+  1011: 'JMSErrRemoveShareUser'
 }
 
 export function ConvertAPIError(errMsg) {
