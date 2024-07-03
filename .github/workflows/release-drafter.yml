@@ -52,13 +52,3 @@ jobs:
             build/*.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: sync lion-release
-        env:
-          REPO_URL: jumpserver/lion-release
-          TAG_NAME: ${{ steps.get_version.outputs.TAG }}
-          BRANCH: master
-          ACCESS_TOKEN: ${{ secrets.PRIVATE_TOKEN }}
-          FILE_PATTERN: build/*.gz
-        run:  |
-          wget "https://github.com/LeeEirc/ghaction/releases/download/v0.0.2/ghrcreate-linux-amd64"
-          chmod +x ghrcreate-linux-amd64 && ./ghrcreate-linux-amd64
