@@ -1,0 +1,41 @@
+FROM golang:1.22-bullseye AS stage-go-build
+
+FROM node:20.15-bullseye
+COPY --from=stage-go-build /usr/local/go/ /usr/local/go/
+COPY --from=stage-go-build /go/ /go/
+ENV GOPATH=/go
+ENV PATH=/go/bin:/usr/local/go/bin:$PATH
+ARG TARGETARCH
+ARG NPM_REGISTRY="https://registry.npmmirror.com"
+ENV NPM_REGISTY=$NPM_REGISTRY
+
+RUN set -ex \
+    && npm config set registry ${NPM_REGISTRY} \
+    && yarn config set registry ${NPM_REGISTRY}
+
+WORKDIR /opt
+
+ARG CHECK_VERSION=v1.0.3
+RUN set -ex \
+    && wget https://github.com/jumpserver-dev/healthcheck/releases/download/${CHECK_VERSION}/check-${CHECK_VERSION}-linux-${TARGETARCH}.tar.gz \
+    && tar -xf check-${CHECK_VERSION}-linux-${TARGETARCH}.tar.gz \
+    && mv check /usr/local/bin/ \
+    && chown root:root /usr/local/bin/check \
+    && chmod 755 /usr/local/bin/check \
+    && rm -f check-${CHECK_VERSION}-linux-${TARGETARCH}.tar.gz
+
+WORKDIR /opt/lion/ui
+
+RUN --mount=type=cache,target=/usr/local/share/.cache/yarn,sharing=locked,id=lion \
+    --mount=type=bind,source=ui/package.json,target=package.json \
+    --mount=type=bind,source=ui/yarn.lock,target=yarn.lock \
+    yarn install
+
+ENV CGO_ENABLED=0
+ENV GO111MODULE=on
+
+WORKDIR /opt/lion
+
+COPY go.mod go.sum ./
+
+RUN go mod download -x
