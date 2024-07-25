@@ -102,6 +102,11 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 
 	// 查询缓存的 connection，未找到则创建新的 connection
 	if tun := g.Cache.Get(sessionId); tun != nil {
+		if tun.Sess.User.ID != user.ID {
+			logger.Errorf("No session tunnel found %s", sessionId)
+			_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrNoSession.String()))
+			return
+		}
 		p, _ := json.Marshal(tun.Sess)
 		ins := NewJmsEventInstruction("session", string(p))
 		if err = ws.WriteMessage(websocket.TextMessage, []byte(ins.String())); err != nil {
@@ -110,14 +115,6 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 		}
 		logger.Errorf("Session %s already connected", sessionId)
 		tun.ReConnect(ws)
-		//if err = tun.Sess.DisConnectedCallback(); err != nil {
-		//	logger.Errorf("Session DisConnectedCallback err: %+v", err)
-		//}
-		//info := g.getClientInfo(ctx)
-		//if err = tun.Sess.FinishReplayCallback(info); err != nil {
-		//	logger.Errorf("Session Replay upload err: %+v", err)
-		//}
-		//logger.Infof("Session[%s] disconnect", sessionId)
 		return
 	}
 
