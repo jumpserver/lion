@@ -1,6 +1,6 @@
 ARG VERSION
 
-FROM registry.fit2cloud.com/jumpserver/lion:${VERSION}-ce
+FROM jumpserver/lion:${VERSION}-ce
 ARG TARGETARCH
 
 ARG DEPENDENCIES="                    \
