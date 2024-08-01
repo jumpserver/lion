@@ -9,16 +9,14 @@ COPY . .
 
 WORKDIR /opt/lion/ui
 
-RUN --mount=type=cache,target=/usr/local/share/.cache/yarn,sharing=locked,id=lion \
-    yarn build
+RUN yarn build
 
 WORKDIR /opt/lion/
 
 ARG VERSION
 ENV VERSION=$VERSION
 
-RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked,id=lion \
-    export GOFlAGS="-X 'main.Buildstamp=`date -u '+%Y-%m-%d %I:%M:%S%p'`'" \
+RUN export GOFlAGS="-X 'main.Buildstamp=`date -u '+%Y-%m-%d %I:%M:%S%p'`'" \
     && export GOFlAGS="${GOFlAGS} -X 'main.Githash=`git rev-parse HEAD`'" \
     && export GOFlAGS="${GOFlAGS} -X 'main.Goversion=`go version`'" \
     && export GOFlAGS="${GOFlAGS} -X 'main.Version=${VERSION}'" \
