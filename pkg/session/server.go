@@ -252,9 +252,15 @@ func (s *Server) Create(ctx *gin.Context, opts ...TunnelOption) (sess TunnelSess
 	sess.AppletOpts = opt.appletOpt
 	sess.VirtualAppOpts = opt.virtualAppOPt
 	sess.AuthInfo = opt.authInfo
+	comment := ""
 	if opt.appletOpt != nil {
 		sess.RemoteApp = &opt.appletOpt.Applet
+		comment = fmt.Sprintf(appletCommentTmpl,
+			opt.appletOpt.Host.String(),
+			opt.appletOpt.Account.String(),
+			opt.appletOpt.Applet.Name)
 	}
+
 	sess.User = opt.User
 	sess.ExpireInfo = opt.ExpireInfo
 	sess.Permission = &perm
@@ -273,6 +279,7 @@ func (s *Server) Create(ctx *gin.Context, opts ...TunnelOption) (sess TunnelSess
 		UserID:     sess.User.ID,
 		AssetID:    sess.Asset.ID,
 		AccountID:  opt.Account.ID,
+		Comment:    comment,
 	}
 	sess.ConnectedCallback = s.RegisterConnectedCallback(jmsSession)
 	sess.ConnectedSuccessCallback = s.RegisterConnectedSuccessCallback(jmsSession)
@@ -496,3 +503,9 @@ func ValidReplayDirname(dirname string) bool {
 	_, err := time.Parse(recordDirTimeFormat, dirname)
 	return err == nil
 }
+
+const appletCommentTmpl = `
+AppletHost: %s
+Account: %s
+Applet：%s
+`
