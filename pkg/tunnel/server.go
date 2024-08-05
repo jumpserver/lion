@@ -1,6 +1,7 @@
 package tunnel
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -236,7 +237,7 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 
 	conn := Connection{
 		guacdAddr:   guacdAddr,
-		Sess:        tunnelSession,
+		Sess:        &tunnelSession,
 		guacdTunnel: tunnel,
 		Service:     g.SessionService,
 		ws:          ws,
