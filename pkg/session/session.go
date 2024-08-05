@@ -96,6 +96,7 @@ func (s TunnelSession) configurationRemoteAppRDP() guacd.Configuration {
 		User:           s.User,
 		Asset:          &appletOpt.Host,
 		Account:        &appletOpt.Account,
+		Platform:       s.Platform,
 		TerminalConfig: s.TerminalConfig,
 		ActionsPerm:    s.ActionPerm,
 	}

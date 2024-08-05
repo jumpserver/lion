@@ -39,6 +39,7 @@ all: lion-ui
 	$(call make_artifact_full,darwin,arm64)
 	$(call make_artifact_full,linux,amd64)
 	$(call make_artifact_full,linux,arm64)
+	$(call make_artifact_full,linux,mips64le)
 	$(call make_artifact_full,linux,ppc64le)
 	$(call make_artifact_full,linux,s390x)
 	$(call make_artifact_full,linux,riscv64)
@@ -63,6 +64,9 @@ linux-loong64: lion-ui
 
 linux-ppc64le: lion-ui
 	$(call make_artifact_full,linux,ppc64le)
+
+linux-mips64le: lion-ui
+	$(call make_artifact_full,linux,mips64le)
 
 linux-s390x: lion-ui
 	$(call make_artifact_full,linux,s390x)

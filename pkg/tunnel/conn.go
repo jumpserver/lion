@@ -47,6 +47,8 @@ type Connection struct {
 	guacdTunnel *guacd.Tunnel
 	Service     *session.Server
 
+	guacdAddr string
+
 	ws *websocket.Conn
 
 	wsLock    sync.Mutex
@@ -147,11 +149,16 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 	t.inactiveChan = make(chan struct{})
 	t.guacdConnect = sync.Map{}
 	t.guacdConnect.Store(t.guacdTunnel, struct{}{})
+	exit := make(chan error, 2)
+	noNopTime := time.Now()
+	maxNopTimeout := time.Minute * 5
+	var requiredErr guacd.Instruction
 	go func(t *Connection) {
 		for {
 			instruction, err := t.readTunnelInstruction()
 			if err != nil {
 				logger.Errorf("Session[%s] guacamole server read err: %+v", t, err)
+				exit <- err
 				break
 			}
 
@@ -166,8 +173,30 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 				}
 			}
 
+			switch instruction.Opcode {
+			case guacd.InstructionClientNop:
+				if time.Now().Sub(noNopTime) > maxNopTimeout {
+					logger.Errorf("Session[%s] guacamole server nop timeout", t)
+					if requiredErr.Opcode != "" {
+						logger.Errorf("Session[%s] send guacamole server required err: %s", t,
+							requiredErr.String())
+						_ = t.writeWsMessage([]byte(requiredErr.String()))
+						requiredErr = guacd.Instruction{}
+						continue
+					}
+
+				}
+			case guacd.InstructionRequired:
+				msg := fmt.Sprintf("required: %s", strings.Join(instruction.Args, ","))
+				logger.Infof("Session[%s] receive guacamole server required: %s", t, msg)
+				requiredErr = guacd.NewInstruction(guacd.InstructionServerError, msg)
+			default:
+				noNopTime = time.Now()
+			}
+
 			if err = t.writeWsMessage([]byte(instruction.String())); err != nil {
 				logger.Errorf("Session[%s] send web client err: %+v", t, err)
+				exit <- err
 				break
 			}
 		}
@@ -184,6 +213,7 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 				} else {
 					logger.Errorf("Session[%s] web client read err: %+v", t, err1)
 				}
+				exit <- err1
 				break
 			}
 
@@ -212,6 +242,7 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 					_, err4 := t.writeTunnelMessage(message)
 					if err4 != nil {
 						logger.Errorf("Session[%s] guacamole server write err: %+v", t, err2)
+						exit <- err4
 						break
 					}
 					logger.Debugf("Session[%s] send guacamole server message when locked status", t)
@@ -224,6 +255,7 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 						Opcode: ret.Opcode, Body: ret.Args,
 						Meta: meta}
 				default:
+
 				}
 
 				switch ret.Opcode {
@@ -249,6 +281,7 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 			_, err = t.writeTunnelMessage(message)
 			if err != nil {
 				logger.Errorf("Session[%s] guacamole server write err: %+v", t, err)
+				exit <- err
 				break
 			}
 		}
@@ -276,6 +309,8 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 				_ = t.SendWsMessage(errSession.Instruction())
 				logger.Errorf("Session[%s] terminated by max session time %d hour",
 					t, maxSessionTimeInt)
+				reason := model.SessionLifecycleLog{Reason: string(model.ReasonErrMaxSessionTimeout)}
+				t.Service.RecordLifecycleLog(t.Sess.ID, model.AssetConnectFinished, reason)
 				return nil
 			}
 			if detectTime.After(latestActive.Add(maxIdleMinutes)) {
@@ -283,6 +318,8 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 				_ = t.SendWsMessage(errIdle.Instruction())
 				logger.Errorf("Session[%s] terminated by %d min timeout",
 					t, maxIndexTime)
+				reason := model.SessionLifecycleLog{Reason: string(model.ReasonErrIdleDisconnect)}
+				t.Service.RecordLifecycleLog(t.Sess.ID, model.AssetConnectFinished, reason)
 				return nil
 			}
 			if detectTime.After(latestInActive.Add(maxInActiveMinutes)) {
@@ -293,6 +330,8 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 			if t.IsPermissionExpired(detectTime) {
 				_ = t.SendWsMessage(ErrPermissionExpired.Instruction())
 				logger.Errorf("Session[%s] permission has expired", t)
+				reason := model.SessionLifecycleLog{Reason: string(model.ReasonErrPermissionExpired)}
+				t.Service.RecordLifecycleLog(t.Sess.ID, model.AssetConnectFinished, reason)
 				return nil
 			}
 		}
@@ -321,9 +360,12 @@ func (t *Connection) HandleTask(task *model.TerminalTask) error {
 		ins := NewJmsEventInstruction("session_pause", string(p))
 		_ = t.SendWsMessage(ins)
 	case model.TaskKillSession:
+		t.recordStatus.Store(true)
 		username := task.Kwargs.TerminatedBy
 		ins := NewJMSGuacamoleError(1005, username)
 		_ = t.SendWsMessage(ins.Instruction())
+		reason := model.SessionLifecycleLog{Reason: string(model.ReasonErrAdminTerminate)}
+		t.Service.RecordLifecycleLog(t.Sess.ID, model.AssetConnectFinished, reason)
 	default:
 		return fmt.Errorf("unknown task %s", task.Name)
 	}
@@ -343,8 +385,7 @@ func (t *Connection) CloneMonitorTunnel() (*guacd.Tunnel, error) {
 	info := guacd.NewClientInformation()
 	conf := guacd.NewConfiguration()
 	conf.ConnectionID = t.guacdTunnel.UUID
-	guacdAddr := net.JoinHostPort(config.GlobalConfig.GuaHost,
-		config.GlobalConfig.GuaPort)
+	guacdAddr := t.guacdAddr
 	monitorTunnel, err := guacd.NewTunnel(guacdAddr, conf, info)
 	if err != nil {
 		return nil, err

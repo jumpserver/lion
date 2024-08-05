@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"net/url"
 	"strings"
 
 	"lion/pkg/jms-sdk-go/model"
@@ -86,10 +87,7 @@ func GetStorage(cfg model.ReplayConfig) Storage {
 		secretKey = cfg.SecretKey
 
 		if region == "" && endpoint != "" {
-			endpointArray := strings.Split(endpoint, ".")
-			if len(endpointArray) >= 2 {
-				region = endpointArray[1]
-			}
+			region = ParseEndpointRegion(endpoint)
 		}
 		if bucket == "" {
 			bucket = "jumpserver"
@@ -188,3 +186,35 @@ func NewCommandStorage(jmsService *service.JMService, conf *model.TerminalConfig
 		return ServerStorage{StorageType: "server", JmsService: jmsService}
 	}
 }
+
+func ParseEndpointRegion(s string) string {
+	if strings.Contains(s, amazonawsSuffix) {
+		return ParseAWSURLRegion(s)
+	}
+	endpoint, err := url.Parse(s)
+	if err != nil {
+		return ""
+	}
+	endpoints := strings.Split(endpoint.Hostname(), ".")
+	if len(endpoints) >= 3 {
+		return endpoints[len(endpoints)-3]
+	}
+	return ""
+}
+
+func ParseAWSURLRegion(s string) string {
+	endpoint, err := url.Parse(s)
+	if err != nil {
+		return ""
+	}
+	s = endpoint.Hostname()
+	s = strings.TrimSuffix(s, amazonawsCNSuffix)
+	s = strings.TrimSuffix(s, amazonawsSuffix)
+	regions := strings.Split(s, ".")
+	return regions[len(regions)-1]
+}
+
+const (
+	amazonawsCNSuffix = ".amazonaws.com.cn"
+	amazonawsSuffix   = ".amazonaws.com"
+)

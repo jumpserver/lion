@@ -15,7 +15,7 @@
         </div>
       </el-row>
     </el-main>
-    <RightPanel>
+    <RightPanel ref="panel">
       <Settings :settings="settings" :title="$t('Settings')">
         <el-button type="text" class="item-button el-icon-c-scale-to-original">
           {{ $t('Display') }}
@@ -156,7 +156,7 @@ export default {
           name: 'Alt+Tab'
         }
       ],
-      scale: 1,
+      scale: 0.1,
       timeout: null,
       origin: null,
       lunaId: null,
@@ -192,7 +192,7 @@ export default {
         {
           title: this.$t('Clipboard'),
           icon: 'el-icon-document-copy',
-          disabled: () => ((!this.clipboardInited) || this.menuDisable),
+          disabled: () => (this.menuDisable || !this.clipboardInited),
           click: () => (this.toggleClipboard())
         },
         {
@@ -312,6 +312,9 @@ export default {
           this.origin = evt.origin
           this.sendEventToLuna('PONG', null)
           break
+        case 'OPEN':
+          this.$refs.panel.toggle()
+          break
       }
       console.log('Lion got post msg: ', msg)
     },
@@ -338,15 +341,16 @@ export default {
     },
 
     getAutoSize() {
-      const width = this.displayWidth
-      const height = this.displayHeight
+      const width = window.innerWidth - sideWidth
+      const height = window.innerHeight
       this.$log.debug('auto size:', width, height)
       return [width, height]
     },
 
     getGuaSize() {
       const lunaSetting = localStorageGet('LunaSetting') || {}
-      const solution = lunaSetting['rdpResolution']
+      const graphics = lunaSetting['graphics'] || {}
+      const solution = graphics['rdp_resolution']
       if (!solution || solution.toLowerCase() === 'auto' || solution.indexOf('x') === -1) {
         this.$log.debug('Solution invalid: ', solution)
         return this.getAutoSize()
@@ -581,7 +585,7 @@ export default {
       // Do not attempt to handle mouse state changes if the client
       // or display are not yet available
       if (!this.client || !this.display) { return }
-
+      this.sendEventToLuna('MOUSEEVENT', '')
       // Send mouse state, show cursor if necessary
       this.display.showCursor(!this.localCursor)
       this.sendScaledMouseState(mouseState)
@@ -698,8 +702,7 @@ export default {
     displayResize(width, height) {
       // 监听guacamole display的变化
       this.$log.debug('Display resize: ', width, height)
-      const scale = this.getPropScale()
-      this.display.scale(scale)
+      this.updateDisplayScale()
     },
 
     onWindowFocus() {
@@ -857,12 +860,14 @@ export default {
         if (this.isRemoteApp && keysym === 65511) {
           return
         }
+        this.sendEventToLuna('KEYBOARDEVENT', '')
         this.client.sendKeyEvent(1, keysym)
       }
       keyboard.onkeyup = (keysym) => {
         if (this.isRemoteApp && keysym === 65511) {
           return
         }
+        this.sendEventToLuna('KEYBOARDEVENT', '')
         this.client.sendKeyEvent(0, keysym)
       }
       this.keyboard = keyboard

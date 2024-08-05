@@ -1,7 +1,6 @@
 package tunnel
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -210,10 +209,12 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	}
 
 	var tunnel *guacd.Tunnel
-	guacdAddr := net.JoinHostPort(config.GlobalConfig.GuaHost, config.GlobalConfig.GuaPort)
+	guacdAddr := config.GlobalConfig.SelectGuacdAddr()
+
 	tunnel, err = guacd.NewTunnel(guacdAddr, conf, info)
 	if err != nil {
 		logger.Errorf("Connect tunnel err: %+v", err)
+		msg := fmt.Sprintf("Connect guacd server %s failed", guacdAddr)
 		_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrGuacamoleServer.String()))
 		if err = tunnelSession.ConnectedFailedCallback(err); err != nil {
 			logger.Errorf("Update session connect status failed %+v", err)
@@ -221,23 +222,26 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 		if err = tunnelSession.DisConnectedCallback(); err != nil {
 			logger.Errorf("Session DisConnectedCallback err: %+v", err)
 		}
+		reason := model.SessionLifecycleLog{Reason: msg}
+		g.RecordLifecycleLog(sessionId, model.AssetConnectFinished, reason)
 		return
 	}
 	defer tunnel.Close()
-	if err := tunnelSession.ConnectedSuccessCallback(); err != nil {
-		logger.Errorf("Update session connect status failed %+v", err)
+	g.RecordLifecycleLog(sessionId, model.AssetConnectSuccess, model.EmptyLifecycleLog)
+	if err1 := tunnelSession.ConnectedSuccessCallback(); err1 != nil {
+		logger.Errorf("Update session connect status failed %+v", err1)
 	}
 	logger.Infof("Session[%s] use resolution (%d*%d)",
 		sessionId, info.OptimalScreenWidth, info.OptimalScreenHeight)
 
 	conn := Connection{
-		Sess:        &tunnelSession,
+		guacdAddr:   guacdAddr,
+		Sess:        tunnelSession,
 		guacdTunnel: tunnel,
 		Service:     g.SessionService,
 		ws:          ws,
 		done:        make(chan struct{}),
 	}
-
 	outFilter := OutputStreamInterceptingFilter{
 		acknowledgeBlobs: true,
 		tunnel:           &conn,
@@ -292,6 +296,13 @@ func (g *GuacamoleTunnelServer) CreateSession(ctx *gin.Context) {
 	}
 	g.SessCache.Add(&connectSession)
 	ctx.JSON(http.StatusCreated, SuccessResponse(connectSession))
+}
+
+func (g *GuacamoleTunnelServer) RecordLifecycleLog(sid string, event model.LifecycleEvent,
+	logObj model.SessionLifecycleLog) {
+	if err := g.JmsService.RecordSessionLifecycleLog(sid, event, logObj); err != nil {
+		logger.Errorf("Record session %s lifecycle %s log err: %s", sid, event, err)
+	}
 }
 
 func (g *GuacamoleTunnelServer) TokenSession(ctx *gin.Context) {
