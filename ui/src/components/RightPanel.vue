@@ -6,6 +6,9 @@
   >
     <div class="background" />
     <div class="right-panel">
+      <div ref="dragDiv" class="handle-button">
+        <i :class="show ? 'el-icon-close':'el-icon-setting'" />
+      </div>
       <div class="right-panel-items">
         <slot />
       </div>
@@ -42,7 +45,7 @@ export default {
     }
   },
   mounted() {
-    // this.init()
+    this.init()
     this.insertToBody()
   },
   beforeDestroy() {

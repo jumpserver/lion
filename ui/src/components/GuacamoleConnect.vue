@@ -15,7 +15,7 @@
         </div>
       </el-row>
     </el-main>
-    <RightPanel ref="panel">
+    <RightPanel>
       <Settings :settings="settings" :title="$t('Settings')">
         <el-button type="text" class="item-button el-icon-c-scale-to-original">
           {{ $t('Display') }}
