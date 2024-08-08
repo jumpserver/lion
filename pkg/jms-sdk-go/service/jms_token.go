@@ -15,7 +15,7 @@ func (s *JMService) GetTokenAsset(token string) (tokenUser model.TokenUser, err 
 func (s *JMService) GetConnectTokenInfo(tokenId string, expireNow bool) (resp model.ConnectToken, err error) {
 	data := map[string]interface{}{
 		"id":         tokenId,
-		"expire_now": expireNow,
+		"expire_now": false,
 	}
 	_, err = s.authClient.Post(SuperConnectTokenSecretURL, data, &resp)
 	return
