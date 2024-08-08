@@ -10,6 +10,9 @@ type TerminalConfig struct {
 	HeartbeatDuration   int                    `json:"TERMINAL_HEARTBEAT_INTERVAL"`
 	HostKey             string                 `json:"TERMINAL_HOST_KEY"`
 	MaxStoreFTPFileSize int                    `json:"FTP_FILE_MAX_STORE"`
+	WatermarkDate       bool                   `json:"SECURITY_WATERMARK_DATE"`
+	WatermarkAlpha      float64                `json:"SECURITY_WATERMARK_ALPHA"`
+	WatermarkContent    string                 `json:"SECURITY_WATERMARK_CONTENT"`
 }
 
 type Terminal struct {

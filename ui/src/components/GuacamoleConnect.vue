@@ -776,21 +776,24 @@ export default {
         }
         case 'session': {
           this.session = dataObj
-          const match = this.session.asset.name.match(/alpha:(\d+\.\d+)/)
-          let number
-          if (match) {
-            number = match[1]
-          } else {
-            number = 0.1
+          const alpha = this.session.terminal_config.SECURITY_WATERMARK_ALPHA
+          const showDate = this.session.terminal_config.SECURITY_WATERMARK_DATE
+          const content = this.session.terminal_config.SECURITY_WATERMARK_CONTENT
+          let watermark = `${this.session.user.name}(${this.session.user.username})\n${this.session.asset.name}`
+          if (content) {
+            watermark += '\n' + content
           }
-          const watermark = `${this.session.user.name}(${this.session.user.username})\n${this.session.asset.name}`
+          if (showDate) {
+            const now = new Date()
+            watermark += '\n' + now.getFullYear() + '-' + (now.getMonth() + 1) + '-' + now.getDate()
+          }
           canvasWaterMark({ container: document.body, content: watermark, settings: {
-            width: 300,
-            height: 300,
+            width: 360,
+            height: 360,
             textAlign: 'center',
             textBaseline: 'middle',
-            alpha: number,
-            font: '20px monaco, microsoft yahei',
+            alpha: alpha,
+            font: '16px monaco, microsoft yahei',
             fillStyle: 'rgba(184, 184, 184, 0.8)',
             rotate: -45,
             zIndex: 1000
