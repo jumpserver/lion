@@ -250,8 +250,8 @@ export default {
         { label: this.getMinuteLabel(60), value: 60 }
       ],
       actionsPermOptions: [
-        { label: this.$t('Writable'), value: 'writable' },
-        { label: this.$t('ReadOnly'), value: 'readonly' }
+        { label: i18n.t('Writable'), value: 'writable' },
+        { label: i18n.t('ReadOnly'), value: 'readonly' }
       ],
       userOptions: [],
       userLoading: false,
@@ -392,9 +392,9 @@ export default {
       return `${BASE_URL}/lion/share/${this.shareId}/`
     },
     getMinuteLabel(item) {
-      let minuteLabel = this.$t('Minute')
+      let minuteLabel = i18n.t('Minute')
       if (item > 1) {
-        minuteLabel = this.$t('Minutes')
+        minuteLabel = i18n.t('Minutes')
       }
       return `${item} ${minuteLabel}`
     },
