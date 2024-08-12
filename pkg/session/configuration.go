@@ -77,14 +77,14 @@ func (r RDPConfiguration) GetGuacdConfiguration() guacd.Configuration {
 		conf.SetParameter(guacd.RDPDomain, adDomain)
 	}
 
-	// 设置 录像路径
-	if r.TerminalConfig.ReplayStorage.TypeName != "null" {
-		recordDirPath := filepath.Join(config.GlobalConfig.RecordPath,
-			r.Created.Format(recordDirTimeFormat))
-		conf.SetParameter(guacd.RecordingPath, recordDirPath)
-		conf.SetParameter(guacd.CreateRecordingPath, BoolTrue)
-		conf.SetParameter(guacd.RecordingName, r.SessionId)
-	}
+	//// 设置 录像路径
+	//if r.TerminalConfig.ReplayStorage.TypeName != "null" {
+	//	recordDirPath := filepath.Join(config.GlobalConfig.RecordPath,
+	//		r.Created.Format(recordDirTimeFormat))
+	//	conf.SetParameter(guacd.RecordingPath, recordDirPath)
+	//	conf.SetParameter(guacd.CreateRecordingPath, BoolTrue)
+	//	conf.SetParameter(guacd.RecordingName, r.SessionId)
+	//}
 
 	// display 相关
 	{
@@ -181,13 +181,13 @@ func (r VNCConfiguration) GetGuacdConfiguration() guacd.Configuration {
 		conf.SetParameter(guacd.VNCAutoretry, "3")
 	}
 	// 设置存储
-	replayCfg := r.TerminalConfig.ReplayStorage
-	if replayCfg.TypeName != "null" {
-		recordDirPath := filepath.Join(config.GlobalConfig.RecordPath, r.Created.Format(recordDirTimeFormat))
-		conf.SetParameter(guacd.RecordingPath, recordDirPath)
-		conf.SetParameter(guacd.CreateRecordingPath, BoolTrue)
-		conf.SetParameter(guacd.RecordingName, r.SessionId)
-	}
+	//replayCfg := r.TerminalConfig.ReplayStorage
+	//if replayCfg.TypeName != "null" {
+	//	recordDirPath := filepath.Join(config.GlobalConfig.RecordPath, r.Created.Format(recordDirTimeFormat))
+	//	conf.SetParameter(guacd.RecordingPath, recordDirPath)
+	//	conf.SetParameter(guacd.CreateRecordingPath, BoolTrue)
+	//	conf.SetParameter(guacd.RecordingName, r.SessionId)
+	//}
 	{
 		for key, value := range VNCDisplay.GetDisplayParams() {
 			conf.SetParameter(key, value)
@@ -247,13 +247,13 @@ func (r VirtualAppConfiguration) GetGuacdConfiguration() guacd.Configuration {
 		conf.SetParameter(guacd.VNCAutoretry, "10")
 	}
 	// 设置存储
-	replayCfg := r.TerminalConfig.ReplayStorage
-	if replayCfg.TypeName != "null" {
-		recordDirPath := filepath.Join(config.GlobalConfig.RecordPath, r.Created.Format(recordDirTimeFormat))
-		conf.SetParameter(guacd.RecordingPath, recordDirPath)
-		conf.SetParameter(guacd.CreateRecordingPath, BoolTrue)
-		conf.SetParameter(guacd.RecordingName, r.SessionId)
-	}
+	//replayCfg := r.TerminalConfig.ReplayStorage
+	//if replayCfg.TypeName != "null" {
+	//	recordDirPath := filepath.Join(config.GlobalConfig.RecordPath, r.Created.Format(recordDirTimeFormat))
+	//	conf.SetParameter(guacd.RecordingPath, recordDirPath)
+	//	conf.SetParameter(guacd.CreateRecordingPath, BoolTrue)
+	//	conf.SetParameter(guacd.RecordingName, r.SessionId)
+	//}
 	{
 		for key, value := range VNCDisplay.GetDisplayParams() {
 			conf.SetParameter(key, value)
