@@ -16,24 +16,10 @@ import (
 	"lion/pkg/session"
 )
 
-const recordDirTimeFormat = "2006-01-02"
-
-func NewReplayRecorder(tunnelSession *session.TunnelSession, guacdAddr string, conf guacd.Configuration, info guacd.ClientInformation) *ReplayRecorder {
-	// 2006-01-02
-	conf.SetParameter(guacd.READONLY, "true")
-	recordDirPath := filepath.Join(config.GlobalConfig.RecordPath,
-		tunnelSession.Created.Format(recordDirTimeFormat))
-	sessionReplayRootPath := filepath.Join(recordDirPath, tunnelSession.ID)
-	_ = os.MkdirAll(sessionReplayRootPath, os.ModePerm)
-	return &ReplayRecorder{
-		tunnelSession: tunnelSession,
-		SessionId:     tunnelSession.ID,
-		conf:          conf,
-		RootPath:      sessionReplayRootPath,
-		guacdAddr:     guacdAddr,
-		info:          info,
-	}
-}
+const (
+	recordDirTimeFormat = "2006-01-02"
+	maxSize             = 1024 * 1024 * 50
+)
 
 type ReplayRecorder struct {
 	tunnelSession *session.TunnelSession
@@ -43,8 +29,8 @@ type ReplayRecorder struct {
 	conf          guacd.Configuration
 	info          guacd.ClientInformation
 	wg            sync.WaitGroup
-	currentIndex  int
 	newChan       chan struct{}
+	currentIndex  int
 }
 
 func (r *ReplayRecorder) run(ctx context.Context) {
@@ -53,12 +39,12 @@ func (r *ReplayRecorder) run(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			logger.Infof("replay conn %s done", r.SessionId)
+			return
 		case <-r.newChan:
 			r.currentIndex++
 			r.startRecordPartReplay(ctx)
 		}
 	}
-
 }
 
 func (r *ReplayRecorder) startRecordPartReplay(ctx context.Context) {
@@ -71,12 +57,18 @@ func (r *ReplayRecorder) Start(ctx context.Context) {
 		logger.Infof("replay storage is null, not record")
 		return
 	}
+	recordDirPath := filepath.Join(config.GlobalConfig.RecordPath,
+		r.tunnelSession.Created.Format(recordDirTimeFormat))
+	sessionReplayRootPath := filepath.Join(recordDirPath, r.tunnelSession.ID)
+	_ = os.MkdirAll(sessionReplayRootPath, os.ModePerm)
+	r.RootPath = sessionReplayRootPath
 	go r.run(ctx)
 }
 
 func (r *ReplayRecorder) Stop() {
 	r.wg.Wait()
-	//
+	// todo: 上传分段的录像文件
+	logger.Infof("Replay recorder %s stop", r.SessionId)
 }
 
 func (r *ReplayRecorder) recordReplay(ctx context.Context, wg *sync.WaitGroup) {
@@ -149,8 +141,6 @@ func (r *ReplayRecorder) recordReplay(ctx context.Context, wg *sync.WaitGroup) {
 	}
 
 }
-
-const maxSize = 1024 * 1024 * 50
 
 func NewReplayConfiguration(conf *guacd.Configuration, connectionId string) guacd.Configuration {
 	newCfg := conf.Clone()

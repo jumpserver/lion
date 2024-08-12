@@ -1,7 +1,6 @@
 package guacd
 
 import (
-	"errors"
 	"testing"
 )
 
@@ -28,7 +27,6 @@ func TestValidateInstructionString(t *testing.T) {
 	for i := range tests {
 		ins, err := ParseInstructionString(tests[i])
 		if err != nil {
-			t.Log(errors.As(err, &ErrInstructionBadDigit))
 			t.Log(err)
 			continue
 		}
