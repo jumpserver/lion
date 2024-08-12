@@ -35,6 +35,8 @@ type TunnelSession struct {
 	FinishReplayCallback func(guacd.ClientInformation) error `json:"-"`
 
 	ReleaseAppletAccount func() error `json:"-"`
+
+	ModelSession *model.Session `json:"-"`
 }
 
 const (

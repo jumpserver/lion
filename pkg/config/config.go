@@ -23,6 +23,7 @@ type Config struct {
 	LogDirPath        string
 	AccessKeyFilePath string
 	CertsFolderPath   string
+	SessionFolderPath string
 
 	Name           string `mapstructure:"NAME"`
 	CoreHost       string `mapstructure:"CORE_HOST"`
@@ -56,6 +57,8 @@ type Config struct {
 	IgnoreVerifyCerts bool   `mapstructure:"IGNORE_VERIFY_CERTS"`
 	PandaHost         string `mapstructure:"PANDA_HOST"`
 	EnablePanda       bool   `mapstructure:"ENABLE_PANDA"`
+
+	ReplayMaxSize int `mapstructure:"REPLAY_MAX_SIZE"`
 }
 
 func (c *Config) SelectGuacdAddr() string {
@@ -81,6 +84,7 @@ func getDefaultConfig() Config {
 	dataFolderPath := filepath.Join(rootPath, "data")
 	driveFolderPath := filepath.Join(dataFolderPath, "drive")
 	recordFolderPath := filepath.Join(dataFolderPath, "replays")
+	sessionsPath := filepath.Join(dataFolderPath, "sessions")
 	ftpFileFolderPath := filepath.Join(dataFolderPath, "ftp_files")
 	LogDirPath := filepath.Join(dataFolderPath, "logs")
 	keyFolderPath := filepath.Join(dataFolderPath, "keys")
@@ -88,7 +92,7 @@ func getDefaultConfig() Config {
 	accessKeyFilePath := filepath.Join(keyFolderPath, ".access_key")
 
 	folders := []string{dataFolderPath, driveFolderPath, recordFolderPath,
-		keyFolderPath, LogDirPath, CertsFolderPath}
+		keyFolderPath, LogDirPath, CertsFolderPath, sessionsPath}
 	for i := range folders {
 		if err := EnsureDirExist(folders[i]); err != nil {
 			log.Fatalf("Create folder failed: %s", err.Error())
@@ -103,6 +107,7 @@ func getDefaultConfig() Config {
 		DrivePath:                 driveFolderPath,
 		CertsFolderPath:           CertsFolderPath,
 		AccessKeyFilePath:         accessKeyFilePath,
+		SessionFolderPath:         sessionsPath,
 		CoreHost:                  "http://localhost:8080",
 		BootstrapToken:            "",
 		BindHost:                  "0.0.0.0",
@@ -116,9 +121,13 @@ func getDefaultConfig() Config {
 		EnableRemoteAPPCopyPaste:  false,
 		CleanDriveScheduleTime:    1,
 		PandaHost:                 "http://localhost:9001",
+		ReplayMaxSize:             defaultMaxSize,
 	}
 
 }
+
+// 300MB
+const defaultMaxSize = 1024 * 1024 * 300
 
 func EnsureDirExist(path string) error {
 	if !haveDir(path) {

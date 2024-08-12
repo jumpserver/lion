@@ -250,6 +250,13 @@ func registerRouter(jmsService *service.JMService, tunnelService *tunnel.Guacamo
 			ctx.File("./ui/dist/index.html")
 		})
 	}
+	{
+		monitorGroup := lionGroup.Group("/replay")
+		monitorGroup.Use(middleware.JmsCookieAuth(jmsService))
+		monitorGroup.Any("", func(ctx *gin.Context) {
+			ctx.File("./ui/dist/index.html")
+		})
+	}
 
 	{
 		shareGroup := lionGroup.Group("/share")
@@ -282,6 +289,7 @@ func registerRouter(jmsService *service.JMService, tunnelService *tunnel.Guacamo
 
 		wsGroup.Group("/token").Use(
 			middleware.SessionAuth(jmsService)).GET("/", tunnelService.Connect)
+
 	}
 
 	{

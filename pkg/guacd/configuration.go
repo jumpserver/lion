@@ -22,3 +22,13 @@ func (conf *Configuration) UnSetParameter(name string) {
 func (conf *Configuration) GetParameter(name string) string {
 	return conf.Parameters[name]
 }
+
+func (conf *Configuration) Clone() Configuration {
+	newConf := NewConfiguration()
+	newConf.ConnectionID = conf.ConnectionID
+	newConf.Protocol = conf.Protocol
+	for k, v := range conf.Parameters {
+		newConf.Parameters[k] = v
+	}
+	return newConf
+}

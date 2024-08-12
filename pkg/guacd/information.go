@@ -69,3 +69,14 @@ func (info *ClientInformation) ExtraConfig() map[string]string {
 	}
 	return ret
 }
+
+func (info *ClientInformation) Clone() ClientInformation {
+	return ClientInformation{
+		OptimalScreenWidth:  info.OptimalScreenWidth,
+		OptimalScreenHeight: info.OptimalScreenHeight,
+		OptimalResolution:   info.OptimalResolution,
+		ImageMimetypes:      []string{"image/jpeg", "image/png", "image/webp"},
+		Timezone:            info.Timezone,
+		KeyboardLayout:      info.KeyboardLayout,
+	}
+}
