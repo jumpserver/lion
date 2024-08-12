@@ -59,9 +59,9 @@ func (r *ReplayRecorder) Start(ctx context.Context) {
 	}
 	recordDirPath := filepath.Join(config.GlobalConfig.RecordPath,
 		r.tunnelSession.Created.Format(recordDirTimeFormat))
-	sessionReplayRootPath := filepath.Join(recordDirPath, r.tunnelSession.ID)
-	_ = os.MkdirAll(sessionReplayRootPath, os.ModePerm)
-	r.RootPath = sessionReplayRootPath
+	rootPath := filepath.Join(recordDirPath, r.SessionId)
+	_ = os.MkdirAll(rootPath, os.ModePerm)
+	r.RootPath = rootPath
 	go r.run(ctx)
 }
 
@@ -145,6 +145,6 @@ func (r *ReplayRecorder) recordReplay(ctx context.Context, wg *sync.WaitGroup) {
 func NewReplayConfiguration(conf *guacd.Configuration, connectionId string) guacd.Configuration {
 	newCfg := conf.Clone()
 	newCfg.ConnectionID = connectionId
-	newCfg.SetParameter(guacd.READONLY, "true")
+	newCfg.SetParameter(guacd.READONLY, guacd.BoolTrue)
 	return newCfg
 }

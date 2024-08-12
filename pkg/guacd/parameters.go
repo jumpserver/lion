@@ -57,3 +57,8 @@ const (
 const (
 	READONLY = "read-only"
 )
+
+const (
+	BoolFalse = "false"
+	BoolTrue  = "true"
+)
