@@ -124,6 +124,7 @@ func NewTunnel(address string, config Configuration, info ClientInformation) (tu
 
 	tunnel.uuid = ready.Args[0]
 	tunnel.IsOpen = true
+	tunnel.Config = config
 	return tunnel, nil
 }
 

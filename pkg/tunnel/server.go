@@ -1,6 +1,7 @@
 package tunnel
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -249,13 +250,29 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	conn.inputFilter = &inputFilter
 	logger.Infof("Session[%s] connect success", sessionId)
 	g.Cache.Add(&conn)
+	replayRecorder := &ReplayRecorder{
+		tunnelSession: &tunnelSession,
+		SessionId:     tunnelSession.ID,
+		guacdAddr:     guacdAddr,
+		conf:          NewReplayConfiguration(&conf, tunnel.UUID()),
+		info:          info.Clone(),
+		newPartChan:   make(chan struct{}, 1),
+		MaxSize:       config.GlobalConfig.ReplayMaxSize,
+		apiClient:     g.JmsService,
+		currentIndex:  0,
+	}
+	childCtx, cancel := context.WithCancel(ctx)
+	replayRecorder.Start(childCtx)
+	defer func() {
+		cancel()
+		logger.Infof("replayRecorder[%s] stop", sessionId)
+		replayRecorder.Stop()
+
+	}()
 	_ = conn.Run(ctx)
 	g.Cache.Delete(&conn)
 	if err = tunnelSession.DisConnectedCallback(); err != nil {
 		logger.Errorf("Session DisConnectedCallback err: %+v", err)
-	}
-	if err = tunnelSession.FinishReplayCallback(info); err != nil {
-		logger.Errorf("Session Replay upload err: %+v", err)
 	}
 	logger.Infof("Session[%s] disconnect", sessionId)
 }
