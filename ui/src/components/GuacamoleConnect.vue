@@ -3,7 +3,6 @@
     <el-main>
       <el-row
         v-loading="loading"
-        :element-loading-text="loadingText"
         element-loading-background="#1f1b1b"
       >
         <div :style="containerStyle">
@@ -785,15 +784,15 @@ export default {
           }
           if (showDate) {
             const now = new Date()
-            watermark += '\n' + now.getFullYear() + '-' + (now.getMonth() + 1) + '-' + now.getDate()
+            watermark += `\n${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()} ${now.getHours()}:${now.getMinutes()}:${now.getMilliseconds()}`
           }
           canvasWaterMark({ container: document.body, content: watermark, settings: {
-            width: 360,
-            height: 360,
+            width: 300,
+            height: 300,
             textAlign: 'center',
             textBaseline: 'middle',
             alpha: alpha,
-            font: '16px monaco, microsoft yahei',
+            font: '20px monaco, microsoft yahei',
             fillStyle: 'rgba(184, 184, 184, 0.8)',
             rotate: -45,
             zIndex: 1000
