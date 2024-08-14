@@ -784,7 +784,19 @@ export default {
           }
           if (showDate) {
             const now = new Date()
-            watermark += `\n${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()} ${now.getHours()}:${now.getMinutes()}:${now.getMilliseconds()}`
+            const year = now.getFullYear()
+            const month = now.getMonth() + 1 // 月份是从 0 开始计数的，需要加1
+            const day = now.getDate()
+            const hours = now.getHours()
+            const minutes = now.getMinutes()
+            const seconds = now.getSeconds()
+            const formattedTime = year + '-' +
+              (month < 10 ? '0' : '') + month + '-' +
+              (day < 10 ? '0' : '') + day + ' ' +
+              (hours < 10 ? '0' : '') + hours + ':' +
+              (minutes < 10 ? '0' : '') + minutes + ':' +
+              (seconds < 10 ? '0' : '') + seconds
+            watermark += `\n${formattedTime}`
           }
           canvasWaterMark({ container: document.body, content: watermark, settings: {
             width: 300,
