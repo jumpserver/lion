@@ -468,7 +468,10 @@ export default {
         case 3:
           this.clientState = 'Connected'
           this.$log.debug('clientState, Connected ')
-          this.loading = false
+          setTimeout(() => {
+            this.loading = false
+          }, 5000)
+
           // Send any clipboard data already provided
           // if (managedClient.clipboardData)
           //     ManagedClient.setClipboard(managedClient, managedClient.clipboardData);
@@ -511,7 +514,9 @@ export default {
     },
 
     clientOnErr(status) {
-      this.loading = false
+      setTimeout(() => {
+        this.loading = false
+      }, 1000)
       this.$log.debug('clientOnErr', status)
       this.closeDisplay(status)
     },
