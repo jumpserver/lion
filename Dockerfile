@@ -49,8 +49,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=lion \
 
 WORKDIR /opt/lion
 
+COPY --from=stage-build /usr/local/bin/check /usr/local/bin/check
 COPY --from=stage-build /opt/lion/ui/dist ui/dist/
-COPY --from=stage-build /usr/local/bin /usr/local/bin
 COPY --from=stage-build /opt/lion/lion .
 COPY --from=stage-build /opt/lion/config_example.yml .
 COPY --from=stage-build /opt/lion/entrypoint.sh .
