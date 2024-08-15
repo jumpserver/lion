@@ -1,6 +1,6 @@
-ARG VERSION
+ARG VERSION=dev
 
-FROM registry.fit2cloud.com/jumpserver/lion:${VERSION}-ce
+FROM jumpserver/lion:${VERSION}-ce
 ARG TARGETARCH
 
 ARG DEPENDENCIES="                    \
@@ -10,8 +10,6 @@ ARG DEPENDENCIES="                    \
         vim                           \
         wget"
 
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=lion \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked,id=lion \
-    set -ex \
+RUN set -ex \
     && apt-get update \
     && apt-get install -y --no-install-recommends ${DEPENDENCIES}
