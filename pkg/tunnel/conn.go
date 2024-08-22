@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -159,7 +160,6 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 			instruction, err := t.readTunnelInstruction()
 			if err != nil {
 				logger.Errorf("Session[%s] guacamole server read err: %+v", t, err)
-				exit <- err
 				break
 			}
 
@@ -185,7 +185,6 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 						requiredErr = guacd.Instruction{}
 						continue
 					}
-
 				}
 			case guacd.InstructionRequired:
 				msg := fmt.Sprintf("required: %s", strings.Join(instruction.Args, ","))
@@ -197,7 +196,6 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 
 			if err = t.writeWsMessage([]byte(instruction.String())); err != nil {
 				logger.Errorf("Session[%s] send web client err: %+v", t, err)
-				exit <- err
 				break
 			}
 		}
@@ -214,7 +212,6 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 				} else {
 					logger.Errorf("Session[%s] web client read err: %+v", t, err1)
 				}
-				exit <- err1
 				break
 			}
 
@@ -282,7 +279,6 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 			_, err = t.writeTunnelMessage(message)
 			if err != nil {
 				logger.Errorf("Session[%s] guacamole server write err: %+v", t, err)
-				exit <- err
 				break
 			}
 		}
@@ -463,10 +459,34 @@ func (t *Connection) generateCommandResult(item *session.ExecutedCommand) *model
 
 func (t *Connection) ReConnect(ws *websocket.Conn) {
 	// 重新连接 guacamole server
+	info := guacd.NewClientInformation()
+	opts := t.Sess.AuthInfo.ConnectOptions
+	resolution := strings.ToLower(opts.Resolution)
+	switch resolution {
+	case "":
+	case "auto":
+	default:
+		logger.Infof("Session[%s] Connect options resolution: %s",
+			t.Sess.ID, resolution)
+		resolutions := strings.Split(resolution, "x")
+		if len(resolutions) == 2 {
+			width := resolutions[0]
+			height := resolutions[1]
+			if widthInt, err1 := strconv.Atoi(width); err1 == nil && widthInt > 0 {
+				info.OptimalScreenWidth = widthInt
+			}
+			if heightInt, err1 := strconv.Atoi(height); err1 == nil && heightInt > 0 {
+				info.OptimalScreenHeight = heightInt
+			}
+		}
+	}
 	conf := guacd.NewConfiguration()
 	conf.ConnectionID = t.guacdTunnel.UUID
+	for argName, argValue := range info.ExtraConfig() {
+		conf.SetParameter(argName, argValue)
+	}
 	guacdAddr := net.JoinHostPort(config.GlobalConfig.GuaHost, config.GlobalConfig.GuaPort)
-	newTunnel, err := guacd.NewTunnel(guacdAddr, conf, guacd.NewClientInformation())
+	newTunnel, err := guacd.NewTunnel(guacdAddr, conf, info)
 	if err != nil {
 		logger.Errorf("Session[%s] reconnect guacamole server err: %+v", t, err)
 		return
@@ -501,10 +521,7 @@ func (t *Connection) ReConnect(ws *websocket.Conn) {
 				default:
 				}
 			}
-
-			if err2 := wsWrite([]byte(instruction.String())); err2 != nil {
-				logger.Errorf("Session[%s] reconnect write ws message err: %+v", t, err2)
-			}
+			_ = wsWrite([]byte(instruction.String()))
 		}
 		t.guacdConnect.Delete(newTunnel)
 	}()

@@ -699,7 +699,7 @@ export default {
         if (displayHeight === optimalWidth && displayWidth === optimalHeight) {
           return
         }
-        this.client.sendSize(optimalWidth, optimalHeight)
+        // this.client.sendSize(optimalWidth, optimalHeight)
       }
     },
 

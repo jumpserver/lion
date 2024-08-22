@@ -102,9 +102,9 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 
 	// 查询缓存的 connection，未找到则创建新的 connection
 	if tun := g.Cache.Get(sessionId); tun != nil {
-		if tun.Sess.User.ID != user.ID {
-			logger.Errorf("No session tunnel found %s", sessionId)
-			_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrNoSession.String()))
+		if user.ID != tun.Sess.User.ID {
+			logger.Error("No valid auth user found")
+			_ = ws.WriteMessage(websocket.TextMessage, []byte(ErrAuthUser.String()))
 			return
 		}
 		p, _ := json.Marshal(tun.Sess)
@@ -210,8 +210,7 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	}
 
 	var tunnel *guacd.Tunnel
-	guacdAddr := config.GlobalConfig.SelectGuacdAddr()
-
+	guacdAddr := net.JoinHostPort(config.GlobalConfig.GuaHost, config.GlobalConfig.GuaPort)
 	tunnel, err = guacd.NewTunnel(guacdAddr, conf, info)
 	if err != nil {
 		logger.Errorf("Connect tunnel err: %+v", err)
@@ -497,6 +496,8 @@ func (g *GuacamoleTunnelServer) Monitor(ctx *gin.Context) {
 		Id:          sessionId,
 		guacdTunnel: tunnelCon,
 		ws:          ws,
+		Service:     g,
+		User:        user,
 	}
 	logger.Infof("User %s start to monitor session %s", user, sessionId)
 	_ = conn.Run(ctx.Request.Context())
