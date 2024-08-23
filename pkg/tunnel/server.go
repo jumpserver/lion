@@ -257,6 +257,7 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	g.Cache.Add(&conn)
 	_ = conn.Run(ctx)
 	g.Cache.Delete(&conn)
+	logger.Infof("Session[%s] delete success", sessionId)
 	if err = tunnelSession.DisConnectedCallback(); err != nil {
 		logger.Errorf("Session DisConnectedCallback err: %+v", err)
 	}

@@ -151,10 +151,6 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 	t.inactiveChan = make(chan struct{})
 	t.guacdConnect = sync.Map{}
 	t.guacdConnect.Store(t.guacdTunnel, struct{}{})
-	exit := make(chan error, 2)
-	noNopTime := time.Now()
-	maxNopTimeout := time.Minute * 5
-	var requiredErr guacd.Instruction
 	go func(t *Connection) {
 		for {
 			instruction, err := t.readTunnelInstruction()
@@ -172,26 +168,6 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 				case t.activeChan <- struct{}{}:
 				default:
 				}
-			}
-
-			switch instruction.Opcode {
-			case guacd.InstructionClientNop:
-				if time.Now().Sub(noNopTime) > maxNopTimeout {
-					logger.Errorf("Session[%s] guacamole server nop timeout", t)
-					if requiredErr.Opcode != "" {
-						logger.Errorf("Session[%s] send guacamole server required err: %s", t,
-							requiredErr.String())
-						_ = t.writeWsMessage([]byte(requiredErr.String()))
-						requiredErr = guacd.Instruction{}
-						continue
-					}
-				}
-			case guacd.InstructionRequired:
-				msg := fmt.Sprintf("required: %s", strings.Join(instruction.Args, ","))
-				logger.Infof("Session[%s] receive guacamole server required: %s", t, msg)
-				requiredErr = guacd.NewInstruction(guacd.InstructionServerError, msg)
-			default:
-				noNopTime = time.Now()
 			}
 
 			if err = t.writeWsMessage([]byte(instruction.String())); err != nil {
@@ -240,7 +216,6 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 					_, err4 := t.writeTunnelMessage(message)
 					if err4 != nil {
 						logger.Errorf("Session[%s] guacamole server write err: %+v", t, err2)
-						exit <- err4
 						break
 					}
 					logger.Debugf("Session[%s] send guacamole server message when locked status", t)
@@ -253,7 +228,6 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 						Opcode: ret.Opcode, Body: ret.Args,
 						Meta: meta}
 				default:
-
 				}
 
 				switch ret.Opcode {
