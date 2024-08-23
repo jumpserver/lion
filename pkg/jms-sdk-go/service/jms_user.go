@@ -9,6 +9,7 @@ func (s *JMService) CheckUserCookie(cookies map[string]string) (user *model.User
 	for k, v := range cookies {
 		client.SetCookie(k, v)
 	}
+	client.SetHeader("X-JMS-LOGIN-TYPE", "T")
 	_, err = client.Get(UserProfileURL, &user)
 	return
 }
