@@ -26,10 +26,10 @@ export const getLanguage = () => {
   }
   if (language.indexOf('en') >= 0) {
     language = 'en'
-  } else if (language.indexOf('zh-cn') >= 0) {
-    language = 'zh-CN'
-  } else {
+  } else if (language.indexOf('zh-hant') >= 0) {
     language = 'zh-Hant'
+  } else {
+    language = 'zh-CN'
   }
   return language
 }
