@@ -15,22 +15,24 @@ import (
 	"lion/pkg/config"
 	"lion/pkg/guacd"
 	"lion/pkg/jms-sdk-go/model"
+	"lion/pkg/jms-sdk-go/service"
 	"lion/pkg/logger"
 	"lion/pkg/session"
 )
 
 type ReplayRecorder struct {
 	tunnelSession *session.TunnelSession
-	RootPath      string
 	SessionId     string
 	guacdAddr     string
 	conf          guacd.Configuration
 	info          guacd.ClientInformation
-	wg            sync.WaitGroup
 	newPartChan   chan struct{}
 	currentIndex  int
+	MaxSize       int
+	apiClient     *service.JMService
 
-	MaxSize int
+	RootPath string
+	wg       sync.WaitGroup
 }
 
 func (r *ReplayRecorder) run(ctx context.Context) {
@@ -60,16 +62,17 @@ func (r *ReplayRecorder) Start(ctx context.Context) {
 	rootPath := filepath.Join(config.GlobalConfig.SessionFolderPath, r.SessionId)
 	_ = os.MkdirAll(rootPath, os.ModePerm)
 	r.RootPath = rootPath
+	r.WriteSessionMeta(r.tunnelSession.Created)
 	go r.run(ctx)
 }
 
-func (r *ReplayRecorder) WriteJson() {
+func (r *ReplayRecorder) WriteSessionMeta(t common.UTCTime) {
 	var sessionData struct {
 		model.Session
 		DateEnd common.UTCTime `json:"date_end"`
 	}
 	sessionData.Session = *r.tunnelSession.ModelSession
-	sessionData.DateEnd = common.NewNowUTCTime()
+	sessionData.DateEnd = t
 	metaFilename := r.SessionId + ".json"
 	metaFilePath := filepath.Join(r.RootPath, metaFilename)
 	metaBuf, _ := json.Marshal(sessionData)
@@ -82,9 +85,16 @@ func (r *ReplayRecorder) WriteJson() {
 
 func (r *ReplayRecorder) Stop() {
 	r.wg.Wait()
-	r.WriteJson()
-	// todo: 上传分段的录像文件
-	logger.Infof("Replay recorder %s stop", r.SessionId)
+	r.WriteSessionMeta(common.NewNowUTCTime())
+	uploader := PartUploader{
+		RootPath:  r.RootPath,
+		SessionId: r.SessionId,
+		apiClient: r.apiClient,
+		termCfg:   r.tunnelSession.TerminalConfig,
+	}
+	go uploader.Start()
+
+	logger.Infof("Replay recorder %s stop and uploading replay parts", r.SessionId)
 }
 
 func (r *ReplayRecorder) GetPartFilename() string {
@@ -158,7 +168,6 @@ func (p *PartRecorder) String() string {
 }
 
 func (p *PartRecorder) Start(ctx context.Context, joinTunnel *guacd.Tunnel) {
-
 	fd, err := os.Create(p.PartFilePath)
 	if err != nil {
 		logger.Errorf("PartRecorder create replay file %s failed: %v", p.PartFilePath, err)
@@ -232,10 +241,10 @@ func (p *PartRecorder) Start(ctx context.Context, joinTunnel *guacd.Tunnel) {
 			break
 		}
 	}
-	p.WriteMeta(totalWrittenSize)
+	p.WritePartMeta(totalWrittenSize)
 }
 
-func (p *PartRecorder) WriteMeta(size int) {
+func (p *PartRecorder) WritePartMeta(size int) {
 	meta := PartMeta{
 		StartTime: p.StartTime,
 		EndTime:   p.EndTime,
