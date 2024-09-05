@@ -30,6 +30,8 @@ upload
 ├── e32248ce-2dc8-43c8-b37e-a61d5ee32176.0.part.gz
 */
 
+const ReplayType = "guacamole"
+
 type SessionReplayMeta struct {
 	model.Session
 	DateEnd    common.UTCTime `json:"date_end,omitempty"`
@@ -46,8 +48,8 @@ type PartFileMeta struct {
 type PartUploader struct {
 	SessionId string
 	RootPath  string
-	apiClient *service.JMService
-	termCfg   *model.TerminalConfig
+	ApiClient *service.JMService
+	TermCfg   *model.TerminalConfig
 
 	replayMeta SessionReplayMeta
 	partFiles  []os.DirEntry
@@ -73,7 +75,7 @@ func (p *PartUploader) preCheckSessionMeta() error {
 		endTime := GetMaxModTime(p.partFiles)
 		p.replayMeta.DateEnd = common.NewUTCTime(endTime)
 		// api finish time
-		if err1 := p.apiClient.SessionFinished(p.SessionId, p.replayMeta.DateEnd); err1 != nil {
+		if err1 := p.ApiClient.SessionFinished(p.SessionId, p.replayMeta.DateEnd); err1 != nil {
 			logger.Errorf("PartUploader %s finish session error: %v", p.SessionId, err1)
 			return err
 		}
@@ -83,6 +85,7 @@ func (p *PartUploader) preCheckSessionMeta() error {
 			logger.Errorf("PartUploader %s write meta file error: %v", p.SessionId, err1)
 		}
 	}
+	p.replayMeta.ReplayType = ReplayType
 	return nil
 }
 
@@ -183,7 +186,7 @@ func (p *PartUploader) CollectionPartFiles() {
 }
 
 func (p *PartUploader) GetStorage() storage.ReplayStorage {
-	return storage.NewReplayStorage(p.apiClient, p.termCfg.ReplayStorage)
+	return storage.NewReplayStorage(p.ApiClient, p.TermCfg.ReplayStorage)
 }
 
 const recordDirTimeFormat = "2006-01-02"
@@ -212,7 +215,7 @@ func (p *PartUploader) uploadToStorage(uploadPath string) {
 		}
 		logger.Debugf("PartUploader %s upload file %s success", p.SessionId, uploadFilePath)
 	}
-	if err = p.apiClient.FinishReply(p.SessionId); err != nil {
+	if err = p.ApiClient.FinishReply(p.SessionId); err != nil {
 		logger.Errorf("PartUploader %s finish replay error: %v", p.SessionId, err)
 		return
 	}

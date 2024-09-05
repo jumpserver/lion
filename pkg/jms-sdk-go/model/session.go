@@ -29,16 +29,21 @@ const (
 	UnKnown  ReplayVersion = ""
 	Version2 ReplayVersion = "2"
 	Version3 ReplayVersion = "3"
+	Version5 ReplayVersion = "5"
+	Version6 ReplayVersion = "5"
 )
 
 const (
-	SuffixReplayGz = ".replay.gz"
-	SuffixCastGz   = ".cast.gz"
+	SuffixReplayGz   = ".replay.gz"
+	SuffixCastGz     = ".cast.gz"
+	SuffixPartReplay = ".part.gz"
+	SuffixReplayJson = ".replay.json"
 )
 
 var SuffixMap = map[ReplayVersion]string{
 	Version2: SuffixReplayGz,
 	Version3: SuffixCastGz,
+	Version5: SuffixPartReplay,
 }
 
 func ParseReplayVersion(gzFile string, defaultValue ReplayVersion) ReplayVersion {
@@ -46,6 +51,9 @@ func ParseReplayVersion(gzFile string, defaultValue ReplayVersion) ReplayVersion
 		if strings.HasSuffix(gzFile, suffix) {
 			return version
 		}
+	}
+	if strings.HasSuffix(gzFile, SuffixReplayJson) {
+		return Version5
 	}
 	return defaultValue
 }

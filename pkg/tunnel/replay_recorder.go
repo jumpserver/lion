@@ -89,8 +89,8 @@ func (r *ReplayRecorder) Stop() {
 	uploader := PartUploader{
 		RootPath:  r.RootPath,
 		SessionId: r.SessionId,
-		apiClient: r.apiClient,
-		termCfg:   r.tunnelSession.TerminalConfig,
+		ApiClient: r.apiClient,
+		TermCfg:   r.tunnelSession.TerminalConfig,
 	}
 	go uploader.Start()
 

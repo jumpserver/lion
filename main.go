@@ -324,9 +324,11 @@ func registerRouter(jmsService *service.JMService, tunnelService *tunnel.Guacamo
 func bootstrap(jmsService *service.JMService) {
 	replayDir := config.GlobalConfig.RecordPath
 	ftpFilePath := config.GlobalConfig.FTPFilePath
+	sessionDir := config.GlobalConfig.SessionFolderPath
 	allRemainFiles := scanRemainReplay(jmsService, replayDir)
 	go uploadRemainReplay(jmsService, allRemainFiles)
 	go uploadRemainFTPFile(jmsService, ftpFilePath)
+	go uploadRemainSessionPartReplay(jmsService, sessionDir)
 }
 
 func uploadRemainFTPFile(jmsService *service.JMService, fileStoreDir string) {
@@ -440,6 +442,30 @@ func scanRemainReplay(jmsService *service.JMService, replayDir string) map[strin
 		return nil
 	})
 	return allRemainFiles
+}
+
+func uploadRemainSessionPartReplay(jmsService *service.JMService, sessionDir string) {
+	sessions, err := os.ReadDir(sessionDir)
+	if err != nil {
+		logger.Errorf("Read session dir failed: %s", err)
+		return
+	}
+	terminalConf, _ := jmsService.GetTerminalConfig()
+	for _, sessionEntry := range sessions {
+		sessionId := sessionEntry.Name()
+		if !common.ValidUUIDString(sessionId) {
+			continue
+		}
+		sessionRootPath := filepath.Join(sessionDir, sessionId)
+		uploader := tunnel.PartUploader{
+			RootPath:  sessionRootPath,
+			SessionId: sessionId,
+			ApiClient: jmsService,
+			TermCfg:   &terminalConf,
+		}
+		uploader.Start()
+		logger.Infof("Upload remain session part replay %s finish", sessionId)
+	}
 }
 
 func GetStatusData(tunnelCache *tunnel.GuaTunnelCacheManager) interface{} {
