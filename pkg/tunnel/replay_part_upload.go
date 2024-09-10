@@ -199,10 +199,12 @@ func (p *PartUploader) uploadToStorage(uploadPath string) {
 		return
 	}
 	//defaultStorage := storage.ServerStorage{StorageType: "server", JmsService: p.apiClient}
+	p.RecordLifecycleLog(model.ReplayUploadStart, model.EmptyLifecycleLog)
 	replayStorage := p.GetStorage()
+	storageType := replayStorage.TypeName()
 	dateRoot := p.replayMeta.DateStart.Format(recordDirTimeFormat)
 	targetRoot := strings.Join([]string{dateRoot, p.SessionId}, "/")
-	logger.Debugf("PartUploader %s upload replay files: %v", p.SessionId, uploadFiles)
+	logger.Infof("PartUploader %s upload replay files: %v, type: %s", p.SessionId, uploadFiles, storageType)
 	for _, uploadFile := range uploadFiles {
 		if uploadFile.IsDir() {
 			continue
@@ -211,6 +213,8 @@ func (p *PartUploader) uploadToStorage(uploadPath string) {
 		targetFile := strings.Join([]string{targetRoot, uploadFile.Name()}, "/")
 		if err1 := replayStorage.Upload(uploadFilePath, targetFile); err1 != nil {
 			logger.Errorf("PartUploader %s upload file %s error: %v", p.SessionId, uploadFilePath, err1)
+			reason := model.SessionLifecycleLog{Reason: err1.Error()}
+			p.RecordLifecycleLog(model.ReplayUploadFailure, reason)
 			return
 		}
 		logger.Debugf("PartUploader %s upload file %s success", p.SessionId, uploadFilePath)
@@ -219,13 +223,21 @@ func (p *PartUploader) uploadToStorage(uploadPath string) {
 		logger.Errorf("PartUploader %s finish replay error: %v", p.SessionId, err)
 		return
 	}
+
+	p.RecordLifecycleLog(model.ReplayUploadSuccess, model.EmptyLifecycleLog)
 	logger.Infof("PartUploader %s upload replay success", p.SessionId)
-	if err := os.RemoveAll(p.RootPath); err != nil {
+	if err = os.RemoveAll(p.RootPath); err != nil {
 		logger.Errorf("PartUploader %s remove root path %s error: %v", p.SessionId, p.RootPath, err)
 		return
 	}
 	logger.Infof("PartUploader %s remove root path %s success", p.SessionId, p.RootPath)
 
+}
+
+func (p *PartUploader) RecordLifecycleLog(event model.LifecycleEvent, logObj model.SessionLifecycleLog) {
+	if err := p.ApiClient.RecordSessionLifecycleLog(p.SessionId, event, logObj); err != nil {
+		logger.Errorf("Record session %s lifecycle %s log err: %s", p.SessionId, event, err)
+	}
 }
 
 func ReadInstruction(r *bufio.Reader) (guacd.Instruction, error) {

@@ -3,15 +3,11 @@ package session
 import (
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 
 	"lion/pkg/common"
-	"lion/pkg/config"
 	"lion/pkg/guacd"
 	"lion/pkg/jms-sdk-go/model"
 	"lion/pkg/jms-sdk-go/service"
@@ -286,7 +282,6 @@ func (s *Server) Create(ctx *gin.Context, opts ...TunnelOption) (sess TunnelSess
 	sess.ConnectedSuccessCallback = s.RegisterConnectedSuccessCallback(jmsSession)
 	sess.ConnectedFailedCallback = s.RegisterConnectedFailedCallback(jmsSession)
 	sess.DisConnectedCallback = s.RegisterDisConnectedCallback(jmsSession)
-	sess.FinishReplayCallback = s.RegisterFinishReplayCallback(sess)
 	sess.ReleaseAppletAccount = func() error {
 		if opt.appletOpt != nil {
 			return s.JmsService.ReleaseAppletAccount(opt.appletOpt.ID)
@@ -366,87 +361,6 @@ func (s *Server) UploadReplayToVideoWorker(tunnel TunnelSession, info guacd.Clie
 	}
 	logger.Infof("video worker create task success: %+v", task)
 	return true
-}
-
-func (s *Server) RegisterFinishReplayCallback(tunnel TunnelSession) func(guacd.ClientInformation) error {
-	return func(info guacd.ClientInformation) error {
-		replayConfig := tunnel.TerminalConfig.ReplayStorage
-		storageType := replayConfig.TypeName
-		if storageType == "null" {
-			logger.Error("录像存储设置为 null，无存储")
-			reason := model.SessionLifecycleLog{Reason: string(model.ReasonErrNullStorage)}
-			s.RecordLifecycleLog(tunnel.ID, model.ReplayUploadFailure, reason)
-			return nil
-		}
-		var replayErrReason model.ReplayError
-
-		defer func() {
-			if replayErrReason != "" {
-				if err1 := s.JmsService.SessionReplayFailed(tunnel.ID, replayErrReason); err1 != nil {
-					logger.Errorf("Update %s replay status %s failed err: %s", tunnel.ID, replayErrReason, err1)
-				}
-			}
-		}()
-
-		recordDirPath := filepath.Join(config.GlobalConfig.RecordPath,
-			tunnel.Created.Format(recordDirTimeFormat))
-		originReplayFilePath := filepath.Join(recordDirPath, tunnel.ID)
-		dstReplayFilePath := originReplayFilePath + ReplayFileNameSuffix
-		fi, err := os.Stat(originReplayFilePath)
-		if err != nil {
-			replayErrReason = model.SessionReplayErrConnectFailed
-			return err
-		}
-		if fi.Size() < 1024 {
-			logger.Error("录像文件小于1024字节，可判断连接失败，未能产生有效的录像文件")
-			_ = os.Remove(originReplayFilePath)
-			replayErrReason = model.SessionReplayErrConnectFailed
-			return s.JmsService.SessionFailed(tunnel.ID, replayErrReason)
-		}
-		// 压缩文件
-		err = common.CompressToGzipFile(originReplayFilePath, dstReplayFilePath)
-		if err != nil {
-			logger.Error("压缩文件失败: ", err)
-			replayErrReason = model.SessionReplayErrCreatedFailed
-			return err
-		}
-		// 压缩完成则删除源文件
-		defer os.Remove(originReplayFilePath)
-
-		if s.VideoWorkerClient != nil && s.UploadReplayToVideoWorker(tunnel, info, dstReplayFilePath) {
-			logger.Infof("Upload replay file to video worker: %s", dstReplayFilePath)
-			_ = os.Remove(dstReplayFilePath)
-			return nil
-		}
-		s.RecordLifecycleLog(tunnel.ID, model.ReplayUploadStart, model.EmptyLifecycleLog)
-		defaultStorage := storage.ServerStorage{StorageType: "server", JmsService: s.JmsService}
-		logger.Infof("Upload record file: %s, type: %s", dstReplayFilePath, storageType)
-		targetName := strings.Join([]string{tunnel.Created.Format(recordDirTimeFormat),
-			tunnel.ID + ReplayFileNameSuffix}, "/")
-		if replayStorage := storage.NewReplayStorage(s.JmsService, replayConfig); replayStorage != nil {
-			if err = replayStorage.Upload(dstReplayFilePath, targetName); err != nil {
-				logger.Errorf("Upload replay failed: %s", err)
-				logger.Errorf("Upload replay by type %s failed, try use default", storageType)
-				err = defaultStorage.Upload(dstReplayFilePath, targetName)
-			}
-		} else {
-			err = defaultStorage.Upload(dstReplayFilePath, targetName)
-		}
-		// 上传文件
-		if err != nil {
-			logger.Errorf("Upload replay failed: %s", err.Error())
-			replayErrReason = model.SessionReplayErrUploadFailed
-			reason := model.SessionLifecycleLog{Reason: err.Error()}
-			s.RecordLifecycleLog(tunnel.ID, model.ReplayUploadFailure, reason)
-			return err
-		}
-		// 上传成功，删除压缩文件
-		defer os.Remove(dstReplayFilePath)
-		// 通知core上传完成
-		err = s.JmsService.FinishReply(tunnel.ID)
-		s.RecordLifecycleLog(tunnel.ID, model.ReplayUploadSuccess, model.EmptyLifecycleLog)
-		return err
-	}
 }
 
 func (s *Server) RecordLifecycleLog(sid string, event model.LifecycleEvent, logObj model.SessionLifecycleLog) {
