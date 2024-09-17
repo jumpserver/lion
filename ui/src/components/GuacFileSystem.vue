@@ -183,6 +183,13 @@ export default {
       iframe.src = url
       this.$log.debug(url)
     },
+    handleI18nStatus(status) {
+      let msg = status.message
+      if (['zh', 'zh_Hant', 'ja'].includes(getLanguage())) {
+        msg = this.$t(ErrorStatusCodes[status.code]) || status.message
+      }
+      return msg
+    },
 
     fileDrop: function(e) {
       e.stopPropagation()
@@ -192,10 +199,7 @@ export default {
       this.handleFiles(files[0]).then(() => {
         this.$message(files[0].name + ' ' + this.$t('UploadSuccess'))
       }).catch(status => {
-        let msg = status.message
-        if (['zh-CN', 'zh-Hant'].includes(getLanguage())) {
-          msg = this.$t(ErrorStatusCodes[status.code]) || status.message
-        }
+        const msg = this.handleI18nStatus(status)
         this.$warning(msg)
       })
     },
@@ -323,10 +327,7 @@ export default {
       }).catch(err => {
         fileObj.onError(err)
         this.$log.debug('Upload error: ', err)
-        let msg = err.message
-        if (['zh-CN', 'zh-Hant'].includes(getLanguage())) {
-          msg = this.$t(ErrorStatusCodes[err.code]) || err.message
-        }
+        const msg = this.handleI18nStatus(err)
         this.$warning(msg)
       })
     },
