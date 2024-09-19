@@ -1,12 +1,13 @@
 NAME=lion
 BUILDDIR=build
-VERSION ?=Unknown
-BuildTime:=$(shell date -u '+%Y-%m-%d %I:%M:%S%p')
-COMMIT:=$(shell git rev-parse HEAD)
-GOVERSION:=$(shell go version)
 
-GOOS:=$(shell go env GOOS)
-GOARCH:=$(shell go env GOARCH)
+VERSION ?= Unknown
+BuildTime := $(shell date -u '+%Y-%m-%d %I:%M:%S%p')
+COMMIT := $(shell git rev-parse HEAD)
+GOVERSION := $(shell go version)
+
+GOOS := $(shell go env GOOS)
+GOARCH := $(shell go env GOARCH)
 
 LDFLAGS=-w -s
 
@@ -18,8 +19,6 @@ GOLDFLAGS+=-X 'main.Goversion=$(GOVERSION)'
 GOBUILD=CGO_ENABLED=0 go build -trimpath -ldflags "$(GOLDFLAGS) ${LDFLAGS}"
 
 UIDIR=ui
-NPMINSTALL=yarn
-NPMBUILD=yarn build
 
 define make_artifact_full
 	GOOS=$(1) GOARCH=$(2) $(GOBUILD) -o $(BUILDDIR)/$(NAME)-$(1)-$(2)
@@ -80,7 +79,7 @@ docker:
 
 lion-ui:
 	@echo "build ui"
-	@cd $(UIDIR) && $(NPMINSTALL) && $(NPMBUILD)
+	@cd $(UIDIR) && yarn install && yarn build
 
 clean:
 	rm -rf $(BUILDDIR)

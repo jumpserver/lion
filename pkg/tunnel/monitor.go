@@ -146,7 +146,7 @@ func (m *MonitorCon) Run(ctx context.Context) (err error) {
 			logger.Infof("Monitor[%s] exit: %+v", m.Id, err)
 			return err
 		case <-ctx.Done():
-			logger.Info("Monitor[%s] done", m.Id)
+			logger.Infof("Monitor[%s] done", m.Id)
 			return nil
 		case event := <-retChan.eventCh:
 			if m.Meta == nil {

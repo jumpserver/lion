@@ -53,3 +53,12 @@ const (
 	WolBroadcastAddr = "wol-broadcast-addr"
 	WolWaitTime      = "wol-wait-time"
 )
+
+const (
+	READONLY = "read-only"
+)
+
+const (
+	BoolFalse = "false"
+	BoolTrue  = "true"
+)
