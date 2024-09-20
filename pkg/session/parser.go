@@ -110,8 +110,8 @@ func (p *Parser) ParseStream(userInChan chan *Message) {
 									unicode := strconv.FormatInt(int64(keyCode), 16)
 									bs, _ := hex.DecodeString(unicode[3:])
 									for i, bl, br, r := 0, len(bs), bytes.NewReader(bs), uint16(0); i < bl; i += 2 {
-										binary.Read(br, binary.BigEndian, &r)
-										to += string(r)
+										_ = binary.Read(br, binary.BigEndian, &r)
+										to += string(rune(r))
 									}
 									b = append(b, []byte(to)...)
 								} else {

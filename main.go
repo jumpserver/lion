@@ -232,7 +232,7 @@ func registerRouter(jmsService *service.JMService, tunnelService *tunnel.Guacamo
 		lionGroup.GET("/health/", func(ctx *gin.Context) {
 			status := make(map[string]interface{})
 			status["timestamp"] = time.Now().UTC()
-			status["uptime"] = time.Now().Sub(now).Minutes()
+			status["uptime"] = time.Since(now).Minutes()
 			ctx.JSON(http.StatusOK, status)
 		})
 	}
