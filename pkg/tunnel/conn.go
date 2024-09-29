@@ -124,7 +124,7 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 	err = t.SendWsMessage(guacd.NewInstruction(
 		INTERNALDATAOPCODE, t.guacdTunnel.UUID()))
 	if err != nil {
-		logger.Error("Run err: ", err)
+		logger.Errorf("Run err: %s", err)
 		return err
 	}
 	eventChan := t.Cache.GetSessionEventChan(t.Sess.ID)

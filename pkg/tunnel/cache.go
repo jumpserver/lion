@@ -28,6 +28,8 @@ type GuaTunnelCache interface {
 	GetSessionEventChan(sid string) *EventChan
 	BroadcastSessionEvent(sid string, event *Event)
 	RecycleSessionEventChannel(sid string, eventChan *EventChan)
+
+	GetActiveConnections() []*Connection
 }
 
 type SessionEvent interface {
