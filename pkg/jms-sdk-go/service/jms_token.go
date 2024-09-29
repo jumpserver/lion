@@ -44,3 +44,9 @@ func (s *JMService) GetConnectTokenVirtualAppOption(tokenId string) (resp model.
 	_, err = s.authClient.Post(SuperConnectTokenVirtualAppOptionURL, data, &resp)
 	return
 }
+
+func (s *JMService) CheckTokenStatus(tokenId string) (res model.TokenCheckStatus, err error) {
+	reqURL := fmt.Sprintf(SuperConnectTokenCheckURL, tokenId)
+	_, err = s.authClient.Get(reqURL, &res)
+	return
+}

@@ -121,3 +121,13 @@ func (g *GuaTunnelLocalCache) RecycleSessionEventChannel(sid string, eventChan *
 		}
 	}
 }
+
+func (g *GuaTunnelLocalCache) GetActiveConnections() []*Connection {
+	g.Lock()
+	defer g.Unlock()
+	ret := make([]*Connection, 0, len(g.Tunnels))
+	for i := range g.Tunnels {
+		ret = append(ret, g.Tunnels[i])
+	}
+	return ret
+}

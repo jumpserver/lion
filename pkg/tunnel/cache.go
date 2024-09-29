@@ -28,6 +28,8 @@ type GuaTunnelCache interface {
 	GetSessionEventChan(sid string) *EventChan
 	BroadcastSessionEvent(sid string, event *Event)
 	RecycleSessionEventChannel(sid string, eventChan *EventChan)
+
+	GetActiveConnections() []*Connection
 }
 
 type SessionEvent interface {
@@ -117,4 +119,7 @@ const (
 	ShareRemoveUser    = "share_remove_user"
 	ShareSessionPause  = "share_session_pause"
 	ShareSessionResume = "share_session_resume"
+
+	PermExpiredEvent = "perm_expired"
+	PermValidEvent   = "perm_valid"
 )

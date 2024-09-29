@@ -50,7 +50,8 @@ export default {
       onlineUsersMap: {},
       share_id: '',
       recordId: '',
-      locked: false
+      locked: false,
+      warningIntervalId: null
     }
   },
   computed: {
@@ -78,6 +79,9 @@ export default {
         }
       ]
     }
+  },
+  destroyed() {
+    clearInterval(this.warningIntervalId)
   },
   methods: {
     submitCode() {
@@ -138,6 +142,19 @@ export default {
           const msg = `${dataObj.user} ${this.$t('ResumeSession')}`
           this.$message.info(msg)
           this.locked = false
+          break
+        }
+        case 'perm_expired': {
+          const warningMsg = `${this.t('PermissionExpired')}: ${dataObj.detail}`
+          this.$message.warning(warningMsg)
+          this.warningIntervalId = setInterval(() => {
+            this.$message.warning(warningMsg)
+          }, 1000 * 31)
+          break
+        }
+        case 'perm_valid': {
+          clearInterval(this.warningIntervalId)
+          this.$message.info(`${this.t('PermissionValid')}`)
           break
         }
       }

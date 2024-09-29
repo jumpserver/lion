@@ -48,6 +48,8 @@ const (
 	SuperConnectAppletHostAccountReleaseURL = "/api/v1/authentication/super-connection-token/applet-account/release/"
 
 	SuperConnectTokenVirtualAppOptionURL = "/api/v1/authentication/super-connection-token/virtual-app-option/"
+
+	SuperConnectTokenCheckURL = "/api/v1/authentication/super-connection-token/%s/check/"
 )
 
 const (
