@@ -83,7 +83,7 @@ func (s *JMService) GetWsClient() (*websocket.Conn, error) {
 	if err != nil {
 		return nil, err
 	}
-	scheme := "ws"
+	var scheme string
 	switch u.Scheme {
 	case "http":
 		scheme = "ws"

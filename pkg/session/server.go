@@ -221,7 +221,7 @@ func (s *Server) Create(ctx *gin.Context, opts ...TunnelOption) (sess TunnelSess
 	for _, setter := range opts {
 		setter(opt)
 	}
-	targetType := TypeRDP
+	var targetType string
 	sessionProtocol := opt.Protocol
 	switch opt.authInfo.ConnectMethod.Type {
 	case connectApplet, connectVirtualAPP:
