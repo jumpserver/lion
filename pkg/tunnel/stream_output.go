@@ -78,7 +78,9 @@ func (filter *OutputStreamInterceptingFilter) handleBlob(unfilteredInstruction *
 			}
 			return nil
 		}
-		stream.recorder.RecordWrite(stream.ftpLog, blob)
+		if err1 := stream.recorder.RecordWrite(stream.ftpLog, blob); err1 != nil {
+			logger.Errorf("OutputStream filter stream %s record write err: %+v", stream.streamIndex, err1)
+		}
 		if !filter.acknowledgeBlobs {
 			filter.acknowledgeBlobs = true
 			ins := guacd.NewInstruction(guacd.InstructionStreamingBlob, index, "")

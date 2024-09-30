@@ -35,10 +35,7 @@ func NewClient(baseUrl string, key model.AccessKey, Insecure bool) *Client {
 
 type Client struct {
 	BaseURL string
-	sign    httplib.AuthSign
 	client  *httplib.Client
-
-	cacheToken map[string]interface{}
 }
 
 func (s *Client) CreateReplayTask(sessionId string, file string, meta ReplayMeta) (model.Task, error) {
@@ -86,21 +83,21 @@ func StructToMapString(m interface{}) map[string]string {
 		if tagValue := fi.Tag.Get(tagName); tagValue != "" {
 			interValue := v.Field(i).Interface()
 			fieldValue := ""
-			switch interValue.(type) {
+			switch interValue1 := interValue.(type) {
 			case string:
-				fieldValue = interValue.(string)
+				fieldValue = interValue1
 			case int:
-				fieldValue = strconv.Itoa(interValue.(int))
+				fieldValue = strconv.Itoa(interValue1)
 			case int32:
-				fieldValue = strconv.FormatInt(int64(interValue.(int32)), 10)
+				fieldValue = strconv.FormatInt(int64(interValue1), 10)
 			case int64:
-				fieldValue = strconv.FormatInt(interValue.(int64), 10)
+				fieldValue = strconv.FormatInt(interValue1, 10)
 			case float64:
-				fieldValue = strconv.FormatFloat(interValue.(float64), 'f', -1, 64)
+				fieldValue = strconv.FormatFloat(interValue1, 'f', -1, 64)
 			case bool:
-				fieldValue = strconv.FormatBool(interValue.(bool))
+				fieldValue = strconv.FormatBool(interValue1)
 			default:
-				fieldValue = fmt.Sprintf("%v", interValue)
+				fieldValue = fmt.Sprintf("%v", interValue1)
 			}
 			// 如果值为空或者为0则不传递
 			if fieldValue == "" || fieldValue == "0" {
