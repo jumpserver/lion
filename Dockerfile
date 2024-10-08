@@ -44,8 +44,10 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=lion \
     && ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
     && apt-get update \
     && apt-get install -y --no-install-recommends ${DEPENDENCIES} \
+    && apt-get clean \
     && sed -i "s@# export @export @g" ~/.bashrc \
-    && sed -i "s@# alias @alias @g" ~/.bashrc
+    && sed -i "s@# alias @alias @g" ~/.bashrc \
+    && mkdir -p /lib32 /libx32
 
 WORKDIR /opt/lion
 
