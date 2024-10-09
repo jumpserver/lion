@@ -35,6 +35,11 @@ const (
 
 	TaskLockSession   = "lock_session"
 	TaskUnlockSession = "unlock_session"
+
+	// TaskPermExpired TaskPermValid 非 api 数据，仅用于内部处理
+
+	TaskPermExpired = "perm_expired"
+	TaskPermValid   = "perm_valid"
 )
 
 type TaskKwargs struct {

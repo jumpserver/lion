@@ -32,7 +32,6 @@ func NewClient(baseUrl string, key model.AccessKey, insecure bool) *Client {
 
 type Client struct {
 	BaseURL string
-	sign    httplib.AuthSign
 	client  *httplib.Client
 }
 

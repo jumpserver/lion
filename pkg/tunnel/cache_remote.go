@@ -148,8 +148,6 @@ type GuaTunnelRedisCache struct {
 
 	redisProxyExitChan chan string
 	redisConExitChan   chan string
-
-	roomLock sync.Mutex
 }
 
 func (r *GuaTunnelRedisCache) BroadcastSessionEvent(sid string, event *Event) {
