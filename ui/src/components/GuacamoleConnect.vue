@@ -247,7 +247,8 @@ export default {
       shareCode: null,
       shareLoading: false,
       enableShare: true,
-      onlineUsersMap: {}
+      onlineUsersMap: {},
+      warningIntervalId: null
     }
   },
   computed: {
@@ -390,6 +391,9 @@ export default {
     this.wsPrefix = result['ws']
     this.startConnect()
     window.addEventListener('message', this.handleEventFromLuna, false)
+  },
+  destroyed() {
+    clearInterval(this.warningIntervalId)
   },
   methods: {
     generateShareURL() {
@@ -971,6 +975,19 @@ export default {
         }
         case 'share_users': {
           this.onlineUsersMap = dataObj
+          break
+        }
+        case 'perm_expired': {
+          const warningMsg = `${this.t('PermissionExpired')}: ${dataObj.detail}`
+          this.$message.warning(warningMsg)
+          this.warningIntervalId = setInterval(() => {
+            this.$message.warning(warningMsg)
+          }, 1000 * 31)
+          break
+        }
+        case 'perm_valid': {
+          clearInterval(this.warningIntervalId)
+          this.$message.info(`${this.t('PermissionValid')}`)
           break
         }
         default:

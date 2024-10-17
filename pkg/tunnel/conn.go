@@ -71,6 +71,10 @@ type Connection struct {
 	meta  *MetaShareUserMessage
 
 	currentOnlineUsers map[string]MetaShareUserMessage
+
+	invalidPerm     atomic.Bool
+	invalidPermData []byte
+	invalidPermTime time.Time
 }
 
 func (t *Connection) SendWsMessage(msg guacd.Instruction) error {
@@ -124,7 +128,7 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 	err = t.SendWsMessage(guacd.NewInstruction(
 		INTERNALDATAOPCODE, t.guacdTunnel.UUID()))
 	if err != nil {
-		logger.Error("Run err: ", err)
+		logger.Errorf("Run err: %s", err)
 		return err
 	}
 	eventChan := t.Cache.GetSessionEventChan(t.Sess.ID)
@@ -182,7 +186,7 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 
 			switch instruction.Opcode {
 			case guacd.InstructionClientNop:
-				if time.Now().Sub(noNopTime) > maxNopTimeout {
+				if time.Since(noNopTime) > maxNopTimeout {
 					logger.Errorf("Session[%s] guacamole server nop timeout", t)
 					if requiredErr.Opcode != "" {
 						logger.Errorf("Session[%s] send guacamole server required err: %s", t,
@@ -377,6 +381,10 @@ func (t *Connection) HandleTask(task *model.TerminalTask) error {
 		_ = t.SendWsMessage(ins.Instruction())
 		reason := model.SessionLifecycleLog{Reason: string(model.ReasonErrAdminTerminate)}
 		t.Service.RecordLifecycleLog(t.Sess.ID, model.AssetConnectFinished, reason)
+	case model.TaskPermExpired:
+		t.PermBecomeExpired(task.Name, task.Args)
+	case model.TaskPermValid:
+		t.PermBecomeValid(task.Name, task.Args)
 	default:
 		return fmt.Errorf("unknown task %s", task.Name)
 	}
@@ -389,7 +397,14 @@ func (t *Connection) String() string {
 }
 
 func (t *Connection) IsPermissionExpired(now time.Time) bool {
-	return t.Sess.ExpireInfo.IsExpired(now)
+	if t.Sess.ExpireInfo.IsExpired(now) {
+		return true
+	}
+	if t.invalidPerm.Load() {
+		maxInvalidTime := t.invalidPermTime.Add(10 * time.Minute)
+		return now.After(maxInvalidTime)
+	}
+	return false
 }
 
 func (t *Connection) CloneMonitorTunnel() (*guacd.Tunnel, error) {
@@ -531,4 +546,28 @@ func (t *Connection) notifySessionAction(action string, user string) {
 	p, _ := json.Marshal(data)
 	t.Cache.BroadcastSessionEvent(t.Sess.ID,
 		&Event{Type: action, Data: p})
+}
+
+func (t *Connection) PermBecomeExpired(code, detail string) {
+	if t.invalidPerm.Load() {
+		return
+	}
+	t.invalidPermTime = time.Now()
+	t.invalidPerm.Store(true)
+	p, _ := json.Marshal(map[string]string{"code": code, "detail": detail})
+	t.invalidPermData = p
+	t.Cache.BroadcastSessionEvent(t.Sess.ID,
+		&Event{Type: PermExpiredEvent, Data: p})
+}
+
+func (t *Connection) PermBecomeValid(code, detail string) {
+	if !t.invalidPerm.Load() {
+		return
+	}
+	t.invalidPermTime = time.Now()
+	t.invalidPerm.Store(false)
+	p, _ := json.Marshal(map[string]string{"code": code, "detail": detail})
+	t.invalidPermData = p
+	t.Cache.BroadcastSessionEvent(t.Sess.ID,
+		&Event{Type: PermValidEvent, Data: p})
 }

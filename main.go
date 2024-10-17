@@ -76,6 +76,7 @@ func main() {
 	eng := registerRouter(jmsService, &tunnelService)
 	go runHeartTask(jmsService, tunnelService.Cache)
 	go runCleanDriverDisk(tunnelService.Cache)
+	go runTokenCheck(jmsService, tunnelService.Cache)
 	addr := net.JoinHostPort(config.GlobalConfig.BindHost, config.GlobalConfig.HTTPPort)
 	fmt.Printf("Lion Version %s, more see https://www.jumpserver.org\n", Version)
 	logger.Infof("listen on: %s", addr)
@@ -212,6 +213,48 @@ func runCleanDriverDisk(tunnelCache *tunnel.GuaTunnelCacheManager) {
 	}
 }
 
+func runTokenCheck(jmsService *service.JMService, tunnelCache *tunnel.GuaTunnelCacheManager) {
+	for {
+		time.Sleep(5 * time.Minute)
+		connections := tunnelCache.GetActiveConnections()
+		tokens := make(map[string]model.TokenCheckStatus, len(connections))
+		for _, s := range connections {
+			tokenId := s.Sess.AuthInfo.Id
+			ret, ok := tokens[tokenId]
+			if ok {
+				handleTokenCheck(s, &ret)
+				continue
+			}
+			ret, err := jmsService.CheckTokenStatus(tokenId)
+			if err != nil && ret.Code == "" {
+				logger.Errorf("Check token status failed: %s", err)
+				continue
+			}
+			tokens[tokenId] = ret
+			handleTokenCheck(s, &ret)
+		}
+	}
+}
+
+func handleTokenCheck(session *tunnel.Connection, tokenStatus *model.TokenCheckStatus) {
+	var task model.TerminalTask
+	switch tokenStatus.Code {
+	case model.CodePermOk:
+		task = model.TerminalTask{
+			Name: model.TaskPermValid,
+			Args: tokenStatus.Detail,
+		}
+	default:
+		task = model.TerminalTask{
+			Name: model.TaskPermExpired,
+			Args: tokenStatus.Detail,
+		}
+	}
+	if err := session.HandleTask(&task); err != nil {
+		logger.Errorf("Handle token check task failed: %s", err)
+	}
+}
+
 func registerRouter(jmsService *service.JMService, tunnelService *tunnel.GuacamoleTunnelServer) *gin.Engine {
 	if config.GlobalConfig.LogLevel != "DEBUG" {
 		gin.SetMode(gin.ReleaseMode)
@@ -232,7 +275,7 @@ func registerRouter(jmsService *service.JMService, tunnelService *tunnel.Guacamo
 		lionGroup.GET("/health/", func(ctx *gin.Context) {
 			status := make(map[string]interface{})
 			status["timestamp"] = time.Now().UTC()
-			status["uptime"] = time.Now().Sub(now).Minutes()
+			status["uptime"] = time.Since(now).Minutes()
 			ctx.JSON(http.StatusOK, status)
 		})
 	}

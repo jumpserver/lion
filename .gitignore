@@ -43,6 +43,5 @@ ui/pnpm-debug.log*
 *.njsproj
 *.sln
 *.sw?
-ui/yarn.lock
 build
-package-lock.json
+build/
