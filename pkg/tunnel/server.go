@@ -211,9 +211,7 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	}
 	defer tunnel.Close()
 	g.RecordLifecycleLog(sessionId, model.AssetConnectSuccess, model.EmptyLifecycleLog)
-	if err1 := tunnelSession.ConnectedSuccessCallback(); err1 != nil {
-		logger.Errorf("Update session connect status failed %+v", err1)
-	}
+
 	logger.Infof("Session[%s] use resolution (%d*%d)",
 		sessionId, info.OptimalScreenWidth, info.OptimalScreenHeight)
 	meta := MetaShareUserMessage{

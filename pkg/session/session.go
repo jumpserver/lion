@@ -27,10 +27,9 @@ type TunnelSession struct {
 
 	VirtualAppOpts *model.VirtualAppContainer `json:"-"`
 
-	ConnectedCallback        func() error          `json:"-"`
-	ConnectedSuccessCallback func() error          `json:"-"`
-	ConnectedFailedCallback  func(err error) error `json:"-"`
-	DisConnectedCallback     func() error          `json:"-"`
+	ConnectedCallback       func() error          `json:"-"`
+	ConnectedFailedCallback func(err error) error `json:"-"`
+	DisConnectedCallback    func() error          `json:"-"`
 
 	ReleaseAppletAccount func() error `json:"-"`
 
