@@ -279,7 +279,6 @@ func (s *Server) Create(ctx *gin.Context, opts ...TunnelOption) (sess TunnelSess
 	}
 	sess.ModelSession = &jmsSession
 	sess.ConnectedCallback = s.RegisterConnectedCallback(jmsSession)
-	sess.ConnectedSuccessCallback = s.RegisterConnectedSuccessCallback(jmsSession)
 	sess.ConnectedFailedCallback = s.RegisterConnectedFailedCallback(jmsSession)
 	sess.DisConnectedCallback = s.RegisterDisConnectedCallback(jmsSession)
 	sess.ReleaseAppletAccount = func() error {
