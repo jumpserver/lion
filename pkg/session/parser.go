@@ -115,7 +115,8 @@ func (p *Parser) ParseStream(userInChan chan *Message) {
 									}
 									b = append(b, []byte(to)...)
 								} else {
-									b = append(b, byte(keyCode))
+									// 未知的键值,转成 rune 字符
+									b = append(b, []byte(string(rune(keyCode)))...)
 								}
 							} else {
 								b = append(b, cb...)
