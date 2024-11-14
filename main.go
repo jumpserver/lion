@@ -393,6 +393,13 @@ func uploadRemainFTPFile(jmsService *service.JMService, fileStoreDir string) {
 		return nil
 	})
 
+	if len(allRemainFiles) == 0 {
+		logger.Info("No remain ftp files")
+		return
+	}
+	logger.Infof("Start upload remain %d ftp files 10 min later", len(allRemainFiles))
+	time.Sleep(10 * time.Minute)
+
 	for path, fid := range allRemainFiles {
 		dateTarget, _ := filepath.Rel(fileStoreDir, path)
 		target := strings.Join([]string{proxy.FTPTargetPrefix, dateTarget}, "/")
@@ -412,6 +419,13 @@ func uploadRemainFTPFile(jmsService *service.JMService, fileStoreDir string) {
 }
 
 func uploadRemainReplay(jmsService *service.JMService, remainFiles map[string]string) {
+	if len(remainFiles) == 0 {
+		logger.Info("No remain replay files")
+		return
+	}
+	logger.Infof("Start upload remain %d replay files 10 min later", len(remainFiles))
+	time.Sleep(10 * time.Minute)
+
 	var replayStorage storage.ReplayStorage
 	terminalConf, _ := jmsService.GetTerminalConfig()
 	replayStorage = storage.NewReplayStorage(jmsService, terminalConf.ReplayStorage)
@@ -486,6 +500,13 @@ func uploadRemainSessionPartReplay(jmsService *service.JMService, sessionDir str
 		logger.Errorf("Read session dir failed: %s", err)
 		return
 	}
+	if len(sessions) == 0 {
+		logger.Info("No remain replay files")
+		return
+	}
+	logger.Infof("Start upload remain %d session replay files 10 min later", len(sessions))
+	time.Sleep(10 * time.Minute)
+
 	terminalConf, _ := jmsService.GetTerminalConfig()
 	for _, sessionEntry := range sessions {
 		sessionId := sessionEntry.Name()
