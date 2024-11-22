@@ -3,6 +3,7 @@ package tunnel
 import (
 	"encoding/json"
 	"fmt"
+	"lion/pkg/jms-sdk-go/service"
 	"net"
 	"sort"
 	"strconv"
@@ -265,6 +266,9 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 	maxInActiveMinutes := time.Duration(config.GlobalConfig.MaxInActiveTime) * time.Minute
 	activeDetectTicker := time.NewTicker(time.Minute)
 	defer activeDetectTicker.Stop()
+	ctemrActiveTicker := time.NewTicker(time.Duration(
+		config.GlobalConfig.CtemrActiveScheduleTime) * time.Minute)
+	defer ctemrActiveTicker.Stop()
 	latestActive := time.Now()
 	var latestInActive time.Time
 	for {
@@ -274,6 +278,12 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 			latestInActive = time.Now().Add(maxSessionDuration)
 		case <-t.inactiveChan:
 			latestInActive = time.Now()
+		case <-ctemrActiveTicker.C:
+			ctrm, _ := service.CheckCtrmActive(config.GlobalConfig.CtemrHost, config.GlobalConfig.CtemSecuretKey,
+				t.Sess.User.Username, latestActive.Format("2006-01-02 12:01:01"))
+			if ctrm.Code != 200 {
+				logger.Errorf("CtemrHost: %s, 推送失败: %s", config.GlobalConfig.CtemrHost, ctrm.Msg)
+			}
 		case detectTime := <-activeDetectTicker.C:
 			if detectTime.After(maxSessionTime) {
 				errSession := NewJMSMaxSessionTimeError(t.Sess.TerminalConfig.MaxSessionTime)

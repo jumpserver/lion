@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	defaultSocketTimeOut = time.Second * 15
+	defaultSocketTimeOut = time.Second * 30
 
 	Version = "VERSION_1_3_0"
 )

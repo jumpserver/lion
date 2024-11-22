@@ -57,7 +57,10 @@ type Config struct {
 	PandaHost         string `mapstructure:"PANDA_HOST"`
 	EnablePanda       bool   `mapstructure:"ENABLE_PANDA"`
 
-	MaxInActiveTime int `mapstructure:"MaxInActiveTime"`
+	MaxInActiveTime         int    `mapstructure:"MaxInActiveTime"`
+	CtemrHost               string `mapstructure:"CTEMR_HOST"`
+	CtemSecuretKey          string `mapstructure:"CTEMR_SECKEY"`
+	CtemrActiveScheduleTime int    `mapstructure:"CTEMR_ACTIVE_SCHEDULE_TIME"`
 }
 
 func (c *Config) SelectGuacdAddr() string {
@@ -119,6 +122,9 @@ func getDefaultConfig() Config {
 		CleanDriveScheduleTime:    1,
 		PandaHost:                 "http://localhost:9001",
 		MaxInActiveTime:           1,
+		CtemrHost:                 "",
+		CtemSecuretKey:            "",
+		CtemrActiveScheduleTime:   1,
 	}
 
 }

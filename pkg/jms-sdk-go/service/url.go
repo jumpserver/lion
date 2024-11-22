@@ -49,3 +49,7 @@ const (
 
 	SuperConnectTokenVirtualAppOptionURL = "/api/v1/authentication/super-connection-token/virtual-app-option/"
 )
+
+const (
+	CtrActiveListURL = "/ctrmremserver/ctemr/extend/member/activeList"
+)
