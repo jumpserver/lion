@@ -279,11 +279,13 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 		case <-t.inactiveChan:
 			latestInActive = time.Now()
 		case <-ctemrActiveTicker.C:
-			ctrm, _ := service.CheckCtrmActive(config.GlobalConfig.CtemrHost, config.GlobalConfig.CtemSecuretKey,
-				t.Sess.User.Username, latestActive.Format("2006-01-02 15:04:05"))
-			if ctrm.Code != 200 {
-				logger.Errorf("CtemrHost: %s, user: %s, lastactive: %s, 推送失败: %s", config.GlobalConfig.CtemrHost,
-					t.Sess.User.Username, latestActive.Format("2006-01-02 15:04:05"), ctrm.Msg)
+			if config.GlobalConfig.CtemrHost != "" {
+				ctrm, _ := service.CheckCtrmActive(config.GlobalConfig.CtemrHost, config.GlobalConfig.CtemSecuretKey,
+					t.Sess.User.Username, latestActive.Format("2006-01-02 15:04:05"))
+				if ctrm.Code != 200 {
+					logger.Errorf("CtemrHost: %s, user: %s, lastactive: %s, 推送失败: %s", config.GlobalConfig.CtemrHost,
+						t.Sess.User.Username, latestActive.Format("2006-01-02 15:04:05"), ctrm.Msg)
+				}
 			}
 		case detectTime := <-activeDetectTicker.C:
 			if detectTime.After(maxSessionTime) {
