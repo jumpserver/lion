@@ -29,6 +29,6 @@ func CheckCtrmActive(Host string, sk string, account string, lastActiveTime stri
 			},
 		},
 	}
-	_, err = client.Post(CtrActiveListURL, data, &ctrm)
+	_, err = client.Post("", data, &ctrm)
 	return
 }
