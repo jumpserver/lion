@@ -58,7 +58,8 @@ const message = {
   GuacamoleErrInsufficientPrivileges: 'Insufficient privileges.',
   GuacamoleErrManuallyDisconnected: 'Manually disconnected.',
   GuacamoleErrManuallyLoggedOff: 'Manually logged off.',
-  GuacamoleErrUnsupportedCredentialTypeRequested: 'Unsupported credential type requested.'
+  GuacamoleErrUnsupportedCredentialTypeRequested: 'Unsupported credential type requested.',
+  GuacamoleErrUnableToConnectToVNCServer: 'Unable to connect to VNC server'
 }
 
 export default {

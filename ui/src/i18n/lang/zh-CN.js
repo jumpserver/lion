@@ -59,7 +59,8 @@ const message = {
   GuacamoleErrInsufficientPrivileges: '远程连接的用户权限不足',
   GuacamoleErrManuallyDisconnected: '远程连接被手动断开',
   GuacamoleErrManuallyLoggedOff: '远程连接的用户被手动注销',
-  GuacamoleErrUnsupportedCredentialTypeRequested: '远程连接的凭证类型不支持'
+  GuacamoleErrUnsupportedCredentialTypeRequested: '远程连接的凭证类型不支持',
+  GuacamoleErrUnableToConnectToVNCServer: '无法连接到 VNC 服务器'
 }
 
 export default {
