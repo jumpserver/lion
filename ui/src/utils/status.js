@@ -1,6 +1,5 @@
 export const ErrorStatusCodes = {
   256: 'GuaErrUnSupport',
-  519: 'GuaErrUpstreamNotFound',
   514: 'GuaErrUpStreamTimeout',
   521: 'GuaErrSessionConflict',
   769: 'GuaErrClientUnauthorized',
@@ -65,5 +64,6 @@ export const GuacamoleErrMsg = {
   'Manually disconnected.': 'GuacamoleErrManuallyDisconnected',
   'Manually logged off.': 'GuacamoleErrManuallyLoggedOff',
 
-  'Unsupported credential type requested.': 'GuacamoleErrUnsupportedCredentialTypeRequested'
+  'Unsupported credential type requested.': 'GuacamoleErrUnsupportedCredentialTypeRequested',
+  'Unable to connect to VNC server.': 'GuacamoleErrUnableToConnectToVNCServer'
 }
