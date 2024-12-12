@@ -139,6 +139,18 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 				tunnelSession.AuthInfo.Ticket.ID, err2)
 		}
 	}
+	if tunnelSession.AuthInfo.FaceMonitorToken != "" {
+		faceMonitorToken := tunnelSession.AuthInfo.FaceMonitorToken
+		faceReq := service.JoinFaceMonitorRequest{
+			FaceMonitorToken: faceMonitorToken,
+			SessionId:        sessionId,
+		}
+		logger.Infof("Session %s join face monitor %s", tunnelSession.ID, faceMonitorToken)
+		if err1 := g.JmsService.JoinFaceMonitor(faceReq); err1 != nil {
+			logger.Errorf("Session %s join face monitor err: %s", tunnelSession.ID, err1)
+		}
+	}
+
 	info := g.getClientInfo(ctx)
 	opts := tunnelSession.AuthInfo.ConnectOptions
 	resolution := strings.ToLower(opts.Resolution)
