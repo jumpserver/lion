@@ -201,6 +201,10 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 				msg := fmt.Sprintf("required: %s", strings.Join(instruction.Args, ","))
 				logger.Infof("Session[%s] receive guacamole server required: %s", t, msg)
 				requiredErr = guacd.NewInstruction(guacd.InstructionServerError, msg)
+				logger.Errorf("Session[%s] send guacamole server required err: %s", t,
+					requiredErr.String())
+				_ = t.writeWsMessage([]byte(requiredErr.String()))
+				continue
 			default:
 				noNopTime = time.Now()
 			}
