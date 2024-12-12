@@ -19,8 +19,9 @@ type ConnectToken struct {
 
 	ConnectOptions ConnectOptions `json:"connect_options"`
 
-	Ticket     *ObjectId   `json:"from_ticket,omitempty"`
-	TicketInfo interface{} `json:"from_ticket_info,omitempty"`
+	Ticket           *ObjectId   `json:"from_ticket,omitempty"`
+	TicketInfo       interface{} `json:"from_ticket_info,omitempty"`
+	FaceMonitorToken string      `json:"face_monitor_token,omitempty"`
 
 	Code   string `json:"code"`
 	Detail string `json:"detail"`
