@@ -358,6 +358,7 @@ func registerRouter(jmsService *service.JMService, tunnelService *tunnel.Guacamo
 }
 
 func bootstrap(jmsService *service.JMService) {
+	updateEncryptConfigValue(jmsService)
 	replayDir := config.GlobalConfig.RecordPath
 	ftpFilePath := config.GlobalConfig.FTPFilePath
 	sessionDir := config.GlobalConfig.SessionFolderPath
@@ -367,6 +368,23 @@ func bootstrap(jmsService *service.JMService) {
 	go uploadRemainSessionPartReplay(jmsService, sessionDir)
 }
 
+func updateEncryptConfigValue(jmsService *service.JMService) {
+	cfg := config.GlobalConfig
+	encryptKey := cfg.SecretEncryptKey
+	if encryptKey != "" {
+		redisPassword := cfg.RedisPassword
+		ret, err := jmsService.GetEncryptedConfigValue(encryptKey, redisPassword)
+		if err != nil {
+			logger.Error("Get encrypted config value failed: " + err.Error())
+			return
+		}
+		if ret.Value != "" {
+			cfg.UpdateRedisPassword(ret.Value)
+		} else {
+			logger.Error("Get encrypted config value failed: empty value")
+		}
+	}
+}
 func uploadRemainFTPFile(jmsService *service.JMService, fileStoreDir string) {
 	err := config.EnsureDirExist(fileStoreDir)
 	if err != nil {

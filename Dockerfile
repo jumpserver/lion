@@ -1,4 +1,5 @@
-FROM jumpserver/lion-base:20240719_034830 AS stage-build
+FROM jumpserver/guacd:1.5.5-bullseye AS stage-guacd
+FROM jumpserver/lion-base:20241209_012951 AS stage-build
 ARG TARGETARCH
 
 ARG GOPROXY=https://goproxy.io
@@ -24,29 +25,29 @@ RUN export GOFlAGS="-X 'main.Buildstamp=`date -u '+%Y-%m-%d %I:%M:%S%p'`'" \
 
 RUN chmod +x entrypoint.sh
 
-FROM jumpserver/guacd:1.5.5-bullseye
+FROM debian:bullseye-slim
 ARG TARGETARCH
 ENV LANG=en_US.UTF-8
-
-USER root
 
 ARG DEPENDENCIES="                    \
         ca-certificates               \
         supervisor"
 
-ARG APT_MIRROR=http://mirrors.ustc.edu.cn
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked,id=lion \
-    --mount=type=cache,target=/var/lib/apt,sharing=locked,id=lion \
-    set -ex \
-    && rm -f /etc/apt/apt.conf.d/docker-clean \
-    && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache \
+ARG PREFIX_DIR=/opt/guacamole
+ENV LD_LIBRARY_PATH=${PREFIX_DIR}/lib
+
+COPY --from=stage-guacd ${PREFIX_DIR} ${PREFIX_DIR} 
+
+ARG APT_MIRROR=http://deb.debian.org
+
+RUN set -ex \
     && sed -i "s@http://.*.debian.org@${APT_MIRROR}@g" /etc/apt/sources.list \
     && ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
     && apt-get update \
     && apt-get install -y --no-install-recommends ${DEPENDENCIES} \
-    && apt-get clean \
-    && sed -i "s@# export @export @g" ~/.bashrc \
-    && sed -i "s@# alias @alias @g" ~/.bashrc \
+    && apt-get install -y --no-install-recommends $(cat "${PREFIX_DIR}"/DEPENDENCIES) \
+    && apt-get clean all \
+    && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /lib32 /libx32
 
 WORKDIR /opt/lion

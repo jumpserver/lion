@@ -24,8 +24,13 @@ define make_artifact_full
 	GOOS=$(1) GOARCH=$(2) $(GOBUILD) -o $(BUILDDIR)/$(NAME)-$(1)-$(2)
 	mkdir -p $(BUILDDIR)/$(NAME)-$(VERSION)-$(1)-$(2)/$(UIDIR)/dist/
 	cp $(BUILDDIR)/$(NAME)-$(1)-$(2) $(BUILDDIR)/$(NAME)-$(VERSION)-$(1)-$(2)/$(NAME)
-	-cp config_example.yml $(BUILDDIR)/$(NAME)-$(VERSION)-$(1)-$(2)/config_example.yml
+	cp README.md $(BUILDDIR)/$(NAME)-$(VERSION)-$(1)-$(2)/README.md
+	cp LICENSE $(BUILDDIR)/$(NAME)-$(VERSION)-$(1)-$(2)/LICENSE
+	cp config_example.yml $(BUILDDIR)/$(NAME)-$(VERSION)-$(1)-$(2)/config_example.yml
+	cp entrypoint.sh $(BUILDDIR)/$(NAME)-$(VERSION)-$(1)-$(2)/entrypoint.sh
+	cp supervisord.conf $(BUILDDIR)/$(NAME)-$(VERSION)-$(1)-$(2)/supervisord.conf
 	cp -r $(UIDIR)/dist/* $(BUILDDIR)/$(NAME)-$(VERSION)-$(1)-$(2)/$(UIDIR)/dist/
+
 	cd $(BUILDDIR) && tar -czvf $(NAME)-$(VERSION)-$(1)-$(2).tar.gz $(NAME)-$(VERSION)-$(1)-$(2)
 	rm -rf $(BUILDDIR)/$(NAME)-$(VERSION)-$(1)-$(2) $(BUILDDIR)/$(NAME)-$(1)-$(2)
 endef
@@ -42,6 +47,7 @@ all: lion-ui
 	$(call make_artifact_full,linux,ppc64le)
 	$(call make_artifact_full,linux,s390x)
 	$(call make_artifact_full,linux,riscv64)
+	$(call make_artifact_full,linux,loong64)
 
 local: lion-ui
 	$(call make_artifact_full,$(shell go env GOOS),$(shell go env GOARCH))

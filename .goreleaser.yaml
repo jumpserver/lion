@@ -8,9 +8,6 @@ before:
     - go mod tidy
     - go generate ./...
 
-snapshot:
-  version_template: "{{ .Tag }}-next"
-
 builds:
   - id: lion
     main: main.go
@@ -44,6 +41,8 @@ archives:
       - LICENSE
       - README.md
       - config_example.yml
+      - entrypoint.sh
+      - supervisord.conf
       - ui/dist/**
 
     format_overrides:
@@ -52,7 +51,7 @@ archives:
     name_template: "{{ .ProjectName }}-{{ .Tag }}-{{ .Os }}-{{ .Arch }}{{- if .Arm }}v{{ .Arm }}{{ end }}"
 
 checksum:
-  name_template: "{{ .ProjectName }}_checksums.txt"
+  name_template: "checksums.txt"
 
 release:
   draft: true

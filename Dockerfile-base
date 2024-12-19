@@ -1,4 +1,4 @@
-FROM golang:1.22-bullseye AS stage-go-build
+FROM golang:1.23-bullseye AS stage-go-build
 
 FROM node:20.15-bullseye
 COPY --from=stage-go-build /usr/local/go/ /usr/local/go/
@@ -15,11 +15,10 @@ RUN set -ex \
 
 WORKDIR /opt
 
-ARG CHECK_VERSION=v1.0.3
+ARG CHECK_VERSION=v1.0.4
 RUN set -ex \
     && wget https://github.com/jumpserver-dev/healthcheck/releases/download/${CHECK_VERSION}/check-${CHECK_VERSION}-linux-${TARGETARCH}.tar.gz \
-    && tar -xf check-${CHECK_VERSION}-linux-${TARGETARCH}.tar.gz \
-    && mv check /usr/local/bin/ \
+    && tar -xf check-${CHECK_VERSION}-linux-${TARGETARCH}.tar.gz -C /usr/local/bin/ check \
     && chown root:root /usr/local/bin/check \
     && chmod 755 /usr/local/bin/check \
     && rm -f check-${CHECK_VERSION}-linux-${TARGETARCH}.tar.gz
