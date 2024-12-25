@@ -220,6 +220,7 @@ func (p *PartRecorder) Start(ctx context.Context, joinTunnel *guacd.Tunnel) {
 			}
 		case guacd.InstructionClientNop:
 			logger.Debugf("PartRecorder(%s) receive nop", p)
+			_ = joinTunnel.WriteInstructionAndFlush(inst)
 			continue
 		default:
 		}
