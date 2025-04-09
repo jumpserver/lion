@@ -52,17 +52,21 @@ func (r RDPConfiguration) GetGuacdConfiguration() guacd.Configuration {
 	conf.SetParameter(guacd.Hostname, ip)
 	conf.SetParameter(guacd.Port, port)
 
-	if r.Platform != nil {
-		if rdpSetting, ok := r.Platform.GetProtocolSetting(rdp); ok {
-			if rdpSetting.Setting.AdDomain != "" {
-				adDomain = rdpSetting.Setting.AdDomain
-			}
-		}
-	}
 	/*
-		AD Domain 的处理调整为
-		1、如果账号 username 格式是 domain\username 则需要转换为 username@domain，且覆盖平台的 AD 域设置。
-		2、其他格式的账号，如果平台中设置了 AD 域则使用平台中的设置，否则使用不设置
+		 pam 会处理 ad Domain 的信息，转化成 username@domain 的格式
+		 不在从 platform 处理
+			if r.Platform != nil {
+				if rdpSetting, ok := r.Platform.GetProtocolSetting(rdp); ok {
+					if rdpSetting.Setting.AdDomain != "" {
+						adDomain = rdpSetting.Setting.AdDomain
+					}
+				}
+			}
+
+			/*
+				AD Domain 的处理调整为
+				1、如果账号 username 格式是 domain\username 则需要转换为 username@domain，且覆盖平台的 AD 域设置。
+				2、其他格式的账号，如果平台中设置了 AD 域则使用平台中的设置，否则使用不设置
 	*/
 
 	parts := strings.Split(username, `\`)
