@@ -1,15 +1,8 @@
+version: "2"
 run:
   timeout: 5m
   modules-download-mode: readonly
 
-issues:
-  exclude-dirs:
-    - docs
-    - ui
-    - .git
-
-  exclude-files:
-    - pkg/utils/terminal.go
 
 linters:
   enable:
@@ -17,4 +10,7 @@ linters:
     - staticcheck
 
 output:
-  format: colored-line-number
+  show-stats: true
+  sort-order:
+    - file
+    - linter
