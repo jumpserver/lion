@@ -67,6 +67,7 @@ export default {
     }).catch(err => {
       this.$log.debug(err)
     })
+    window.addEventListener('message', this.handleEventFromLuna, false)
   },
   methods: {
     getAutoSize() {
@@ -169,6 +170,22 @@ export default {
       const display = document.getElementById('display')
       display.appendChild(this.client.getDisplay().getElement())
       display.appendChild(this.sink.getElement())
+    },
+
+    handleEventFromLuna(evt) {
+      const msg = evt.data
+      switch (msg.name) {
+        case 'PING':
+          if (this.lunaId != null) {
+            return
+          }
+          this.lunaId = msg.id
+          this.origin = evt.origin
+          this.sendEventToLuna('PONG', null)
+          break
+      }
+
+      console.log('Lion got post msg: ', msg)
     },
 
     displayResize(width, height) {
