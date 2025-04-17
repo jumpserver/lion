@@ -397,7 +397,8 @@ export default {
   },
   methods: {
     generateShareURL() {
-      return `${BASE_URL}/lion/share/${this.shareId}/`
+      // return `${BASE_URL}/lion/share/${this.shareId}/`
+      return `${BASE_URL}/luna/share/${this.shareId}?type=lion`
     },
     getMinuteLabel(item) {
       let minuteLabel = i18n.t('Minute')
