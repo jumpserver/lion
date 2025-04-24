@@ -271,5 +271,7 @@ func (r VirtualAppConfiguration) GetGuacdConfiguration() guacd.Configuration {
 		conf.SetParameter(guacd.DisableCopy, disableCopy)
 		conf.SetParameter(guacd.DisablePaste, disablePaste)
 	}
+	// vnc 强制使用 utf8 编码
+	conf.SetParameter(guacd.VNCClipboardEncoding, "UTF-8")
 	return conf
 }
