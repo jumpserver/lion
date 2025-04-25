@@ -249,6 +249,7 @@ func (r VirtualAppConfiguration) GetGuacdConfiguration() guacd.Configuration {
 	port = strconv.Itoa(r.VirtualAppOpt.Port)
 	username = r.VirtualAppOpt.Username
 	password = r.VirtualAppOpt.Password
+	sftpPort := strconv.Itoa(r.VirtualAppOpt.SFTPPort)
 	conf.Protocol = vnc
 	conf.SetParameter(guacd.Hostname, ip)
 	conf.SetParameter(guacd.Port, port)
@@ -285,7 +286,7 @@ func (r VirtualAppConfiguration) GetGuacdConfiguration() guacd.Configuration {
 	// default sftp enable and set sftp username and password
 	conf.SetParameter(guacd.EnableSftp, BoolTrue)
 	conf.SetParameter(guacd.SftpHostname, ip)
-	conf.SetParameter(guacd.SftpPort, "22")
+	conf.SetParameter(guacd.SftpPort, sftpPort)
 	conf.SetParameter(guacd.SftpUsername, vAPPSFTPUsername)
 	conf.SetParameter(guacd.SftpPassword, password)
 	return conf
