@@ -32,6 +32,7 @@ type VirtualAppContainer struct {
 	Protocol    string `json:"protocol"`
 	Username    string `json:"username"`
 	Password    string `json:"password"`
+	SFTPPort    int    `json:"sftp_port"`
 }
 
 func (v VirtualAppContainer) String() string {
