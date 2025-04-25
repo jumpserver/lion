@@ -9,8 +9,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/spf13/viper"
 	"lion/pkg/common"
+
+	"github.com/spf13/viper"
 )
 
 var GlobalConfig *Config
@@ -60,6 +61,8 @@ type Config struct {
 
 	ReplayMaxSize    int    `mapstructure:"REPLAY_MAX_SIZE"`
 	SecretEncryptKey string `mapstructure:"SECRET_ENCRYPT_KEY"`
+
+	VncClipboardEncoding string `mapstructure:"VNC_CLIPBOARD_ENCODING"`
 }
 
 func (c *Config) UpdateRedisPassword(val string) {
