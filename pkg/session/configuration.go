@@ -281,5 +281,14 @@ func (r VirtualAppConfiguration) GetGuacdConfiguration() guacd.Configuration {
 	}
 	// vnc 强制使用 utf8 编码
 	conf.SetParameter(guacd.VNCClipboardEncoding, "UTF-8")
+
+	// default sftp enable and set sftp username and password
+	conf.SetParameter(guacd.EnableSftp, BoolTrue)
+	conf.SetParameter(guacd.SftpHostname, ip)
+	conf.SetParameter(guacd.SftpPort, "22")
+	conf.SetParameter(guacd.SftpUsername, vAPPSFTPUsername)
+	conf.SetParameter(guacd.SftpPassword, password)
 	return conf
 }
+
+const vAPPSFTPUsername = "jumpserver"
