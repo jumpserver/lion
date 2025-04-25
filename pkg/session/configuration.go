@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/spf13/viper"
+
 	"lion/pkg/common"
 	"lion/pkg/config"
 	"lion/pkg/guacd"
@@ -205,6 +207,12 @@ func (r VNCConfiguration) GetGuacdConfiguration() guacd.Configuration {
 		conf.SetParameter(guacd.DisableCopy, disableCopy)
 		conf.SetParameter(guacd.DisablePaste, disablePaste)
 	}
+
+	// VNC_CLIPBOARD_ENCODING from env
+	if value := viper.GetString("VNC_CLIPBOARD_ENCODING"); value != "" {
+		conf.SetParameter(guacd.VNCClipboardEncoding, value)
+	}
+
 	return conf
 }
 
