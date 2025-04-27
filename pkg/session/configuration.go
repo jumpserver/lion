@@ -302,5 +302,5 @@ func (r VirtualAppConfiguration) GetGuacdConfiguration() guacd.Configuration {
 
 const (
 	vAPPSFTPUsername = "jumpserver"
-	sftpRootDir      = "/tmp/"
+	sftpRootDir      = "/tmp/jumpserver/download"
 )
