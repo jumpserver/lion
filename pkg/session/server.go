@@ -3,6 +3,8 @@ package session
 import (
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -44,6 +46,39 @@ type Server struct {
 	VideoWorkerClient *videoworker.Client
 
 	PandaClient *panda.Client
+}
+
+func ParseWidthAndHeight(ctx *gin.Context, connectToken *model.ConnectToken) (int, int) {
+	var width, height int
+	if guacWidth, ok := ctx.GetQuery("GUAC_WIDTH"); ok {
+		if widthInt, err := strconv.Atoi(guacWidth); err == nil && widthInt > 0 {
+			width = widthInt
+		}
+	}
+	if guacHeight, ok := ctx.GetQuery("GUAC_HEIGHT"); ok {
+		if heightInt, err := strconv.Atoi(guacHeight); err == nil && heightInt > 0 {
+			height = heightInt
+		}
+	}
+	opts := connectToken.ConnectOptions
+	resolution := strings.ToLower(opts.Resolution)
+	switch resolution {
+	case "":
+	case "auto":
+	default:
+		resolutions := strings.Split(resolution, "x")
+		if len(resolutions) == 2 {
+			widthStr := resolutions[0]
+			heightStr := resolutions[1]
+			if widthInt, err1 := strconv.Atoi(widthStr); err1 == nil && widthInt > 0 {
+				width = widthInt
+			}
+			if heightInt, err1 := strconv.Atoi(heightStr); err1 == nil && heightInt > 0 {
+				height = heightInt
+			}
+		}
+	}
+	return width, height
 }
 
 func (s *Server) CreatByToken(ctx *gin.Context, token string) (TunnelSession, error) {
@@ -103,10 +138,13 @@ func (s *Server) CreatByToken(ctx *gin.Context, token string) (TunnelSession, er
 			}
 			return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, msg)
 		}
+		width, height := ParseWidthAndHeight(ctx, &connectToken)
 		appOpt := model.VirtualAppOption{
 			ImageName:     virtualApp.ImageName,
 			ImageProtocol: virtualApp.ImageProtocol,
 			ImagePort:     virtualApp.ImagePort,
+			DesktopWidth:  width,
+			DesktopHeight: height,
 		}
 		virtualContainer, err2 := s.PandaClient.CreateContainer(token, appOpt)
 		if err2 != nil {

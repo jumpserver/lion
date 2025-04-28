@@ -44,7 +44,7 @@ type GuacamoleTunnelServer struct {
 	SessionService *session.Server
 }
 
-func (g *GuacamoleTunnelServer) getClientInfo(ctx *gin.Context) guacd.ClientInformation {
+func (g *GuacamoleTunnelServer) getClientInfo(ctx *gin.Context, token *model.ConnectToken) guacd.ClientInformation {
 	info := guacd.NewClientInformation()
 	if supportImages, ok := ctx.GetQueryArray("GUAC_IMAGE"); ok {
 		info.ImageMimetypes = supportImages
@@ -55,17 +55,11 @@ func (g *GuacamoleTunnelServer) getClientInfo(ctx *gin.Context) guacd.ClientInfo
 	if supportVideos, ok := ctx.GetQueryArray("GUAC_VIDEO"); ok {
 		info.VideoMimetypes = supportVideos
 	}
-	if width, ok := ctx.GetQuery("GUAC_WIDTH"); ok {
-		if widthInt, err := strconv.Atoi(width); err == nil && widthInt > 0 {
-			info.OptimalScreenWidth = widthInt
-		}
+	width, height := session.ParseWidthAndHeight(ctx, token)
+	if width > 0 && height > 0 {
+		info.OptimalScreenWidth = width
+		info.OptimalScreenHeight = height
 	}
-	if height, ok := ctx.GetQuery("GUAC_HEIGHT"); ok {
-		if heightInt, err := strconv.Atoi(height); err == nil && heightInt > 0 {
-			info.OptimalScreenHeight = heightInt
-		}
-	}
-
 	if dpi, ok := ctx.GetQuery("GUAC_DPI"); ok {
 		if dpiInt, err := strconv.Atoi(dpi); err == nil && dpiInt > 0 {
 			info.OptimalResolution = dpiInt
@@ -151,27 +145,7 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 		}
 	}
 
-	info := g.getClientInfo(ctx)
-	opts := tunnelSession.AuthInfo.ConnectOptions
-	resolution := strings.ToLower(opts.Resolution)
-	switch resolution {
-	case "":
-	case "auto":
-	default:
-		logger.Infof("Session[%s] Connect options resolution: %s",
-			sessionId, resolution)
-		resolutions := strings.Split(resolution, "x")
-		if len(resolutions) == 2 {
-			width := resolutions[0]
-			height := resolutions[1]
-			if widthInt, err1 := strconv.Atoi(width); err1 == nil && widthInt > 0 {
-				info.OptimalScreenWidth = widthInt
-			}
-			if heightInt, err1 := strconv.Atoi(height); err1 == nil && heightInt > 0 {
-				info.OptimalScreenHeight = heightInt
-			}
-		}
-	}
+	info := g.getClientInfo(ctx, tunnelSession.AuthInfo)
 
 	conf := tunnelSession.GuaConfiguration()
 	for argName, argValue := range info.ExtraConfig() {
