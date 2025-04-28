@@ -44,6 +44,8 @@ type VirtualAppOption struct {
 	ImageName     string `json:"image_name"`
 	ImageProtocol string `json:"image_protocol"`
 	ImagePort     int    `json:"image_port"`
+	DesktopWidth  int    `json:"desktop_width"`
+	DesktopHeight int    `json:"desktop_height"`
 }
 
 type VirtualApp struct {
