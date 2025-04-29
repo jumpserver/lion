@@ -36,7 +36,7 @@ define make_artifact_full
 endef
 
 build:
-	GOARCH=$(GOARCH) GOOS=$(GOOS) $(GO_BUILD) -o $(BUILDDIR)/$(NAME) .
+	GOARCH=$(GOARCH) GOOS=$(GOOS) $(GOBUILD) -o $(BUILDDIR)/$(NAME) .
 
 all: lion-ui
 	$(call make_artifact_full,darwin,amd64)
