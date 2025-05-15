@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/spf13/viper"
+
 	"lion/pkg/common"
 	"lion/pkg/config"
 	"lion/pkg/guacd"
@@ -205,6 +207,12 @@ func (r VNCConfiguration) GetGuacdConfiguration() guacd.Configuration {
 		conf.SetParameter(guacd.DisableCopy, disableCopy)
 		conf.SetParameter(guacd.DisablePaste, disablePaste)
 	}
+
+	// VNC_CLIPBOARD_ENCODING from env
+	if value := viper.GetString("VNC_CLIPBOARD_ENCODING"); value != "" {
+		conf.SetParameter(guacd.VNCClipboardEncoding, value)
+	}
+
 	return conf
 }
 
@@ -241,6 +249,7 @@ func (r VirtualAppConfiguration) GetGuacdConfiguration() guacd.Configuration {
 	port = strconv.Itoa(r.VirtualAppOpt.Port)
 	username = r.VirtualAppOpt.Username
 	password = r.VirtualAppOpt.Password
+	sftpPort := r.VirtualAppOpt.SFTPPort
 	conf.Protocol = vnc
 	conf.SetParameter(guacd.Hostname, ip)
 	conf.SetParameter(guacd.Port, port)
@@ -271,5 +280,27 @@ func (r VirtualAppConfiguration) GetGuacdConfiguration() guacd.Configuration {
 		conf.SetParameter(guacd.DisableCopy, disableCopy)
 		conf.SetParameter(guacd.DisablePaste, disablePaste)
 	}
+	// vnc 强制使用 utf8 编码
+	conf.SetParameter(guacd.VNCClipboardEncoding, "UTF-8")
+
+	if sftpPort > 0 {
+		//  sftp enable and set sftp username and password
+		enableDrive := ConvertBoolToString(r.ActionsPerm.EnableDownload || r.ActionsPerm.EnableUpload)
+		disableDownload := ConvertBoolToString(!r.ActionsPerm.EnableDownload)
+		disableUpload := ConvertBoolToString(!r.ActionsPerm.EnableUpload)
+		conf.SetParameter(guacd.EnableSftp, enableDrive)
+		conf.SetParameter(guacd.SftpHostname, ip)
+		conf.SetParameter(guacd.SftpPort, strconv.Itoa(sftpPort))
+		conf.SetParameter(guacd.SftpUsername, vAPPSFTPUsername)
+		conf.SetParameter(guacd.SftpPassword, password)
+		conf.SetParameter(guacd.SftpRootDirectory, sftpRootDir)
+		conf.SetParameter(guacd.SftpDisableDownload, disableDownload)
+		conf.SetParameter(guacd.SftpDisableUpload, disableUpload)
+	}
 	return conf
 }
+
+const (
+	vAPPSFTPUsername = "jumpserver"
+	sftpRootDir      = "/tmp/jumpserver/download"
+)
