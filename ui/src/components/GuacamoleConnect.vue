@@ -384,19 +384,7 @@ export default {
     const result = getCurrentConnectParams()
     this.apiPrefix = result['api']
     this.wsPrefix = result['ws']
-    const vm = this
-    createSession(result['api'], result['data']).then(res => {
-      window.addEventListener('beforeunload', e => this.beforeunloadFn(e))
-      window.addEventListener('unload', e => this.beforeunloadFn(e))
-      this.session = res.data
-      this.startConnect()
-    }).catch(err => {
-      const message = err.message || err
-      vm.$log.debug('err ', message)
-      const errArray = message.split(':')
-      vm.$error(vm.$t(ConvertAPIError(message)) + ': ' + errArray.slice(1).join(':'))
-      vm.loading = false
-    })
+    this.startConnect()
     window.addEventListener('message', this.handleEventFromLuna, false)
   },
   methods: {
@@ -501,7 +489,9 @@ export default {
       this.$log.debug('Clipboard inited: ', this.clipboardInited)
     },
     startConnect() {
-      this.getConnectString(this.session.id).then(connectionParams => {
+      const params = getURLParams()
+      const tokenId = params.get('token')
+      this.getConnectString(tokenId).then(connectionParams => {
         this.connectGuacamole(connectionParams, this.wsPrefix)
       })
     },
@@ -585,7 +575,7 @@ export default {
       return keyboardLayout
     },
 
-    getConnectString(sessionId) {
+    getConnectString(tokenId) {
       // Calculate optimal width/height for display
       const [optimalWidth, optimalHeight] = this.getGuaSize()
       const keyboardLayout = this.getKeyboardLayout()
@@ -601,7 +591,7 @@ export default {
           const supportAudios = values[1]
           const supportVideos = values[2]
           let connectString =
-              'SESSION_ID=' + encodeURIComponent(sessionId) +
+              'TOKEN_ID=' + encodeURIComponent(tokenId) +
               '&GUAC_WIDTH=' + Math.floor(optimalWidth) +
               '&GUAC_HEIGHT=' + Math.floor(optimalHeight) +
               '&GUAC_DPI=' + Math.floor(optimalDpi) +
@@ -1174,7 +1164,6 @@ export default {
 }
 
 .share-dialog >>> .el-form-item__label {
-  //color: #ffffff;
   color: #ffffff;
   background: #303133;
 }
