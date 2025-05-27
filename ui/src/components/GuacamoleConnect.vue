@@ -47,6 +47,79 @@
       :show.sync="fileDrawer"
       @closeDrawer="onCloseDrawer"
     />
+    <el-dialog
+      :title="shareTitle"
+      :visible.sync="shareDialogVisible"
+      width="30%"
+      :close-on-press-escape="false"
+      :close-on-click-modal="false"
+      :modal="false"
+      class="share-dialog"
+      center
+      @close="shareDialogClosed"
+    >
+      <div v-if="!shareId">
+        <el-form v-loading="shareLoading" label-position="left" :model="shareLinkRequest">
+          <el-form-item :label="$t('ExpiredTime')">
+            <el-select v-model="shareLinkRequest.expiredTime" :placeholder="$t('SelectAction')">
+              <el-option
+                v-for="item in expiredOptions"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item :label="$t('ActionPerm')">
+            <el-select v-model="shareLinkRequest.actionPerm" :placeholder="$t('ActionPerm')">
+              <el-option
+                v-for="item in actionsPermOptions"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item :label="$t('ShareUser')">
+            <el-select
+              v-model="shareLinkRequest.users"
+              multiple
+              filterable
+              remote
+              reserve-keyword
+              :placeholder="$t('GetShareUser')"
+              :remote-method="getSessionUser"
+              :loading="userLoading"
+            >
+              <el-option
+                v-for="item in userOptions"
+                :key="item.id"
+                :label="item.name + '(' + item.username + ')'"
+                :value="item.id"
+              />
+            </el-select>
+            <div style="color: #d9d1d1;font-size: 12px">{{ $t('ShareUserHelpText') }}</div>
+          </el-form-item>
+        </el-form>
+        <div>
+          <el-button class="share-btn" @click="handleShareURlCreated">{{ $t('CreateLink') }}</el-button>
+        </div>
+      </div>
+      <div v-else>
+        <el-result icon="success" class="result" :title="$t('CreateSuccess')" />
+        <el-form label-position="top">
+          <el-form-item :label="$t('LinkAddr')">
+            <el-input readonly :value="shareURL" />
+          </el-form-item>
+          <el-form-item :label="$t('VerifyCode')">
+            <el-input readonly :value="shareCode" />
+          </el-form-item>
+        </el-form>
+        <div class="share">
+          <el-button class="copy-btn" @click="copyShareURL">{{ $t('CopyLink') }}</el-button>
+        </div>
+      </div>
+    </el-dialog>
   </el-container>
 </template>
 
@@ -55,15 +128,16 @@ import Guacamole from 'guacamole-common-js'
 import { getSupportedMimetypes } from '@/utils/image'
 import { getSupportedGuacAudios } from '@/utils/audios'
 import { getSupportedGuacVideos } from '@/utils/video'
-import { getCurrentConnectParams } from '@/utils/common'
-import { createSession, deleteSession } from '@/api/session'
+import { getCurrentConnectParams, getURLParams,
+  localStorageGet, BASE_URL, CopyTextToClipboard } from '@/utils/common'
 import GuacClipboard from './GuacClipboard'
 import GuacFileSystem from './GuacFileSystem'
 import RightPanel from './RightPanel'
 import Settings from './Settings'
 import { default as i18n, getLanguage } from '@/i18n'
-import { ErrorStatusCodes, ConvertAPIError, ConvertGuacamoleError } from '@/utils'
-import { localStorageGet } from '@/utils/common'
+import { ErrorStatusCodes, ConvertGuacamoleError } from '@/utils'
+import { getUserInfo } from '@/api/user'
+import { createShareURL, removeShareUser } from '@/api/session'
 
 const pixelDensity = 1
 const sideWidth = 0
@@ -160,7 +234,31 @@ export default {
       origin: null,
       lunaId: null,
       display: null,
-      autoFit: true
+      autoFit: true,
+      shareDialogVisible: false,
+      shareId: '',
+      shareLinkRequest: {
+        expiredTime: 10,
+        actionPerm: 'writable',
+        users: []
+      },
+      expiredOptions: [
+        { label: this.getMinuteLabel(1), value: 1 },
+        { label: this.getMinuteLabel(5), value: 5 },
+        { label: this.getMinuteLabel(10), value: 10 },
+        { label: this.getMinuteLabel(20), value: 20 },
+        { label: this.getMinuteLabel(60), value: 60 }
+      ],
+      actionsPermOptions: [
+        { label: this.$t('Writable'), value: 'writable' },
+        { label: this.$t('ReadOnly'), value: 'readonly' }
+      ],
+      userOptions: [],
+      userLoading: false,
+      shareCode: null,
+      shareLoading: false,
+      enableShare: true,
+      onlineUsersMap: {}
     }
   },
   computed: {
@@ -198,6 +296,12 @@ export default {
           icon: 'el-icon-folder',
           disabled: () => ((!this.hasFileSystem) || this.menuDisable),
           click: () => (this.toggleFileSystem())
+        },
+        {
+          title: this.$t('Share'),
+          icon: 'el-icon-share',
+          disabled: () => (this.menuDisable || !this.enableShare),
+          click: () => (this.shareDialogVisible = !this.shareDialogVisible)
         }
       ]
       if (!this.isRemoteApp) {
@@ -217,7 +321,56 @@ export default {
           itemClick: (keys) => (this.handleKeys(keys))
         })
       }
+      settings.push({
+        title: this.$t('User'),
+        icon: 'el-icon-s-custom',
+        disabled: () => Object.keys(this.onlineUsersMap).length < 1,
+        content: Object.values(this.onlineUsersMap).map(item => {
+          item.name = item.user
+          item.faIcon = item.writable ? 'fa-solid fa-keyboard' : 'fa-solid fa-eye'
+          item.iconTip = item.writable ? this.$t('Writable') : this.$t('ReadOnly')
+          return item
+        }).sort((a, b) => new Date(a.created) - new Date(b.created)),
+        itemClick: () => {
+        },
+        itemActions: [
+          {
+            faIcon: 'fa-solid fa-trash-can',
+            tipText: this.$t('Remove'),
+            style: {
+              color: '#f56c6c'
+            },
+            hidden: (user) => {
+              return user.primary
+            },
+            click: (user) => {
+              if (user.primary) {
+                return
+              }
+              this.$confirm(this.$t('RemoveShareUserConfirm'))
+                .then(() => {
+                  this.$log.debug('Remove user', user)
+                  removeShareUser(user).then(response => {
+                    this.$log.debug('Remove user response: ', response)
+                  })
+                    .catch(() => {
+                      this.$log.debug('not Remove user', user)
+                    })
+                })
+                .catch(() => {
+                  this.$log.debug('not Remove user', user)
+                })
+            }
+          }
+        ]
+      })
       return settings
+    },
+    shareTitle() {
+      return this.shareId ? this.$t('Share') : this.$t('CreateLink')
+    },
+    shareURL() {
+      return this.shareId ? this.generateShareURL() : this.$t('NoLink')
     }
   },
   watch: {
@@ -231,22 +384,67 @@ export default {
     const result = getCurrentConnectParams()
     this.apiPrefix = result['api']
     this.wsPrefix = result['ws']
-    const vm = this
-    createSession(result['api'], result['data']).then(res => {
-      window.addEventListener('beforeunload', e => this.beforeunloadFn(e))
-      window.addEventListener('unload', e => this.beforeunloadFn(e))
-      this.session = res.data
-      this.startConnect()
-    }).catch(err => {
-      const message = err.message || err
-      vm.$log.debug('err ', message)
-      const errArray = message.split(':')
-      vm.$error(vm.$t(ConvertAPIError(message)) + ': ' + errArray.slice(1).join(':'))
-      vm.loading = false
-    })
+    this.startConnect()
     window.addEventListener('message', this.handleEventFromLuna, false)
   },
   methods: {
+    generateShareURL() {
+      return `${BASE_URL}/lion/share/${this.shareId}/`
+    },
+    getMinuteLabel(item) {
+      let minuteLabel = this.$t('Minute')
+      if (item > 1) {
+        minuteLabel = this.$t('Minutes')
+      }
+      return `${item} ${minuteLabel}`
+    },
+    shareDialogClosed() {
+      this.$log.debug('share dialog closed')
+      this.loading = false
+      this.shareId = null
+      this.shareCode = null
+      this.shareDialogVisible = false
+    },
+    copyShareURL() {
+      if (!this.shareId) {
+        return
+      }
+      const shareURL = this.generateShareURL()
+      this.$log.debug('share URL: ' + shareURL)
+      const linkTitle = this.$t('LinkAddr')
+      const codeTitle = this.$t('VerifyCode')
+      const text = `${linkTitle}： ${shareURL}\n${codeTitle}: ${this.shareCode}`
+      CopyTextToClipboard(text)
+      this.$message(this.$t('CopyShareURLSuccess'))
+    },
+    getSessionUser(query) {
+      if (query !== '') {
+        this.userLoading = true
+        getUserInfo(query).then(response => {
+          this.userLoading = false
+          this.$log.debug('User options response: ', response)
+          this.userOptions = response
+        })
+      } else {
+        this.userOptions = []
+      }
+    },
+    handleShareURlCreated() {
+      this.shareLoading = true
+      const data = {
+        session_id: this.session.id,
+        expired_time: this.shareLinkRequest.expiredTime,
+        users: this.shareLinkRequest.users,
+        action_perm: this.shareLinkRequest.actionPerm
+      }
+      createShareURL(data).then(response => {
+        this.$log.debug('Create share URL response: ', response)
+        this.shareLoading = false
+        this.shareId = response.id
+        this.shareCode = response.verify_code
+      })
+      this.$log.debug('分享请求数据： ', this.sessionId, this.shareLinkRequest)
+    },
     increaseScale() {
       this.autoFit = false
       this.scale += 0.1
@@ -288,12 +486,12 @@ export default {
         this.$log.debug(this.session.permission)
         this.clipboardInited = hasClipboardPermission
       }
-    },
-    beforeunloadFn(e) {
-      this.removeSession()
+      this.$log.debug('Clipboard inited: ', this.clipboardInited)
     },
     startConnect() {
-      this.getConnectString(this.session.id).then(connectionParams => {
+      const params = getURLParams()
+      const tokenId = params.get('token')
+      this.getConnectString(tokenId).then(connectionParams => {
         this.connectGuacamole(connectionParams, this.wsPrefix)
       })
     },
@@ -332,11 +530,6 @@ export default {
       }
     },
 
-    removeSession() {
-      deleteSession(this.apiPrefix, this.session.id).catch(err => {
-        this.$log.debug(err)
-      })
-    },
     menuIndex(index, num) {
       return index + num
     },
@@ -382,7 +575,7 @@ export default {
       return keyboardLayout
     },
 
-    getConnectString(sessionId) {
+    getConnectString(tokenId) {
       // Calculate optimal width/height for display
       const [optimalWidth, optimalHeight] = this.getGuaSize()
       const keyboardLayout = this.getKeyboardLayout()
@@ -398,7 +591,7 @@ export default {
           const supportAudios = values[1]
           const supportVideos = values[2]
           let connectString =
-              'SESSION_ID=' + encodeURIComponent(sessionId) +
+              'TOKEN_ID=' + encodeURIComponent(tokenId) +
               '&GUAC_WIDTH=' + Math.floor(optimalWidth) +
               '&GUAC_HEIGHT=' + Math.floor(optimalHeight) +
               '&GUAC_DPI=' + Math.floor(optimalDpi) +
@@ -544,6 +737,9 @@ export default {
           break
         case 1010:
           msg = msg.replace('{PLACEHOLDER}', status.message)
+          break
+        case 1006:
+          msg = msg + ': ' + status.message
           break
       }
       this.$alert(msg, this.$t('ErrTitle'), {
@@ -744,6 +940,37 @@ export default {
           this.$message.info(msg)
           break
         }
+        case 'session': {
+          this.session = dataObj
+          this.initFileSystem()
+          this.initClipboard()
+          const actions = this.session.action_permission
+          this.$log.debug('Session actions: ', actions)
+          this.enableShare = actions.enable_share
+          break
+        }
+        case 'current_user': {
+          this.shareid = dataObj.share_id
+          break
+        }
+        case 'share_join': {
+          if (dataObj.primary) {
+            this.$log.debug('primary user 不提醒')
+            break
+          }
+          const joinMsg = `${dataObj.user} ${this.$t('JoinShare')}`
+          this.$message(joinMsg)
+          break
+        }
+        case 'share_exit': {
+          const leaveMsg = `${dataObj.user} ${this.$t('LeaveShare')}`
+          this.$message(leaveMsg)
+          break
+        }
+        case 'share_users': {
+          this.onlineUsersMap = dataObj
+          break
+        }
         default:
           break
       }
@@ -922,5 +1149,49 @@ export default {
 
 .h3title{
   padding-left: 25px;
+}
+
+.share-dialog >>> .el-dialog__header {
+  background: #333;
+}
+
+.share-dialog >>> .el-dialog__body {
+  background: #333;
+}
+
+.share-dialog >>> .el-dialog__title {
+  color: #ffffff;
+}
+
+.share-dialog >>> .el-form-item__label {
+  color: #ffffff;
+  background: #303133;
+}
+
+.share-dialog >>> .el-button:hover {
+  background: rgb(134, 133, 133);
+  color: #303133;
+  border-color: rgba(183, 172, 172, 0.1);
+}
+.share-btn >>> .el-button {
+  background: #303133;
+  color: #ffffff;
+}
+
+.share-btn:hover {
+  background: rgb(134, 133, 133);
+  color: #303133;
+  border-color: rgba(183, 172, 172, 0.1);
+}
+
+.share >>> .el-button {
+  background: #303133;
+  color: #ffffff;
+}
+
+.copy-btn:hover {
+  background: rgb(134, 133, 133);
+  color: #303133;
+  border-color: rgba(183, 172, 172, 0.1);
 }
 </style>

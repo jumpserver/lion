@@ -10,24 +10,27 @@ import (
 func NewLocalTunnelLocalCache() *GuaTunnelLocalCache {
 	return &GuaTunnelLocalCache{
 		Tunnels: make(map[string]*Connection),
+		Rooms:   make(map[string]*Room),
 	}
 }
 
 type GuaTunnelLocalCache struct {
 	sync.Mutex
-	Tunnels map[string]*Connection
+	Tunnels  map[string]*Connection
+	roomLock sync.Mutex
+	Rooms    map[string]*Room
 }
 
 func (g *GuaTunnelLocalCache) Add(t *Connection) {
 	g.Lock()
 	defer g.Unlock()
-	g.Tunnels[t.guacdTunnel.UUID] = t
+	g.Tunnels[t.guacdTunnel.UUID()] = t
 }
 
 func (g *GuaTunnelLocalCache) Delete(t *Connection) {
 	g.Lock()
 	defer g.Unlock()
-	delete(g.Tunnels, t.guacdTunnel.UUID)
+	delete(g.Tunnels, t.guacdTunnel.UUID())
 }
 
 func (g *GuaTunnelLocalCache) Get(tid string) *Connection {
@@ -83,6 +86,38 @@ func (g *GuaTunnelLocalCache) RemoveMonitorTunneler(sid string, monitorTunnel Tu
 	if conn := g.GetBySessionId(sid); conn != nil {
 		if tunnel, ok := monitorTunnel.(*guacd.Tunnel); ok {
 			conn.unTraceMonitorTunnel(tunnel)
+		}
+	}
+}
+
+func (g *GuaTunnelLocalCache) GetSessionEventChan(sid string) *EventChan {
+	g.roomLock.Lock()
+	defer g.roomLock.Unlock()
+	room := g.Rooms[sid]
+	if room == nil {
+		g.Rooms[sid] = &Room{
+			sid:           sid,
+			eventChanMaps: make(map[string]*EventChan),
+		}
+	}
+	return g.Rooms[sid].GetEventChannel(sid)
+}
+
+func (g *GuaTunnelLocalCache) BroadcastSessionEvent(sid string, event *Event) {
+	g.roomLock.Lock()
+	defer g.roomLock.Unlock()
+	if room, ok := g.Rooms[sid]; ok {
+		room.BroadcastEvent(event)
+	}
+}
+
+func (g *GuaTunnelLocalCache) RecycleSessionEventChannel(sid string, eventChan *EventChan) {
+	g.roomLock.Lock()
+	defer g.roomLock.Unlock()
+	if room, ok := g.Rooms[sid]; ok {
+		room.RecycleEventChannel(eventChan)
+		if len(room.eventChanMaps) == 0 {
+			delete(g.Rooms, sid)
 		}
 	}
 }

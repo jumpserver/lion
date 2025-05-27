@@ -15,19 +15,46 @@
           @click.stop="i.click && itemClick(i)"
         >
           {{ i.title }}
-          {{ i.content && Object.keys(i.content).length > 0 ? Object.keys(i.content).length : null }}
+          <span v-if="i.content && Object.keys(i.content).length > 0 && i.content[0].faIcon">
+            ({{ Object.keys(i.content).length }})
+          </span>
         </el-button>
         <div v-if="i.content" class="content">
-          <el-button
+          <div
             v-for="(item, key) of i.content"
             :key="key"
-            class="content-item"
-            type="text"
-            :disabled="i.disabled()"
-            @click="i.itemClick && i.itemClick(item.keys)"
+            style="padding-bottom: 1px;"
           >
-            {{ item.name }}
-          </el-button>
+            <el-tooltip v-if="item.faIcon" class="item" effect="dark" :content="item.iconTip" placement="top-start">
+              <FontAwesomeIcon :icon="item.faIcon" />
+            </el-tooltip>
+            <span v-if="i.itemActions" style="padding-left: 5px;">
+              {{ item.name }}
+            </span>
+            <el-button
+              v-else
+              :key="key"
+              class="content-item"
+              type="text"
+              :disabled="i.disabled()"
+              @click="i.itemClick && i.itemClick(item.keys)"
+            >
+              {{ item.name }}
+            </el-button>
+            <span v-if="i.itemActions">
+              <span
+                v-for="(action, idx) of i.itemActions"
+                v-show="!action.hidden(item)"
+                :key="idx"
+                style="float: right"
+                @click.stop="action.click(item)"
+              >
+                <el-tooltip v-if="action.faIcon" class="item" effect="dark" :content="action.tipText" placement="top-start">
+                  <FontAwesomeIcon :icon="action.faIcon" :style="action.style" />
+                </el-tooltip>
+              </span>
+            </span>
+          </div>
         </div>
       </li>
       <li class="item">
@@ -120,5 +147,39 @@ export default {
 .content-item:hover {
   border-radius: 2px;
   background: rgba(0, 0, 0, .5);
+}
+
+.item {
+  color: rgb(250, 247, 247);
+  font-size: 14px;
+  list-style-type: none;
+  cursor: pointer;
+  border-radius: 2px;
+  line-height: 14px;
+}
+
+.item-button {
+  padding-left: 10px;
+  width: 100%;
+  text-align: left;
+  color: #faf7f7;
+}
+
+.item-button.is-disabled {
+  color: rgb(250, 247, 247);
+}
+
+.item-button.is-disabled:hover {
+  color: rgb(0, 0, 0, 0.5);
+  background: none;
+}
+
+.item-button:hover {
+  background: rgb(134, 133, 133);
+}
+
+.content {
+  padding: 4px 6px 4px 25px;
+  color: white;
 }
 </style>
