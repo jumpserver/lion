@@ -147,9 +147,6 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 
 	info := g.getClientInfo(ctx, tunnelSession.AuthInfo)
 
-	if config.GlobalConfig.DisableWebAudio {
-		info.AudioMimetypes = []string{}
-	}
 	conf := tunnelSession.GuaConfiguration()
 	for argName, argValue := range info.ExtraConfig() {
 		conf.SetParameter(argName, argValue)

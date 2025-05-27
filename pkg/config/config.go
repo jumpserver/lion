@@ -63,8 +63,6 @@ type Config struct {
 	SecretEncryptKey string `mapstructure:"SECRET_ENCRYPT_KEY"`
 
 	VncClipboardEncoding string `mapstructure:"VNC_CLIPBOARD_ENCODING"`
-
-	DisableWebAudio bool `mapstructure:"DIABLE_WEB_AUDIO"`
 }
 
 func (c *Config) UpdateRedisPassword(val string) {

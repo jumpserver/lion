@@ -32,6 +32,7 @@ var (
 	enableMenuAnimations     = DisplayParameter{Key: guacd.RDPEnableMenuAnimations, DefaultValue: "", valueType: Boolean}
 	disableBitmapCaching     = DisplayParameter{Key: guacd.RDPDisableBitmapCaching, DefaultValue: "", valueType: Boolean}
 	disableOffscreenCaching  = DisplayParameter{Key: guacd.RDPDisableOffscreenCaching, DefaultValue: "", valueType: Boolean}
+	enableConsoleAudio       = DisplayParameter{Key: guacd.RDPConsoleAudio, DefaultValue: "", valueType: Boolean}
 )
 
 type Display struct {
@@ -67,6 +68,7 @@ var RDPDisplay = Display{data: map[string]DisplayParameter{
 	"JUMPSERVER_ENABLE_MENU_ANIMATIONS":     enableMenuAnimations,
 	"JUMPSERVER_DISABLE_BITMAP_CACHING":     disableBitmapCaching,
 	"JUMPSERVER_DISABLE_OFFSCREEN_CACHING":  disableOffscreenCaching,
+	"JUMPSERVER_ENABLE_CONSOLE_AUDIO":       enableConsoleAudio,
 }}
 
 var VNCDisplay = Display{data: map[string]DisplayParameter{

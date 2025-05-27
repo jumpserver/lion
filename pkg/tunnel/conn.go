@@ -13,7 +13,6 @@ import (
 	"github.com/gorilla/websocket"
 
 	"lion/pkg/common"
-	"lion/pkg/config"
 	"lion/pkg/guacd"
 	"lion/pkg/jms-sdk-go/model"
 	"lion/pkg/logger"
@@ -414,9 +413,6 @@ func (t *Connection) IsPermissionExpired(now time.Time) bool {
 
 func (t *Connection) CloneMonitorTunnel() (*guacd.Tunnel, error) {
 	info := guacd.NewClientInformation()
-	if config.GlobalConfig.DisableWebAudio {
-		info.AudioMimetypes = []string{}
-	}
 	conf := guacd.NewConfiguration()
 	conf.ConnectionID = t.guacdTunnel.UUID()
 	guacdAddr := t.guacdAddr
