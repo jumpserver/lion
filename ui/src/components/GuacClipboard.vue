@@ -95,7 +95,7 @@ export default {
 
         // Set clipboard contents once stream is finished
         reader.onend = async() => {
-          this.clipboardText = data
+          console.log('clipboard received from remote: ', data)
           if (navigator.clipboard) {
             await navigator.clipboard.writeText(data)
           }
