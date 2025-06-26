@@ -74,6 +74,12 @@ export interface LunaMessageEvents {
   [LUNA_MESSAGE_TYPE.CHANGE_MAIN_THEME]: {
     data: string;
   };
+  [LUNA_MESSAGE_TYPE.MOUSE_EVENT]: {
+    data: string;
+  };
+  [LUNA_MESSAGE_TYPE.KEYBOARDEVENT]: {
+    data: string;
+  };
 }
 
 export interface LunaMessage {
@@ -162,4 +168,8 @@ export enum LUNA_MESSAGE_TYPE {
   CLICK = 'CLICK',
   CHANGE_MAIN_THEME = 'CHANGE_MAIN_THEME',
   FILE_MANAGE_EXPIRED = 'FILE_MANAGE_EXPIRED',
+
+  MOUSE_EVENT = 'MOUSEEVENT',
+
+  KEYBOARDEVENT = 'KEYBOARDEVENT',
 }

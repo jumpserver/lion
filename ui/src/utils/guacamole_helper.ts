@@ -1,5 +1,5 @@
 //@ts-ignore 
-import Guacamole from 'guacamole-common-js'
+import Guacamole from 'guacamole-common-js';
 
 const supportImages:any[] = []
 const pendingTests:any[] = []
@@ -27,6 +27,25 @@ const testImages:any = {
      */
   'image/webp': 'UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA=='
 
+}// 测试单个图片格式
+async function testImageFormat(mimeType: string, base64Data: any): Promise<boolean> {
+  return new Promise<boolean>((resolve) => {
+    const image = new Image();
+    
+    image.onload = () => {
+      // Image format is supported if successfully decoded with correct dimensions
+      const isSupported = image.width === 1 && image.height === 1;
+      resolve(isSupported);
+    };
+    
+    image.onerror = () => {
+      console.debug(`Format ${mimeType} not supported`);
+      resolve(false);
+    };
+    
+    // Set source to trigger loading
+    image.src = `data:${mimeType};base64,${base64Data}`;
+  });
 }
 
 // Use Object.entries for better iteration over key-value pairs
@@ -56,16 +75,46 @@ Object.entries(testImages).forEach(([mimeType, base64Data]) => {
   pendingTests.push(imageTest);
 });
 
-export async function getSupportedMimetypes() {
-  return Promise.all(pendingTests).then(() => supportImages);
+export async function getSupportedImages(): Promise<string[]> {
+  // 清空之前的结果
+  supportImages.length = 0;
+  
+  // 并行测试所有图片格式
+  const testPromises = Object.entries(testImages).map(async ([mimeType, base64Data]) => {
+    const isSupported = await testImageFormat(mimeType, base64Data);
+    if (isSupported) {
+      supportImages.push(mimeType);
+    }
+    return { mimeType, isSupported };
+  });
+  
+  // 等待所有测试完成
+  await Promise.all(testPromises);
+  
+  return [...supportImages]; // 返回副本
 }
-
-
-export function getSupportedGuacVideos() {
+export async function getSupportedGuacVideos(): Promise<string[]>{
   return Guacamole.VideoPlayer.getSupportedTypes()
 }
 
-export function getSupportedGuacAudios() {
+export async function getSupportedGuacAudios(): Promise<string[]>{
   return Guacamole.AudioPlayer.getSupportedTypes()
 }
 
+
+export async function getSupportedGuacMimeTypes(): Promise<string> {
+    const supportImages = await getSupportedImages();
+    const supportVideos = await getSupportedGuacVideos();
+    const supportAudios = await getSupportedGuacAudios();
+    let connectString = '';
+    supportImages.forEach((mimeType) => {
+        connectString += '&GUAC_IMAGE=' + encodeURIComponent(mimeType);
+    });
+    supportVideos.forEach((mimeType) => {
+        connectString += '&GUAC_AUDIO=' + encodeURIComponent(mimeType);
+    });
+    supportAudios.forEach((mimeType) => {
+        connectString += '&GUAC_VIDEO=' + encodeURIComponent(mimeType);
+    });
+  return connectString
+}
