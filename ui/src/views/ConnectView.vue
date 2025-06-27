@@ -31,12 +31,15 @@ const guacTunnel = ref(null);
 const guacClient = ref<GuacamoleClient>();
 // const keyboard = ref<Guacamole.Keyboard | null>(null);
 const debouncedResize = useDebounceFn((width, height) => {
+   
     if (guacClient.value && guacDisplay.value) {
+        console.log('Sending resize to Guacamole client:', width, height);
         guacClient.value.sendSize(width, height)
+        //  updateScale();
     }
 }, 300);
 
-const updateScale = () => {
+const updateScale = useDebounceFn(() => {
     if (guacClient.value && guacDisplay.value) {
         const w = guacDisplay.value.getWidth();
         const h = guacDisplay.value.getHeight();
@@ -56,7 +59,7 @@ const updateScale = () => {
             currentHeight.value, h, w,
             newScale);
     }
-};
+});
 
 
 
@@ -65,8 +68,8 @@ const currentHeight = ref(height)
 watch([width, height], ([newWidth, newHeight]) => {
     currentWidth.value = newWidth;
     currentHeight.value = newHeight;
-    console.log('Window size changed:', newWidth, newHeight);
-    //  updateScale();
+    // console.log('Window size changed:', newWidth, newHeight);
+     
     debouncedResize(newWidth, newHeight);
 }, { immediate: true });
 
@@ -104,7 +107,7 @@ const connectGuacamole = (connectString: string) => {
     }
 
     display.onresize = () => {
-        console.log('Guacamole display resized:', display.getWidth(), display.getHeight());
+        console.log('Guacamole display onresize:', display.getWidth(), display.getHeight());
         updateScale();
     };
     display.oncursor = (canvas: any, x: any, y: any) => {
@@ -207,7 +210,7 @@ onUnmounted(() => {
 
 
 <template>
-    <div class="w-full h-full justify-center">
+    <div class="w-full h-full justify-center items-center flex flex-col">
         <div id="display">
         </div>
     </div>
@@ -216,8 +219,12 @@ onUnmounted(() => {
 
 <style scoped>
 #display {
-    width: 100vw;
-    height: 100vh;
+    display: flex;
+    justify-content: center;
+    /* width: 100vw; */
+    /* height: 100vh; */
+    width: 100%;
+    height: 100%;
     position: relative;
 }
 </style>
