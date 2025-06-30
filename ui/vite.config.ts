@@ -2,6 +2,8 @@ import { fileURLToPath, URL } from 'node:url'
 
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import { NaiveUiResolver } from 'unplugin-vue-components/resolvers'
+import Components from 'unplugin-vue-components/vite'
 import vueJsx from '@vitejs/plugin-vue-jsx'
 import vueDevTools from 'vite-plugin-vue-devtools'
 import tailwindcss from '@tailwindcss/vite'
@@ -12,6 +14,7 @@ export default defineConfig({
     vue(),
     tailwindcss(),
     vueJsx(),
+    Components({ dts: true, resolvers: [NaiveUiResolver()] }),
   ],
   resolve: {
     extensions: ['.js', '.ts', '.tsx', '.vue'],

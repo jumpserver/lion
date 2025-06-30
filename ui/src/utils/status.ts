@@ -1,4 +1,4 @@
-export const ErrorStatusCodes = {
+export const ErrorStatusCodes:any = {
   256: 'GuaErrUnSupport',
   514: 'GuaErrUpStreamTimeout',
   521: 'GuaErrSessionConflict',
