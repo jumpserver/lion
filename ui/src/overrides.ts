@@ -1,0 +1,160 @@
+import type { GlobalThemeOverrides } from 'naive-ui';
+
+import { useColor } from './hooks/useColor';
+
+const { darken, lighten, alpha, setCurrentMainColor } = useColor();
+
+// 创建主题生成函数
+export const createThemeOverrides = (
+  themeType: 'default' | 'deepBlue' | 'darkGary' = 'default'
+): GlobalThemeOverrides => {
+  setCurrentMainColor(themeType);
+
+  const primaryColor = lighten(0);
+  const primaryColorHover = lighten(10);
+  const primaryColorPressed = darken(10);
+  // 使用主色调的轻微变暗版本作为背景色，更贴近主色
+  const backgroundColor = darken(5);
+  const cardBackgroundColor = darken(3); // Card 专用背景色，更接近主色
+  const inputBackgroundColor = lighten(2); // Input 背景色，比主色稍亮
+  const surfaceColor = lighten(8); // 表面色，用于菜单等
+  const borderColor = alpha(0.15); // 增加边框透明度，更明显
+  const textColor = 'rgba(235, 235, 235, 1)';
+  const textColorSecondary = alpha(0.8, '#FFFFFF');
+  const hoverColor = alpha(0.12, '#FFFFFF'); // 增加悬停效果透明度
+
+  return {
+    Drawer: {
+      color: backgroundColor,
+      titleTextColor: textColor,
+    },
+    Tabs: {
+      tabPaddingVerticalSmallLine: '6px 12px 6px 0',
+    },
+    Form: {},
+    Tree: {
+      nodeColorActive: alpha(0.1),
+    },
+    Input: {
+      color: inputBackgroundColor,
+      border: `1px solid ${borderColor}`,
+      borderHover: `1px solid ${primaryColor}`,
+      borderActive: `1px solid ${primaryColor}`,
+      borderFocus: `1px solid ${primaryColor}`,
+    },
+    List: {
+      colorModal: backgroundColor,
+    },
+    Select: {
+      peers: {
+        InternalSelection: {
+          color: backgroundColor,
+          border: `1px solid ${borderColor}`,
+          borderHover: `1px solid ${primaryColor}`,
+          borderActive: `1px solid ${primaryColor}`,
+          borderFocus: `1px solid ${primaryColor}`,
+        },
+        InternalSelectMenu: {
+          color: surfaceColor,
+          optionTextColor: textColor,
+          optionCheckColor: primaryColor,
+        },
+      },
+    },
+    Modal: {
+      peers: {
+        Dialog: {
+          color: backgroundColor,
+          peers: {
+            Button: {
+              borderPressedPrimary: `1px solid ${primaryColorPressed}`,
+              borderFocusPrimary: `1px solid ${primaryColor}`,
+              borderHoverPrimary: `1px solid ${primaryColorHover}`,
+              borderPrimary: `1px solid ${primaryColor}`,
+              colorPrimary: primaryColor,
+              colorFocusPrimary: primaryColor,
+              colorHoverPrimary: primaryColorHover,
+              colorPressedPrimary: primaryColorPressed,
+              textColorPrimary: textColor,
+              textColorHoverPrimary: textColor,
+              textColorPressedPrimary: textColor,
+              textColorFocusPrimary: textColor,
+              textColorError: textColor,
+              textColorHoverError: textColor,
+              textColorPressedError: textColor,
+              textColorFocusError: textColor,
+            },
+          },
+        },
+      },
+    },
+    Card: {
+      color: cardBackgroundColor,
+      colorModal: cardBackgroundColor,
+    },
+    Button: {
+      borderPressedPrimary: `1px solid ${primaryColorPressed}`,
+      borderFocusPrimary: `1px solid ${primaryColor}`,
+      borderHoverPrimary: `1px solid ${primaryColorHover}`,
+      borderPrimary: `1px solid ${primaryColor}`,
+      colorPrimary: primaryColor,
+      colorFocusPrimary: primaryColor,
+      colorHoverPrimary: primaryColorHover,
+      colorPressedPrimary: primaryColorPressed,
+      textColorPrimary: textColor,
+      textColorHoverPrimary: textColor,
+      textColorPressedPrimary: textColor,
+      textColorFocusPrimary: textColor,
+    },
+    Switch: {
+      railColorActive: textColorSecondary,
+      buttonColor: backgroundColor,
+    },
+    DataTable: {
+      thColor: cardBackgroundColor,
+      tdColor: cardBackgroundColor,
+      tdColorHover: hoverColor,
+      thColorModal: cardBackgroundColor,
+      tdColorModal: cardBackgroundColor,
+      tdColorHoverModal: hoverColor,
+      borderColorModal: borderColor,
+      borderColorHoverModal: borderColor,
+    },
+    Ellipsis: {
+      textColor,
+      peers: {
+        Tooltip: {
+          color: surfaceColor,
+          textColor,
+          peers: {
+            Popover: {
+              color: surfaceColor,
+              textColor,
+            },
+          },
+        },
+      },
+    },
+    Table: {
+      thColorModal: cardBackgroundColor,
+      tdColorModal: cardBackgroundColor,
+    },
+    Tag: {
+      borderPrimary: `1px solid ${primaryColor}`,
+      textColorPrimary: primaryColor,
+    },
+    Upload: {
+      peers: {
+        Progress: {
+          fillColor: primaryColor,
+          fillColorInfo: primaryColor,
+        },
+      },
+    },
+    Layout: {
+      color: darken(40),
+      siderColor: darken(40),
+      headerColor: darken(40),
+    },
+  };
+};

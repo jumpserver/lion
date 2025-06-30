@@ -4,7 +4,7 @@ body {
   height: 100%;
   /* -moz-osx-font-smoothing: grayscale; */
   -webkit-font-smoothing: auto;
-  /* background-color: #1f1b1b; */
+  background-color: #1f1b1b;
   font-family: "open sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
   font-size: 13px;
   line-height: 1.428;
@@ -12,10 +12,10 @@ body {
 
 ::-webkit-scrollbar-track {
   box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.3);
-  /* background-color: #272323; */
+  background-color: #272323;
 }
 
 ::-webkit-scrollbar-thumb {
-  /* background-color: #494141; */
+  background-color: #494141;
   border-radius: 6px;
 }

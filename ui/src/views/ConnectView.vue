@@ -3,7 +3,9 @@ import { nextTick, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vu
 import { useWindowSize } from '@vueuse/core'
 import { useDebounceFn } from '@vueuse/core';
 // @ts-ignore
-import Guacamole from 'guacamole-common-js';
+// import Guacamole from 'guacamole-common-js';
+import Guacamole from '@dushixiang/guacamole-common-js';
+console.log('Guacamole version:', Guacamole);
 import { NSpin, useMessage } from 'naive-ui'
 import { useI18n } from 'vue-i18n';
 import { getCurrentConnectParams } from '@/utils/common';

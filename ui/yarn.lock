@@ -276,6 +276,11 @@
   resolved "https://registry.npmmirror.com/@css-render/vue3-ssr/-/vue3-ssr-0.15.14.tgz#a2f4dedc3e86211a3ce1445555265095b7736491"
   integrity sha512-//8027GSbxE9n3QlD73xFY6z4ZbHbvrOVB7AO6hsmrEzGbg+h2A09HboUyDgu+xsmj7JnvJD39Irt+2D0+iV8g==
 
+"@dushixiang/guacamole-common-js@^1.6.0":
+  version "1.6.0"
+  resolved "https://registry.npmmirror.com/@dushixiang/guacamole-common-js/-/guacamole-common-js-1.6.0.tgz#437add3be40a688feea6c6689cf3e112f443ba11"
+  integrity sha512-O80QAUqT1ifIDlvEv32ck8LZavUzSr+tO/7yLzOWraKXYX/EXAQyxkMIwdTefHEAlgYpmQ4hP7po4G43VcLTyw==
+
 "@emnapi/core@^1.4.3":
   version "1.4.3"
   resolved "https://registry.npmmirror.com/@emnapi/core/-/core-1.4.3.tgz#9ac52d2d5aea958f67e52c40a065f51de59b77d6"
