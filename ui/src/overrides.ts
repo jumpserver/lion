@@ -6,7 +6,7 @@ const { darken, lighten, alpha, setCurrentMainColor } = useColor();
 
 // 创建主题生成函数
 export const createThemeOverrides = (
-  themeType: 'default' | 'deepBlue' | 'darkGary' = 'default'
+  themeType: 'default' | 'deepBlue' | 'darkGary' = 'default',
 ): GlobalThemeOverrides => {
   setCurrentMainColor(themeType);
 

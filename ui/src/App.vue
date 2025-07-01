@@ -18,7 +18,7 @@ const langCodeMap = new Map(
     'zh-hant': zhTW,
     'zh-hans': zhCN,
     'zh-cn': zhCN,
-  })
+  }),
 );
 const themeOverrides = ref<GlobalThemeOverrides | null>(null);
 const langCode = langCodeMap.get(LanguageCode);
@@ -36,12 +36,11 @@ onMounted(async () => {
   try {
     const translations = await alovaInstance
       .Get(`${BASE_URL}/api/v1/settings/i18n/lion/?lang=${LanguageCode}&flat=0`)
-      .then(response => (response as Response).json());
+      .then((response) => (response as Response).json());
 
     for (const [key, value] of Object.entries(translations)) {
       mergeLocaleMessage(key, value);
     }
-
   } catch (e) {
     throw new Error(`${e}`);
   } finally {
@@ -53,8 +52,13 @@ onMounted(async () => {
 </script>
 
 <template>
-  <n-config-provider :locale="componentsLocale" :theme="darkTheme" :date-locale="dateZhCN"
-    :theme-overrides="themeOverrides" class="flex items-center justify-center h-full w-full overflow-hidden">
+  <n-config-provider
+    :locale="componentsLocale"
+    :theme="darkTheme"
+    :date-locale="dateZhCN"
+    :theme-overrides="themeOverrides"
+    class="flex items-center justify-center h-full w-full overflow-hidden"
+  >
     <n-dialog-provider>
       <n-notification-provider>
         <n-message-provider>

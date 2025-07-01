@@ -1,8 +1,7 @@
-import { createRouter, createWebHistory } from 'vue-router'
-import ConnectView from '../views/ConnectView.vue'
+import { createRouter, createWebHistory } from 'vue-router';
+import ConnectView from '../views/ConnectView.vue';
 
-
-console.log('router init',import.meta.env)
+console.log('router init', import.meta.env);
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -24,8 +23,8 @@ const router = createRouter({
       path: '/share/:id/',
       name: 'share',
       component: () => import('../views/ShareView.vue'),
-    }
+    },
   ],
-})
+});
 
-export default router
+export default router;

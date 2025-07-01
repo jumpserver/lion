@@ -11,7 +11,9 @@ export type LunaEventType = keyof LunaMessageEvents;
 
 // 创建事件-数据映射类型
 type EventPayloadMap = {
-  [K in LunaEventType]: LunaMessageEvents[K]['data'] extends undefined ? void : LunaMessageEvents[K]['data'];
+  [K in LunaEventType]: LunaMessageEvents[K]['data'] extends undefined
+    ? void
+    : LunaMessageEvents[K]['data'];
 };
 
 const allEventTypes = Object.keys(LUNA_MESSAGE_TYPE) as LunaEventType[];
@@ -36,7 +38,9 @@ class LunaCommunicator<T extends EventPayloadMap = EventPayloadMap> {
           this.targetOrigin = event.origin;
           this.protocol = message.protocol;
           this.sendLuna(LUNA_MESSAGE_TYPE.PONG, '');
-          console.log(`LunaCommunicator initialized with ID: ${this.lunaId}, Origin: ${this.targetOrigin}, Protocol: ${this.protocol}`);
+          console.log(
+            `LunaCommunicator initialized with ID: ${this.lunaId}, Origin: ${this.targetOrigin}, Protocol: ${this.protocol}`,
+          );
           break;
         default:
           // 处理其他类型的消息
@@ -44,8 +48,7 @@ class LunaCommunicator<T extends EventPayloadMap = EventPayloadMap> {
             const eventType = message.name as keyof T;
             const data = message as T[keyof T];
             this.mitt.emit(eventType, data);
-          }
-          else {
+          } else {
             console.warn(`Unhandled message type: ${message.name}`, message);
           }
       }

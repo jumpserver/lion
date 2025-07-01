@@ -1,5 +1,3 @@
-
-
 export interface LunaMessageEvents {
   [LUNA_MESSAGE_TYPE.PING]: {
     data: LunaMessage;

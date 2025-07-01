@@ -18,7 +18,7 @@ const i18n = createI18n({
   silentFallbackWarn: true,
   silentTranslationWarn: true,
   messages: message,
-  dateTimeFormats: date
+  dateTimeFormats: date,
 });
 
 export default i18n;

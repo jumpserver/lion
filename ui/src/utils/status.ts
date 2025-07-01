@@ -1,4 +1,4 @@
-export const ErrorStatusCodes:any = {
+export const ErrorStatusCodes: any = {
   256: 'GuaErrUnSupport',
   514: 'GuaErrUpStreamTimeout',
   521: 'GuaErrSessionConflict',
@@ -14,44 +14,46 @@ export const ErrorStatusCodes:any = {
   1008: 'JMSErrGuacamoleServer',
   1009: 'JMSErrDisconnected',
   1010: 'JMSErrMaxSession',
-  1011: 'JMSErrRemoveShareUser'
-}
+  1011: 'JMSErrRemoveShareUser',
+};
 
 export function ConvertAPIError(errMsg: string | any): string {
   if (typeof errMsg !== 'string') {
-    return errMsg
+    return errMsg;
   }
-  const errArray = errMsg.split(':')
+  const errArray = errMsg.split(':');
   if (errArray.length >= 1) {
-    return APIErrorType[errArray[0]] || errMsg
+    return APIErrorType[errArray[0]] || errMsg;
   }
-  return errMsg
+  return errMsg;
 }
 
-export const APIErrorType:any = {
+export const APIErrorType: any = {
   'connect API core err': 'JMSErrAPIFailed',
   'connect Panda API core err': 'JMSErrAPIFailed',
   'unsupported type': 'JMSErrBadParams',
   'unsupported protocol': 'JMSErrBadParams',
-  'permission deny': 'JMSErrPermission'
-}
+  'permission deny': 'JMSErrPermission',
+};
 
 export function ConvertGuacamoleError(errMsg: string | any): string {
   if (typeof errMsg !== 'string') {
-    return errMsg
+    return errMsg;
   }
-  return GuacamoleErrMsg[errMsg] || errMsg
+  return GuacamoleErrMsg[errMsg] || errMsg;
 }
 
-export const GuacamoleErrMsg:any = {
+export const GuacamoleErrMsg: any = {
   'Disconnected.': 'GuacamoleErrDisconnected',
   'Credentials expired.': 'GuacamoleErrCredentialsExpired',
   'Security negotiation failed (wrong security type?)': 'GuacamoleErrSecurityNegotiationFailed',
   'Access denied by server (account locked/disabled?)': 'GuacamoleErrAccessDenied',
   'Authentication failure (invalid credentials?)': 'GuacamoleErrAuthenticationFailure',
-  'SSL/TLS connection failed (untrusted/self-signed certificate?)': 'GuacamoleErrSSLTLSConnectionFailed',
+  'SSL/TLS connection failed (untrusted/self-signed certificate?)':
+    'GuacamoleErrSSLTLSConnectionFailed',
   'DNS lookup failed (incorrect hostname?)': 'GuacamoleErrDNSLookupFailed',
-  'Server refused connection (wrong security type?)': 'GuacamoleErrServerRefusedConnectionBySecurityType',
+  'Server refused connection (wrong security type?)':
+    'GuacamoleErrServerRefusedConnectionBySecurityType',
   'Connection failed (server unreachable?)': 'GuacamoleErrConnectionFailed',
   'Upstream error.': 'GuacamoleErrUpstreamError',
   'Forcibly disconnected.': 'GuacamoleErrForciblyDisconnected',
@@ -65,5 +67,5 @@ export const GuacamoleErrMsg:any = {
   'Manually logged off.': 'GuacamoleErrManuallyLoggedOff',
 
   'Unsupported credential type requested.': 'GuacamoleErrUnsupportedCredentialTypeRequested',
-  'Unable to connect to VNC server.': 'GuacamoleErrUnableToConnectToVNCServer'
-}
+  'Unable to connect to VNC server.': 'GuacamoleErrUnableToConnectToVNCServer',
+};

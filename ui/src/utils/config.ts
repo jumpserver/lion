@@ -38,14 +38,37 @@ export const defaultTheme = {
   brightBlue: '#729fcf',
   brightMagenta: '#ad7fa8',
   brightCyan: '#34e2e2',
-  brightWhite: '#eeeeec'
+  brightWhite: '#eeeeec',
 };
 
-
 // 图片类型的
-export const FILE_SUFFIX_IMAGE = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'ico', 'svg', 'heic', 'heif'];
+export const FILE_SUFFIX_IMAGE = [
+  'jpg',
+  'jpeg',
+  'png',
+  'gif',
+  'bmp',
+  'webp',
+  'ico',
+  'svg',
+  'heic',
+  'heif',
+];
 // 音频类型的
-export const FILE_SUFFIX_AUDIO = ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac', 'm4b', 'm4p', 'm4b', 'm4p', 'm4b', 'm4p'];
+export const FILE_SUFFIX_AUDIO = [
+  'mp3',
+  'wav',
+  'ogg',
+  'm4a',
+  'aac',
+  'flac',
+  'm4b',
+  'm4p',
+  'm4b',
+  'm4p',
+  'm4b',
+  'm4p',
+];
 // 视频类型的
 export const FILE_SUFFIX_VIDEO = [
   'mp4',
@@ -67,7 +90,7 @@ export const FILE_SUFFIX_VIDEO = [
   'mts',
   'ts',
   'm2t',
-  'm2ts'
+  'm2ts',
 ];
 // 压缩包类型的
 export const FILE_SUFFIX_COMPRESSION = [
@@ -91,7 +114,7 @@ export const FILE_SUFFIX_COMPRESSION = [
   'rpm',
   'msi',
   'exe',
-  'app'
+  'app',
 ];
 // 文档类型的
 export const FILE_SUFFIX_DOCUMENT = [
@@ -123,7 +146,7 @@ export const FILE_SUFFIX_DOCUMENT = [
   'config',
   'log',
   'lock',
-  'sock'
+  'sock',
 ];
 // 代码类型的
 export const FILE_SUFFIX_CODE = [
@@ -157,10 +180,23 @@ export const FILE_SUFFIX_CODE = [
   'ocaml',
   'erlang',
   'elixir',
-  'ocaml'
+  'ocaml',
 ];
 // 安装包类型的
-export const FILE_SUFFIX_INSTALL = ['deb', 'rpm', 'msi', 'exe', 'app', 'dmg', 'pkg', 'deb', 'rpm', 'msi', 'exe', 'app'];
+export const FILE_SUFFIX_INSTALL = [
+  'deb',
+  'rpm',
+  'msi',
+  'exe',
+  'app',
+  'dmg',
+  'pkg',
+  'deb',
+  'rpm',
+  'msi',
+  'exe',
+  'app',
+];
 // 数据库类型
 export const FILE_SUFFIX_DATABASE = [
   'mysql',
@@ -171,5 +207,5 @@ export const FILE_SUFFIX_DATABASE = [
   'redis',
   'memcached',
   'sqlite',
-  'mariadb'
+  'mariadb',
 ];

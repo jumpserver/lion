@@ -11,7 +11,7 @@ const mainThemeColorMap = new Map(
     default: '#483D3D',
     deepBlue: '#1A212C',
     darkGary: '#303237',
-  })
+  }),
 );
 
 export const useColor = () => {
@@ -38,7 +38,7 @@ export const useColor = () => {
     if (hexValue.length === 3) {
       hexValue = hexValue
         .split('')
-        .map(char => char + char)
+        .map((char) => char + char)
         .join('');
     }
 
@@ -143,7 +143,7 @@ export const useColor = () => {
     if (hex.length === 3) {
       hex = hex
         .split('')
-        .map(char => char + char)
+        .map((char) => char + char)
         .join('');
     }
 
