@@ -8,7 +8,7 @@ import Guacamole from '@dushixiang/guacamole-common-js';
 
 import { NSpin, useMessage, NTabPane } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
-import { getCurrentConnectParams } from '@/utils/common';
+import { getCurrentConnectParams, BaseAPIURL } from '@/utils/common';
 import { getSupportedGuacMimeTypes } from '@/utils/guacamole_helper';
 import type { GuacamoleDisplay } from '@/types/guacamole.type';
 import { lunaCommunicator } from '@/utils/lunaBus.ts';
@@ -51,6 +51,7 @@ const guacClient = ref<GuacamoleClient>();
 const drawShow = ref(false);
 const connectStatus = ref('Connecting');
 const loading = ref(true);
+const fileFsloading = ref(false);
 
 const remoteClipboardText = ref<string>('');
 const hasClipboardPermission = ref(false);
@@ -244,6 +245,7 @@ interface GuacamoleFile {
   type: 'DIRECTORY' | 'FILE';
   name?: string;
   parent?: GuacamoleFile | null;
+  is_dir?: boolean;
 }
 
 const RefreshFileSystem = (
@@ -328,7 +330,108 @@ const RefreshFileSystem = (
 };
 const currentFolderObject = ref<any>(null);
 const current_files = ref<any>({});
+const currentFolder = ref<GuacamoleFile>();
 const currentFolderFiles = ref<any>([]);
+
+const handleFolderOpen = (row: any) => {
+  console.log('Opening folder:', row);
+  if (!row || !row.is_dir) {
+    console.warn('Cannot open folder, row is not a directory:', row);
+    return;
+  }
+  currentFolder.value = row;
+  currentFolderObject.value = row;
+  fileFsloading.value = true;
+  RefreshFileSystem(currentGuacFsObject.value, row)
+    .then((files: any) => {
+      console.log('Refreshed folder files:', files);
+      current_files.value = files;
+      currentFolderFiles.value = [] as GuacamoleFile[];
+      for (const fileName in files) {
+        console.log('File:', fileName, current_files.value[fileName]);
+        currentFolderFiles.value.push({
+          name: fileName,
+          is_dir: files[fileName].type === 'DIRECTORY',
+          mimetype: files[fileName].mimetype,
+          streamName: files[fileName].streamName,
+          parent: row,
+        });
+      }
+      console.log('Current folder files:', currentFolderFiles.value);
+    })
+    .catch((error: any) => {
+      console.error('Error refreshing folder:', error);
+      message.error(t('FileSystemError') + ': ' + error.message);
+    })
+    .finally(() => {
+      fileFsloading.value = false;
+    });
+};
+
+const handleDownloadFile = (fileItem: GuacamoleFile) => {
+  console.log('Downloading file:', fileItem);
+  if (!fileItem || !fileItem.streamName) {
+    console.warn('Cannot download file, file is not valid:', fileItem);
+    return;
+  }
+  const path = fileItem.streamName;
+  const downloadStream = (stream: any, mimetype: any) => {
+    clientFileReceived(stream, mimetype, fileItem.name);
+  };
+  currentGuacFsObject.value.requestInputStream(path, downloadStream);
+};
+
+const sanitizeFilename = (filename: string) => {
+  return filename.replace(/[\\\/]+/g, '_');
+};
+const clientFileReceived = (stream: any, mimetype: any, filename: any) => {
+  // Build download URL
+  const uuid = guacTunnel.value?.uuid || '';
+  const url =
+    BaseAPIURL +
+    '/tunnels/' +
+    encodeURIComponent(uuid) +
+    '/streams/' +
+    encodeURIComponent(stream.index) +
+    '/' +
+    encodeURIComponent(sanitizeFilename(filename));
+
+  // Create temporary hidden iframe to facilitate download
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.border = 'none';
+  iframe.style.width = '1px';
+  iframe.style.height = '1px';
+  iframe.style.left = '-1px';
+  iframe.style.top = '-1px';
+
+  // The iframe MUST be part of the DOM for the download to occur
+  document.body.appendChild(iframe);
+
+  // Automatically remove iframe from DOM when download completes, if
+  // browser supports tracking of iframe downloads via the "load" event
+  iframe.onload = function downloadComplete() {
+    document.body.removeChild(iframe);
+  };
+
+  // Acknowledge (and ignore) any received blobs
+  stream.onblob = function acknowledgeData() {
+    stream.sendAck('OK', Guacamole.Status.Code.SUCCESS);
+  };
+
+  // Automatically remove iframe from DOM a few seconds after the stream
+  // ends, in the browser does NOT fire the "load" event for downloads
+  stream.onend = function downloadComplete() {
+    window.setTimeout(function cleanupIframe() {
+      if (iframe.parentElement) {
+        document.body.removeChild(iframe);
+      }
+    }, 500);
+  }.bind(this);
+  // Begin download
+  iframe.src = url;
+};
+
 const onFileSystem = (obj: any, name: any) => {
   if (!obj || !Guacamole.Object) {
     console.warn('Guacamole file system object or name is not provided.');
@@ -340,14 +443,16 @@ const onFileSystem = (obj: any, name: any) => {
   currentGuacFsObject.value = obj;
   currentFolderObject.value = obj;
   currentGuacFsName.value = name;
-  const folder: GuacamoleFile = {
+  const defaultFolder: GuacamoleFile = {
     mimetype: Guacamole.Object.STREAM_INDEX_MIMETYPE,
     streamName: Guacamole.Object.ROOT_STREAM,
     type: 'DIRECTORY',
+    is_dir: true,
     name: name,
-    parent: obj,
+    parent: null,
   };
-  RefreshFileSystem(obj, folder)
+  currentFolder.value = defaultFolder;
+  RefreshFileSystem(obj, defaultFolder)
     .then((files: any) => {
       console.log('Refreshed file system:', files);
       current_files.value = files;
@@ -358,6 +463,7 @@ const onFileSystem = (obj: any, name: any) => {
           is_dir: files[fileName].type === 'DIRECTORY',
           mimetype: files[fileName].mimetype,
           streamName: files[fileName].streamName,
+          parent: defaultFolder,
         });
       }
       console.log('Current files:', current_files.value);
@@ -365,6 +471,9 @@ const onFileSystem = (obj: any, name: any) => {
     .catch((error: any) => {
       console.error('Error refreshing file system:', error);
       message.error(t('FileSystemError') + ': ' + error.message);
+    })
+    .finally(() => {
+      fileFsloading.value = false;
     });
 };
 
@@ -661,7 +770,14 @@ document.addEventListener(
           />
         </n-tab-pane>
         <n-tab-pane name="file-manager" tab="文件管理">
-          <FileManager :files="currentFolderFiles" />
+          <FileManager
+            :loading="fileFsloading"
+            :files="currentFolderFiles"
+            :name="currentGuacFsName"
+            :folder="currentFolder"
+            @open-folder="handleFolderOpen"
+            @download-file="handleDownloadFile"
+          />
         </n-tab-pane>
         <n-tab-pane name="share-collaboration" tab="分享会话"> 分享会话 </n-tab-pane>
       </n-tabs>

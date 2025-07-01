@@ -35,7 +35,12 @@ import {
 } from 'lucide-vue-next';
 
 import { useI18n } from 'vue-i18n';
+import { defineEmits } from 'vue';
+import { useDebounceFn } from '@vueuse/core';
+
 const { t } = useI18n();
+
+const emit = defineEmits(['open-folder', 'download-file']);
 
 // 添加类型定义
 interface RowData {
@@ -50,38 +55,76 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  name: {
+    type: String,
+    default: '',
+  },
+  folder: {
+    type: Object,
+    default: () => ({}),
+  },
+  loading: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-const handlePathBack = () => {};
+const handlePathBack = () => {
+  if (!props.folder || !props.folder.parent) return;
+  // 处理路径后退事件
+  storeBackFolders.value.push(props.folder); // 保存当前文件夹到后退存储
+  emit('open-folder', props.folder.parent);
+};
 
-const handlePathForward = () => {};
+const handlePathForward = () => {
+  if (!storeBackFolders.value || storeBackFolders.value.length === 0) return;
+  // 处理路径前进事件
+  console.log('Path forward clicked', storeBackFolders.value);
+  const nextFolder = storeBackFolders.value.pop(); // 获取第一个文件夹
+  if (nextFolder) {
+    console.log('Next folder:', nextFolder);
+    emit('open-folder', nextFolder);
+  }
+};
 
 const handlePathClick = (item: any) => {
   // 处理路径点击事件
-  console.log('Path clicked:', item);
+  storeBackFolders.value.length = 0; // 清空后退存储
+  emit('open-folder', item.row);
 };
 
-const filePathList = ref([
-  {
-    id: 1,
-    active: false,
-    path: 'root',
-    showArrow: false,
-  },
-  {
-    id: 2,
+const filePathList = computed(() => {
+  if (!props.folder) return [];
+  const list = [];
+  let currentFolder = props.folder;
+  let parent = currentFolder?.parent;
+  let index = 0;
+  list.push({
+    id: index,
     active: true,
-    path: 'home',
-    showArrow: true,
-  },
-]);
+    name: currentFolder.name,
+    path: currentFolder.name,
+    showArrow: false,
+    row: currentFolder,
+  });
+  console.log('Current folder:', currentFolder);
+  while (parent !== null) {
+    currentFolder = parent;
+    parent = currentFolder.parent;
+    index++;
+    list.unshift({
+      id: index,
+      active: false,
+      name: currentFolder.name,
+      path: currentFolder.name,
+      showArrow: true,
+      row: currentFolder,
+    });
+  }
 
+  return list;
+});
 const searchValue = ref('');
-
-const handleNewFolder = () => {
-  // 处理新建文件夹事件
-  console.log('New folder created');
-};
 
 const isShowUploadList = ref(false);
 const uploadFileList = ref([]);
@@ -93,10 +136,7 @@ const customRequest = (options: any) => {
     options.onSuccess({}, options.file);
   }, 1000);
 };
-const handleRemoveItem = (file: any) => {
-  // 处理文件移除事件
-  console.log('File removed:', file);
-};
+
 const handleUploadFileChange = (file: any) => {
   // 处理上传文件变化事件
   console.log('Upload file changed:', file);
@@ -118,11 +158,17 @@ const handleShowInner = () => {
 const handleRefresh = () => {
   // 刷新逻辑
   console.log('Refresh clicked');
+  emit('open-folder', props.folder);
 };
 const onClickOutside = () => {
   showDropdown.value = false;
 };
-const dataList = ref<RowData[]>(props.files as RowData[]);
+const dataList = computed(() => {
+  return props.files.filter((file: any) => {
+    // 这里可以添加搜索过滤逻辑
+    return file.name.toLowerCase().includes(searchValue.value.toLowerCase());
+  });
+});
 
 const columns = [
   {
@@ -202,9 +248,21 @@ onMounted(() => {
 });
 
 const currentRowData = ref<RowData | null>(null);
-// const columns = [
-//   { key: 'name', title: t('Name'), width: 200 },
-// ];
+const storeBackFolders = ref<any>([]);
+
+const handleSearch = useDebounceFn(() => {
+  console.log('Search value:', searchValue.value);
+}, 300);
+
+const disabledBack = computed(() => {
+  // 禁用后退按钮的逻辑
+  return !props.folder || !props.folder.parent;
+});
+
+const disabledForward = computed(() => {
+  // 禁用前进按钮的逻辑
+  return storeBackFolders.value === null || storeBackFolders.value.length === 0;
+});
 
 // 动态设置 dropdown options
 const options = computed(() => {
@@ -220,12 +278,12 @@ const options = computed(() => {
     show: !currentRowData.value.is_dir,
   });
 
-  baseOptions.push({
-    key: 'open',
-    label: t('Open'),
-    icon: () => h(Folder, { size: 16 }),
-    show: currentRowData.value.is_dir,
-  });
+  // baseOptions.push({
+  //   key: 'open',
+  //   label: t('Open'),
+  //   icon: () => h(Folder, { size: 16 }),
+  //   show: currentRowData.value.is_dir,
+  // });
 
   return baseOptions;
 });
@@ -251,35 +309,26 @@ const rowProps = (row: RowData) => {
       });
     },
     onClick: () => {
+      if (!row.is_dir) {
+        return;
+      }
+      currentRowData.value = row;
       console.log('Row clicked:', row);
+      emit('open-folder', row);
     },
   };
 };
 
 const handleSelect = (key: string) => {
   showDropdown.value = false;
-  console.log('Selected option:', key);
   switch (key) {
-    case 'rename': {
-      // modalType.value = 'rename';
-      // showModal.value = true;
-      // modalTitle.value = t('Rename');
-
-      break;
-    }
-    case 'delete': {
-      // modalType.value = 'delete';
-      // showModal.value = true;
-      // modalTitle.value = t('ConfirmDelete');
-      // modalContent.value = t('DangerWarning');
-      break;
-    }
     case 'download': {
-      // mittBus.emit('download-file', {
-      //   path: `${fileManageStore.currentPath}/${currentRowData?.value?.name as string}`,
-      //   is_dir: currentRowData.value.is_dir!,
-      //   size: currentRowData.value.size!,
-      // });
+      // 处理下载逻辑
+      if (currentRowData.value) {
+        console.log('Downloading file:', currentRowData.value.name);
+        // 这里可以添加下载逻辑
+        emit('download-file', currentRowData.value);
+      }
 
       break;
     }
@@ -291,11 +340,11 @@ const handleSelect = (key: string) => {
   <n-flex align="center" justify="space-between" vertical class="!gap-x-6">
     <n-flex align="center" class="w-full !flex-nowrap">
       <n-flex class="controls-part !gap-x-6 h-full !flex-nowrap" align="center">
-        <n-button text :disabled="true" @click="handlePathBack">
+        <n-button text :disabled="disabledBack" @click="handlePathBack">
           <ChevronLeft :size="16" class="icon-hover" />
         </n-button>
 
-        <n-button text :disabled="true" @click="handlePathForward">
+        <n-button text :disabled="disabledForward" @click="handlePathForward">
           <ChevronRight :size="16" class="icon-hover" />
         </n-button>
       </n-flex>
@@ -325,25 +374,24 @@ const handleSelect = (key: string) => {
     </n-flex>
 
     <n-flex align="center" justify="space-between" class="w-full !flex-nowrap">
-      <n-input v-model:value="searchValue" clearable size="small" :placeholder="t('PleaseInput')">
+      <n-input
+        v-model:value="searchValue"
+        clearable
+        size="small"
+        @change="handleSearch"
+        :placeholder="t('PleaseInput')"
+      >
         <template #prefix>
           <Search :size="16" class="focus:outline-none" />
         </template>
       </n-input>
       <n-flex align="center" class="!flex-nowrap">
-        <n-button secondary size="small" class="custom-button-text" @click="handleNewFolder">
-          <template #icon>
-            <Plus :size="12" />
-          </template>
-          {{ t('NewFolder') }}
-        </n-button>
         <n-upload
           v-model:file-list="uploadFileList"
           abstract
           :multiple="false"
           :show-retry-button="false"
           :custom-request="customRequest"
-          @remove="handleRemoveItem"
           @change="handleUploadFileChange"
         >
           <n-button-group>
@@ -428,6 +476,7 @@ const handleSelect = (key: string) => {
     <n-flex class="mt-4">
       <n-card size="small">
         <n-data-table
+          :loading="loading"
           single-line
           flex-height
           virtual-scroll
@@ -435,7 +484,7 @@ const handleSelect = (key: string) => {
           :bordered="false"
           :columns="columns"
           :row-props="rowProps"
-          :data="dataList"
+          :data="dataList as RowData[]"
           :style="{ height: 'calc(100vh - 240px)' }"
         >
           <template #empty>
