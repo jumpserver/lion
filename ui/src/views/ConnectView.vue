@@ -5,6 +5,7 @@ import { useDebounceFn } from '@vueuse/core';
 // @ts-ignore
 // import Guacamole from 'guacamole-common-js';
 import Guacamole from '@dushixiang/guacamole-common-js';
+
 import { NSpin, useMessage, NTabPane } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
 import { getCurrentConnectParams } from '@/utils/common';
@@ -27,6 +28,10 @@ interface GuacamoleClient {
   disconnect(): () => void;
   createClipboardStream: (type: string) => any;
 }
+const FileType = {
+  NORMAL: 'NORMAL',
+  DIRECTORY: 'DIRECTORY',
+};
 
 const apiPrefix = ref('');
 const wsPrefix = ref('');
@@ -230,9 +235,137 @@ const onClientError = (status: any) => {
   message.error(msg);
 };
 
-const onFileSystem = (obj: object, name: any) => {
+const currentGuacFsObject = ref<any>(null);
+const currentGuacFsName = ref<any>(null);
+
+interface GuacamoleFile {
+  mimetype?: any;
+  streamName?: any;
+  type: 'DIRECTORY' | 'FILE';
+  name?: string;
+  parent?: GuacamoleFile | null;
+}
+
+const RefreshFileSystem = (
+  guacFsObject: any,
+  file: GuacamoleFile,
+): Promise<Record<string, GuacamoleFile>> => {
+  if (!guacFsObject || !guacFsObject.requestInputStream || !file) {
+    return Promise.reject(new Error('Guacamole guacFsObject is not initialized'));
+  }
+  return new Promise<Record<string, GuacamoleFile>>(function (resolve, reject) {
+    // Do not attempt to refresh the contents of directories
+    if (file.mimetype !== Guacamole.Object.STREAM_INDEX_MIMETYPE) {
+      reject('Cannot refresh contents of file: ' + file.name);
+      return;
+    }
+    // Request contents of given file
+    guacFsObject.requestInputStream(
+      file.streamName,
+      function handleStream(stream: any, mimetype: any) {
+        // Ignore stream if mimetype is wrong
+        if (mimetype !== Guacamole.Object.STREAM_INDEX_MIMETYPE) {
+          stream.sendAck('Unexpected mimetype', Guacamole.Status.Code.UNSUPPORTED);
+          reject('Unexpected mimetype' + ': ' + mimetype + ' for file: ' + file.name);
+          return;
+        }
+
+        // Signal server that data is ready to be received
+        stream.sendAck('Ready', Guacamole.Status.Code.SUCCESS);
+
+        // Read stream as JSON
+        var reader = new Guacamole.JSONReader(stream);
+
+        // Acknowledge received JSON blobs
+        reader.onprogress = function onprogress() {
+          stream.sendAck('Received', Guacamole.Status.Code.SUCCESS);
+        };
+
+        // Reset contents of directory
+        reader.onend = function jsonReady() {
+          // Empty contents
+          const files: any = {};
+
+          // Determine the expected filename prefix of each stream
+          var expectedPrefix = file.streamName;
+          if (expectedPrefix.charAt(expectedPrefix.length - 1) !== '/') {
+            expectedPrefix += '/';
+          }
+
+          // For each received stream name
+          var mimetypes = reader.getJSON();
+          for (var name in mimetypes) {
+            // Assert prefix is correct
+            if (name.substring(0, expectedPrefix.length) !== expectedPrefix) {
+              continue;
+            }
+
+            // Extract filename from stream name
+            var filename = name.substring(expectedPrefix.length);
+            // Deduce type from mimetype
+            var type = FileType.NORMAL;
+            if (mimetypes[name] === Guacamole.Object.STREAM_INDEX_MIMETYPE) {
+              type = FileType.DIRECTORY;
+            }
+
+            // Add file entry
+            files[filename] = {
+              mimetype: mimetypes[name],
+              streamName: name,
+              type: type,
+              parent: file,
+              name: filename,
+            };
+          }
+          resolve(files);
+        };
+        reader.onerror = function jsonError(error: any) {
+          reject('Error reading JSON from Guacamole stream: ');
+        };
+      },
+    );
+  });
+};
+const currentFolderObject = ref<any>(null);
+const current_files = ref<any>({});
+const currentFolderFiles = ref<any>([]);
+const onFileSystem = (obj: any, name: any) => {
+  if (!obj || !Guacamole.Object) {
+    console.warn('Guacamole file system object or name is not provided.');
+    return;
+  }
+  console.log('Guacamole file system object received:', obj, name);
+
   enableFilesystem.value = true;
-  console.log('Guacamole file system initialized:', obj, name);
+  currentGuacFsObject.value = obj;
+  currentFolderObject.value = obj;
+  currentGuacFsName.value = name;
+  const folder: GuacamoleFile = {
+    mimetype: Guacamole.Object.STREAM_INDEX_MIMETYPE,
+    streamName: Guacamole.Object.ROOT_STREAM,
+    type: 'DIRECTORY',
+    name: name,
+    parent: obj,
+  };
+  RefreshFileSystem(obj, folder)
+    .then((files: any) => {
+      console.log('Refreshed file system:', files);
+      current_files.value = files;
+      for (const fileName in files) {
+        console.log('File:', fileName, current_files.value[fileName]);
+        currentFolderFiles.value.push({
+          name: fileName,
+          is_dir: files[fileName].type === 'DIRECTORY',
+          mimetype: files[fileName].mimetype,
+          streamName: files[fileName].streamName,
+        });
+      }
+      console.log('Current files:', current_files.value);
+    })
+    .catch((error: any) => {
+      console.error('Error refreshing file system:', error);
+      message.error(t('FileSystemError') + ': ' + error.message);
+    });
 };
 
 const onfile = (stream: number, mimetype: string, name: string) => {
@@ -499,6 +632,14 @@ const sendTextToRemote = (text: string) => {
     writer.sendBlob(data.data);
   }
 };
+document.addEventListener(
+  'contextmenu',
+  (e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  },
+  false,
+);
 </script>
 
 <template>
@@ -509,7 +650,7 @@ const sendTextToRemote = (text: string) => {
     </div>
     <div id="display" v-show="!loading" class="w-screen h-screen"></div>
   </div>
-  <n-drawer v-model:show="drawShow" :min-width="502" animated resizable>
+  <n-drawer v-model:show="drawShow" :min-width="502" :default-width="502" resizable>
     <n-drawer-content>
       <n-tabs default-value="settings" justify-content="space-evenly" type="line">
         <n-tab-pane name="settings" tab="设置">
@@ -520,7 +661,7 @@ const sendTextToRemote = (text: string) => {
           />
         </n-tab-pane>
         <n-tab-pane name="file-manager" tab="文件管理">
-          <FileManager />
+          <FileManager :files="currentFolderFiles" />
         </n-tab-pane>
         <n-tab-pane name="share-collaboration" tab="分享会话"> 分享会话 </n-tab-pane>
       </n-tabs>

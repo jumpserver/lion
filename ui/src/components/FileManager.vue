@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, computed, onMounted, nextTick, h } from 'vue';
+import { ref, computed, onMounted, nextTick, h, onUnmounted } from 'vue';
 import {
   NFlex,
   NButton,
@@ -16,6 +16,7 @@ import {
   NPopover,
   NIcon,
   useMessage,
+  type DropdownOption,
 } from 'naive-ui';
 
 import {
@@ -24,6 +25,7 @@ import {
   Download,
   Folder,
   ListTree,
+  File,
   PenLine,
   Plus,
   RefreshCcw,
@@ -34,6 +36,21 @@ import {
 
 import { useI18n } from 'vue-i18n';
 const { t } = useI18n();
+
+// 添加类型定义
+interface RowData {
+  name: string;
+  is_dir: boolean;
+  size?: number;
+  [key: string]: any;
+}
+
+const props = defineProps({
+  files: {
+    type: Array,
+    default: () => [],
+  },
+});
 
 const handlePathBack = () => {};
 
@@ -105,43 +122,116 @@ const handleRefresh = () => {
 const onClickOutside = () => {
   showDropdown.value = false;
 };
-const dataList = [
-  // 模拟数据列表
-  { id: 1, name: 'File1.txt', size: '1MB', type: 'Text File' },
-  { id: 2, name: 'File2.jpg', size: '2MB', type: 'Image File' },
-  { id: 3, name: 'File3.mp4', size: '5MB', type: 'Video File' },
-];
-
-
+const dataList = ref<RowData[]>(props.files as RowData[]);
 
 const columns = [
-  { key: 'name', title: t('Name'), width: 200 },
-  { key: 'size', title: t('Size'), width: 100 },
-];
-const options: DropdownOption[] = [
   {
-    key: 'rename',
-    label: t('Rename'),
-    icon: () => h(PenLine, { size: 16 }),
+    title: t('Name'),
+    key: 'name',
+    ellipsis: {
+      tooltip: true,
+    },
+    render(row: RowData) {
+      const fileIcon = h(NIcon, {
+        size: 18,
+        component: row.is_dir ? Folder : File,
+        style: { marginRight: '8px' },
+      });
+
+      const fileName = h(
+        NPopover,
+        {
+          delay: 500,
+          placement: 'top-start',
+          style: { maxWidth: '485px' },
+        },
+        {
+          trigger: () =>
+            h(
+              NText,
+              {
+                depth: 1,
+                strong: true,
+                style: {
+                  cursor: 'pointer',
+                  maxWidth: '200px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                },
+              },
+              { default: () => row.name },
+            ),
+          default: () =>
+            h(
+              NText,
+              { style: { maxWidth: '300px', wordBreak: 'break-all' } },
+              { default: () => row.name },
+            ),
+        },
+      );
+
+      return h(
+        NFlex,
+        {
+          align: 'center',
+          style: { gap: '0px' },
+        },
+        {
+          default: () => [
+            fileIcon,
+            h(
+              NFlex,
+              {
+                vertical: true,
+                style: { gap: '0px' },
+              },
+              {
+                default: () => [fileName].filter(Boolean),
+              },
+            ),
+          ],
+        },
+      );
+    },
   },
-  {
+];
+
+onMounted(() => {
+  // dataList.value =  props.files
+});
+
+const currentRowData = ref<RowData | null>(null);
+// const columns = [
+//   { key: 'name', title: t('Name'), width: 200 },
+// ];
+
+// 动态设置 dropdown options
+const options = computed(() => {
+  if (!currentRowData.value) return [];
+
+  const baseOptions = [];
+
+  // 下载选项 - 对所有文件和文件夹都显示
+  baseOptions.push({
     key: 'download',
     label: t('Download'),
     icon: () => h(Download, { size: 16 }),
-  },
-  {
-    type: 'divider',
-    key: 'd1',
-  },
-  {
-    key: 'delete',
-    icon: () => h(Trash, { size: 16, color: '#ff6b6b' }),
-    label: () =>
-      h(NText, { depth: 1, style: { color: '#ff6b6b' } }, { default: () => t('Delete') }),
-  },
-];
+    show: !currentRowData.value.is_dir,
+  });
+
+  baseOptions.push({
+    key: 'open',
+    label: t('Open'),
+    icon: () => h(Folder, { size: 16 }),
+    show: currentRowData.value.is_dir,
+  });
+
+  return baseOptions;
+});
+
 const showDropdown = ref(false);
-const currentRowData = ref(null);
+
 const x = ref(0);
 const y = ref(0);
 const rowProps = (row: RowData) => {
@@ -149,7 +239,7 @@ const rowProps = (row: RowData) => {
     style: 'cursor: pointer',
     onContextmenu: (e: MouseEvent) => {
       currentRowData.value = row;
-
+      console.log('Row data:', row);
       e.preventDefault();
 
       showDropdown.value = false;
@@ -168,7 +258,7 @@ const rowProps = (row: RowData) => {
 
 const handleSelect = (key: string) => {
   showDropdown.value = false;
-
+  console.log('Selected option:', key);
   switch (key) {
     case 'rename': {
       // modalType.value = 'rename';
@@ -195,7 +285,6 @@ const handleSelect = (key: string) => {
     }
   }
 };
-
 </script>
 
 <template>
@@ -360,7 +449,7 @@ const handleSelect = (key: string) => {
           :x="x"
           :y="y"
           :show-arrow="true"
-          :options="options"
+          v-model:options="options"
           :show="showDropdown"
           @clickoutside="onClickOutside"
           @select="handleSelect"
@@ -369,3 +458,9 @@ const handleSelect = (key: string) => {
     </n-flex>
   </n-flex>
 </template>
+
+<style scoped lang="scss">
+:deep(.n-drawer .n-drawer-content .n-drawer-body) {
+  overflow: unset !important;
+}
+</style>
