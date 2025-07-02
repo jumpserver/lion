@@ -1,11 +1,11 @@
 <script lang="ts" setup>
-import { nextTick, onMounted, onUnmounted, ref, useTemplateRef, watch } from 'vue';
+import { nextTick, onMounted, onUnmounted, ref, useTemplateRef, watch, h } from 'vue';
 import { set, useWindowSize } from '@vueuse/core';
 import { useDebounceFn } from '@vueuse/core';
 // @ts-ignore
 // import Guacamole from 'guacamole-common-js';
 import Guacamole from '@dushixiang/guacamole-common-js';
-
+import type { UploadCustomRequestOptions, UploadFileInfo, UploadSettledFileInfo } from 'naive-ui';
 import { NSpin, useMessage, NTabPane } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
 import { getCurrentConnectParams, BaseAPIURL } from '@/utils/common';
@@ -243,7 +243,7 @@ interface GuacamoleFile {
   mimetype?: any;
   streamName?: any;
   type: 'DIRECTORY' | 'FILE';
-  name?: string;
+  name: string;
   parent?: GuacamoleFile | null;
   is_dir?: boolean;
 }
@@ -357,6 +357,14 @@ const handleFolderOpen = (row: any) => {
           parent: row,
         });
       }
+      currentFolderFiles.value.sort((a: GuacamoleFile, b: GuacamoleFile) => {
+        if (a.is_dir && !b.is_dir) {
+          return -1; // Directories first
+        } else if (!a.is_dir && b.is_dir) {
+          return 1; // Files after directories
+        }
+        return a.name.localeCompare(b.name); // Sort alphabetically
+      });
       console.log('Current folder files:', currentFolderFiles.value);
     })
     .catch((error: any) => {
@@ -379,6 +387,226 @@ const handleDownloadFile = (fileItem: GuacamoleFile) => {
     clientFileReceived(stream, mimetype, fileItem.name);
   };
   currentGuacFsObject.value.requestInputStream(path, downloadStream);
+};
+
+interface UploadItem {
+  uploadOptions: UploadCustomRequestOptions;
+  folder: GuacamoleFile;
+}
+
+const uploadingFiles = ref<Array<UploadItem>>([]);
+const isUploading = ref(false);
+
+const displayUploadingFiles = ref<Array<UploadSettledFileInfo>>([]);
+
+const handleUploadFile = (options: UploadCustomRequestOptions, folder: any) => {
+  if (!options.file || !currentGuacFsObject.value) {
+    console.warn('Cannot upload file, file or Guacamole object is not valid:', options.file);
+    return;
+  }
+  const item = {
+    uploadOptions: options,
+    folder: folder || currentFolder.value,
+  };
+  uploadingFiles.value.push(item);
+  if (isUploading.value) {
+    console.warn('Already uploading files, skipping new upload:', options.file.name);
+    return;
+  }
+  isUploading.value = true;
+
+  processUploadQueue()
+    .then(() => {
+      console.log('All files uploaded successfully');
+      message.success(t('FileUploadSuccess'));
+    })
+    .catch((error: any) => {
+      console.error('Error uploading files:', error);
+      message.error(t('FileUploadError') + ': ' + error.message);
+    })
+    .finally(() => {
+      handleFolderOpen(currentFolder.value);
+    });
+};
+
+const handleRemoveFile = (options: any) => {
+  console.log('Removing file:', options);
+};
+
+// const createnRef = () => {
+//   if (nRef.value) {
+//     updateNRef();
+//     return;
+//   }
+//   const fileList = displayUploadingFiles.value.map((item: any) => item.file);
+//   const notificationOptions: NotificationOptions = {
+//     title: 'uploading',
+//     content: () => h(FileUploading, { fileList: fileList, onRemove: handleRemoveFile }),
+//     onClose: () => {
+//       const uploading = uploadingFiles.value.filter((item: any) => {
+//         if (item.status === 'uploading' || item.status === 'pending') {
+//           return true;
+//         }
+//         return false;
+//       });
+//       if (uploading && uploading.length > 0) {
+//         message.error(t('Uploadunfinished'));
+//         return false;
+//       }
+//       return true;
+//     },
+//   };
+//   nRef.value = notification.create(notificationOptions);
+// };
+
+// const updateNRef = () => {
+//   if (nRef.value) {
+//     const fileList = displayUploadingFiles.value.map((item: any) => item.file);
+//     nRef.value.content = () => h(FileUploading, { fileList: fileList, onRemove: handleRemoveFile });
+//   }
+// };
+
+const processUploadQueue = async () => {
+  while (isUploading.value && uploadingFiles.value.length > 0) {
+    const UploadItem = uploadingFiles.value.shift();
+    if (!UploadItem || !UploadItem.uploadOptions) {
+      continue;
+    }
+    const { uploadOptions, folder } = UploadItem;
+    uploadOptions.file.status = 'uploading';
+    displayUploadingFiles.value.push(uploadOptions.file);
+    // createnRef();
+    await uploadFile(uploadOptions, folder);
+    uploadOptions.file.status = 'finished';
+    // updateNRef();
+  }
+  isUploading.value = false;
+};
+
+const uploadFile = async (options: UploadCustomRequestOptions, folder: GuacamoleFile) => {
+  if (!guacClient.value || !guacClient.value.createClipboardStream) {
+    console.warn('Guacamole client is not initialized yet.');
+    return;
+  }
+  const file = options.file;
+  const { onFinish, onError } = options;
+  const streamName = folder.streamName + '/' + sanitizeFilename(file.name).replace(/[:]+/g, '_');
+  console.log('Uploading file:', file.name, 'to stream:', streamName);
+  const progressCallback = (e: any) => {
+    console.log('Upload progress:', e.loaded, '/', e.total, 'for file:', file.name);
+    options.file.percentage = (e.loaded / e.total) * 100;
+  };
+  try {
+    await uploadGuacamoleFile(file.file, currentGuacFsObject.value, streamName, progressCallback);
+    console.log('File uploaded successfully:', file.name);
+    onFinish();
+  } catch (error) {
+    message.error(t('FileUploadError') + ': ' + error);
+    onError();
+    return;
+  }
+};
+
+import {
+  NFlex,
+  NButton,
+  NInput,
+  NText,
+  NScrollbar,
+  NDataTable,
+  NCard,
+  NModal,
+  NUpload,
+  NUploadTrigger,
+  NDrawer,
+  NDrawerContent,
+  NPopover,
+  NIcon,
+  NProgress,
+  useNotification,
+} from 'naive-ui';
+
+import type { NotificationOptions, NotificationReactive } from 'naive-ui';
+const notification = useNotification();
+const nRef = ref<NotificationReactive | null>(null);
+
+const uploadGuacamoleFile = (
+  file: any,
+  object: any,
+  streamName: any,
+  progressCallback: CallableFunction,
+): Promise<void> => {
+  const clinet = guacClient.value;
+  const tunnel = guacTunnel.value;
+  if (!clinet || !tunnel) {
+    return Promise.reject(new Error('Guacamole client or tunnel is not initialized'));
+  }
+  const uuid = tunnel.uuid;
+  const stream = object.createOutputStream(file.type, streamName);
+  return new Promise<void>((resolve, reject) => {
+    stream.onack = function beginUpload(status: any) {
+      // Notify of any errors from the Guacamole server
+      if (status.isError()) {
+        reject(status);
+        return;
+      }
+      const uploadToStream = function uploadStream(
+        tunnelId: any,
+        stream: any,
+        file: any,
+        progressCallback: CallableFunction,
+      ) {
+        // Build upload URL
+        const url =
+          BaseAPIURL +
+          '/tunnels/' +
+          encodeURIComponent(tunnelId) +
+          '/streams/' +
+          encodeURIComponent(stream.index) +
+          '/' +
+          encodeURIComponent(sanitizeFilename(file.name));
+        const xhr = new XMLHttpRequest();
+        xhr.withCredentials = true;
+        // Invoke provided callback if upload tracking is supported
+        if (progressCallback && xhr.upload) {
+          xhr.upload.addEventListener('progress', function updateProgress(e) {
+            progressCallback(e);
+          });
+        }
+        // Resolve/reject promise once upload has stopped
+        xhr.onreadystatechange = () => {
+          // Ignore state changes prior to completion
+          if (xhr.readyState !== 4) {
+            return;
+          }
+          // Resolve if HTTP status code indicates success
+          if (xhr.status >= 200 && xhr.status < 300) {
+            resolve();
+          } else if (xhr.getResponseHeader('Content-Type') === 'application/json') {
+            try {
+              const error = JSON.parse(xhr.responseText);
+              reject({ status: xhr.status, message: error.message });
+            } catch (e) {
+              reject({ status: xhr.status, message: 'Failed to parse error response' });
+            }
+          } else if (xhr.status >= 400 && xhr.status < 500) {
+            reject({ status: xhr.status, message: xhr.responseText });
+          } else {
+            reject(xhr.status);
+          }
+        };
+        // Perform upload
+        xhr.open('POST', url, true);
+        const fd = new FormData();
+        fd.append('file', file);
+        xhr.send(fd);
+      };
+      // Begin upload
+      uploadToStream(uuid, stream, file, progressCallback);
+      // Ignore all further acks
+      stream.onack = null;
+    };
+  });
 };
 
 const sanitizeFilename = (filename: string) => {
@@ -427,7 +655,7 @@ const clientFileReceived = (stream: any, mimetype: any, filename: any) => {
         document.body.removeChild(iframe);
       }
     }, 500);
-  }.bind(this);
+  };
   // Begin download
   iframe.src = url;
 };
@@ -452,36 +680,11 @@ const onFileSystem = (obj: any, name: any) => {
     parent: null,
   };
   currentFolder.value = defaultFolder;
-  RefreshFileSystem(obj, defaultFolder)
-    .then((files: any) => {
-      console.log('Refreshed file system:', files);
-      current_files.value = files;
-      for (const fileName in files) {
-        console.log('File:', fileName, current_files.value[fileName]);
-        currentFolderFiles.value.push({
-          name: fileName,
-          is_dir: files[fileName].type === 'DIRECTORY',
-          mimetype: files[fileName].mimetype,
-          streamName: files[fileName].streamName,
-          parent: defaultFolder,
-        });
-      }
-      console.log('Current files:', current_files.value);
-    })
-    .catch((error: any) => {
-      console.error('Error refreshing file system:', error);
-      message.error(t('FileSystemError') + ': ' + error.message);
-    })
-    .finally(() => {
-      fileFsloading.value = false;
-    });
+  handleFolderOpen(defaultFolder);
 };
 
 const onfile = (stream: number, mimetype: string, name: string) => {
-  console.log('Guacamole file received:', stream, mimetype, name);
-  // Handle file reception logic here
-  // For example, you can display the file or process it as needed
-  // This is a placeholder for actual file handling logic
+  clientFileReceived(stream, mimetype, name);
 };
 
 const onclipboard = (stream: object, mimetype: string) => {
@@ -687,7 +890,9 @@ onMounted(async () => {
   loading.value = true;
   const handLunaOpen = (message: any) => {
     console.log('Received Luna command:', message);
-    drawShow.value = !drawShow.value;
+    nextTick(() => {
+      drawShow.value = !drawShow.value;
+    });
   };
   lunaCommunicator.onLuna(LUNA_MESSAGE_TYPE.OPEN, handLunaOpen);
   const params = getCurrentConnectParams();
@@ -775,8 +980,10 @@ document.addEventListener(
             :files="currentFolderFiles"
             :name="currentGuacFsName"
             :folder="currentFolder"
+            :display-uploading-files="displayUploadingFiles"
             @open-folder="handleFolderOpen"
             @download-file="handleDownloadFile"
+            @upload-file="handleUploadFile"
           />
         </n-tab-pane>
         <n-tab-pane name="share-collaboration" tab="分享会话"> 分享会话 </n-tab-pane>

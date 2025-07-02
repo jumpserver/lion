@@ -60,7 +60,7 @@ onMounted(async () => {
     class="flex items-center justify-center h-full w-full overflow-hidden"
   >
     <n-dialog-provider>
-      <n-notification-provider>
+      <n-notification-provider placement="bottom-right">
         <n-message-provider>
           <RouterView v-if="loaded" />
         </n-message-provider>

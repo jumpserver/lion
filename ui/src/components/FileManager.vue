@@ -16,9 +16,20 @@ import {
   NPopover,
   NIcon,
   useMessage,
-  type DropdownOption,
+  NCollapseItem,
+  NCollapse,
+  NDivider,
+  NProgress,
 } from 'naive-ui';
 
+import { NAvatar, useNotification } from 'naive-ui';
+
+import type {
+  UploadCustomRequestOptions,
+  NotificationOptions,
+  NotificationReactive,
+  UploadSettledFileInfo,
+} from 'naive-ui';
 import {
   ChevronLeft,
   ChevronRight,
@@ -40,7 +51,8 @@ import { useDebounceFn } from '@vueuse/core';
 
 const { t } = useI18n();
 
-const emit = defineEmits(['open-folder', 'download-file']);
+const emit = defineEmits(['open-folder', 'download-file', 'upload-file']);
+const message = useMessage();
 
 // 添加类型定义
 interface RowData {
@@ -66,6 +78,10 @@ const props = defineProps({
   loading: {
     type: Boolean,
     default: false,
+  },
+  displayUploadingFiles: {
+    type: Array as () => UploadSettledFileInfo[],
+    default: () => [],
   },
 });
 
@@ -107,7 +123,6 @@ const filePathList = computed(() => {
     showArrow: false,
     row: currentFolder,
   });
-  console.log('Current folder:', currentFolder);
   while (parent !== null) {
     currentFolder = parent;
     parent = currentFolder.parent;
@@ -128,22 +143,18 @@ const searchValue = ref('');
 
 const isShowUploadList = ref(false);
 const uploadFileList = ref([]);
-const customRequest = (options: any) => {
+
+const customRequest = (options: UploadCustomRequestOptions) => {
   // 自定义上传请求逻辑
+  const { onFinish, onError, file } = options;
   console.log('Custom upload request:', options);
-  // 模拟上传成功
-  setTimeout(() => {
-    options.onSuccess({}, options.file);
-  }, 1000);
+  emit('upload-file', options, props.folder);
 };
 
-const handleUploadFileChange = (file: any) => {
+const handleUploadFileChange = useDebounceFn((file: any) => {
   // 处理上传文件变化事件
   console.log('Upload file changed:', file);
-  if (file.status === 'done') {
-  } else if (file.status === 'error') {
-  }
-};
+}, 100);
 
 const scrollRef = ref(null);
 const showInner = ref(false);
@@ -167,7 +178,7 @@ const dataList = computed(() => {
   return props.files.filter((file: any) => {
     // 这里可以添加搜索过滤逻辑
     return file.name.toLowerCase().includes(searchValue.value.toLowerCase());
-  });
+  }) as RowData[];
 });
 
 const columns = [
@@ -243,9 +254,7 @@ const columns = [
   },
 ];
 
-onMounted(() => {
-  // dataList.value =  props.files
-});
+onMounted(() => {});
 
 const currentRowData = ref<RowData | null>(null);
 const storeBackFolders = ref<any>([]);
@@ -334,6 +343,19 @@ const handleSelect = (key: string) => {
     }
   }
 };
+
+const handleUploadFinish = (options: any) => {
+  // 处理上传完成事件
+  console.log('File upload finished:', options);
+
+  message.success(t('UploadSuccess'));
+};
+
+const handleUploadError = (options: any) => {
+  // 处理上传错误事件
+  console.error('File upload error:', options);
+  message.error(t('UploadError') + ': ');
+};
 </script>
 
 <template>
@@ -391,6 +413,8 @@ const handleSelect = (key: string) => {
           abstract
           :multiple="false"
           :show-retry-button="false"
+          @finish="handleUploadFinish"
+          @error="handleUploadError"
           :custom-request="customRequest"
           @change="handleUploadFileChange"
         >
@@ -474,7 +498,13 @@ const handleSelect = (key: string) => {
       </n-flex>
     </n-flex>
     <n-flex class="mt-4">
-      <n-card size="small">
+      <n-card
+        size="small"
+        :segmented="{
+          content: true,
+          footer: 'soft',
+        }"
+      >
         <n-data-table
           :loading="loading"
           single-line
@@ -484,13 +514,24 @@ const handleSelect = (key: string) => {
           :bordered="false"
           :columns="columns"
           :row-props="rowProps"
-          :data="dataList as RowData[]"
-          :style="{ height: 'calc(100vh - 240px)' }"
+          :data="dataList"
+          :style="{ height: 'calc(100vh - 300px)' }"
         >
           <template #empty>
             <n-empty class="w-full h-full justify-center" :description="t('NoData')" />
           </template>
         </n-data-table>
+
+        <template #footer>
+          <n-upload
+            abstract
+            :show-preview-button="false"
+            :show-retry-button="false"
+            :file-list="props.displayUploadingFiles"
+          >
+            <n-upload-file-list />
+          </n-upload>
+        </template>
         <n-dropdown
           size="small"
           trigger="manual"
