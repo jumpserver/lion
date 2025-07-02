@@ -29,6 +29,7 @@ import type {
   NotificationOptions,
   NotificationReactive,
   UploadSettledFileInfo,
+  UploadFileInfo,
 } from 'naive-ui';
 import {
   ChevronLeft,
@@ -51,7 +52,7 @@ import { useDebounceFn } from '@vueuse/core';
 
 const { t } = useI18n();
 
-const emit = defineEmits(['open-folder', 'download-file', 'upload-file']);
+const emit = defineEmits(['open-folder', 'download-file', 'upload-file', 'remove-upload-file']);
 const message = useMessage();
 
 // 添加类型定义
@@ -95,10 +96,8 @@ const handlePathBack = () => {
 const handlePathForward = () => {
   if (!storeBackFolders.value || storeBackFolders.value.length === 0) return;
   // 处理路径前进事件
-  console.log('Path forward clicked', storeBackFolders.value);
   const nextFolder = storeBackFolders.value.pop(); // 获取第一个文件夹
   if (nextFolder) {
-    console.log('Next folder:', nextFolder);
     emit('open-folder', nextFolder);
   }
 };
@@ -147,13 +146,12 @@ const uploadFileList = ref([]);
 const customRequest = (options: UploadCustomRequestOptions) => {
   // 自定义上传请求逻辑
   const { onFinish, onError, file } = options;
-  console.log('Custom upload request:', options);
   emit('upload-file', options, props.folder);
 };
 
 const handleUploadFileChange = useDebounceFn((file: any) => {
   // 处理上传文件变化事件
-  console.log('Upload file changed:', file);
+  // console.log('Upload file changed:', file);
 }, 100);
 
 const scrollRef = ref(null);
@@ -168,7 +166,6 @@ const handleShowInner = () => {
 };
 const handleRefresh = () => {
   // 刷新逻辑
-  console.log('Refresh clicked');
   emit('open-folder', props.folder);
 };
 const onClickOutside = () => {
@@ -286,14 +283,6 @@ const options = computed(() => {
     icon: () => h(Download, { size: 16 }),
     show: !currentRowData.value.is_dir,
   });
-
-  // baseOptions.push({
-  //   key: 'open',
-  //   label: t('Open'),
-  //   icon: () => h(Folder, { size: 16 }),
-  //   show: currentRowData.value.is_dir,
-  // });
-
   return baseOptions;
 });
 
@@ -306,11 +295,9 @@ const rowProps = (row: RowData) => {
     style: 'cursor: pointer',
     onContextmenu: (e: MouseEvent) => {
       currentRowData.value = row;
-      console.log('Row data:', row);
       e.preventDefault();
 
       showDropdown.value = false;
-      console.log('Row right-clicked:', e);
       nextTick().then(() => {
         showDropdown.value = true;
         x.value = e.clientX;
@@ -322,7 +309,6 @@ const rowProps = (row: RowData) => {
         return;
       }
       currentRowData.value = row;
-      console.log('Row clicked:', row);
       emit('open-folder', row);
     },
   };
@@ -334,7 +320,6 @@ const handleSelect = (key: string) => {
     case 'download': {
       // 处理下载逻辑
       if (currentRowData.value) {
-        console.log('Downloading file:', currentRowData.value.name);
         // 这里可以添加下载逻辑
         emit('download-file', currentRowData.value);
       }
@@ -346,16 +331,27 @@ const handleSelect = (key: string) => {
 
 const handleUploadFinish = (options: any) => {
   // 处理上传完成事件
-  console.log('File upload finished:', options);
 
-  message.success(t('UploadSuccess'));
+  message.success(t('UploadSuccess') + ': ' + options.file.name);
 };
 
 const handleUploadError = (options: any) => {
   // 处理上传错误事件
-  console.error('File upload error:', options);
-  message.error(t('UploadError') + ': ');
+  message.error(t('UploadError') + ': ' + options.file.name);
 };
+
+const removeUploadList = (options: any) => {
+  // 处理移除上传文件列表
+  const { file } = options;
+  emit('remove-upload-file', file);
+};
+
+const tableHeight = computed(() => {
+  if (!props.displayUploadingFiles || props.displayUploadingFiles.length === 0) {
+    return 240;
+  }
+  return 300;
+});
 </script>
 
 <template>
@@ -515,18 +511,20 @@ const handleUploadError = (options: any) => {
           :columns="columns"
           :row-props="rowProps"
           :data="dataList"
-          :style="{ height: 'calc(100vh - 300px)' }"
+          :style="{ height: 'calc(100vh - ' + tableHeight + 'px)' }"
         >
           <template #empty>
             <n-empty class="w-full h-full justify-center" :description="t('NoData')" />
           </template>
         </n-data-table>
 
-        <template #footer>
+        <template #footer v-if="displayUploadingFiles.length > 0">
           <n-upload
             abstract
+            :file-list-class="'max-height-32'"
             :show-preview-button="false"
             :show-retry-button="false"
+            @remove="removeUploadList"
             :file-list="props.displayUploadingFiles"
           >
             <n-upload-file-list />
@@ -550,7 +548,13 @@ const handleUploadError = (options: any) => {
 </template>
 
 <style scoped lang="scss">
-:deep(.n-drawer .n-drawer-content .n-drawer-body) {
+:deep(.n-drawer .n-drawer-content .n-drawer-body .n-upload-file-list) {
   overflow: unset !important;
+}
+
+:deep(.max-height-32) {
+  max-height: 60px;
+  overflow: scroll;
+  scrollbar-width: none;
 }
 </style>

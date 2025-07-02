@@ -344,11 +344,9 @@ const handleFolderOpen = (row: any) => {
   fileFsloading.value = true;
   RefreshFileSystem(currentGuacFsObject.value, row)
     .then((files: any) => {
-      console.log('Refreshed folder files:', files);
       current_files.value = files;
       currentFolderFiles.value = [] as GuacamoleFile[];
       for (const fileName in files) {
-        console.log('File:', fileName, current_files.value[fileName]);
         currentFolderFiles.value.push({
           name: fileName,
           is_dir: files[fileName].type === 'DIRECTORY',
@@ -408,6 +406,7 @@ const handleUploadFile = (options: UploadCustomRequestOptions, folder: any) => {
     uploadOptions: options,
     folder: folder || currentFolder.value,
   };
+  displayUploadingFiles.value.push(options.file);
   uploadingFiles.value.push(item);
   if (isUploading.value) {
     console.warn('Already uploading files, skipping new upload:', options.file.name);
@@ -415,56 +414,23 @@ const handleUploadFile = (options: UploadCustomRequestOptions, folder: any) => {
   }
   isUploading.value = true;
 
-  processUploadQueue()
-    .then(() => {
-      console.log('All files uploaded successfully');
-      message.success(t('FileUploadSuccess'));
-    })
-    .catch((error: any) => {
-      console.error('Error uploading files:', error);
-      message.error(t('FileUploadError') + ': ' + error.message);
-    })
-    .finally(() => {
-      handleFolderOpen(currentFolder.value);
-    });
+  processUploadQueue().then(() => {
+    handleFolderOpen(currentFolder.value);
+  });
 };
 
-const handleRemoveFile = (options: any) => {
-  console.log('Removing file:', options);
+const handleRemoveFile = (file: any) => {
+  if (file.status === 'uploading') {
+    message.warning(t('FileUploadingWarning'));
+    return;
+  }
+  const newDisplayFiles = displayUploadingFiles.value.filter((f) => {
+    return f.name !== file.name;
+  });
+  nextTick(() => {
+    displayUploadingFiles.value = newDisplayFiles;
+  });
 };
-
-// const createnRef = () => {
-//   if (nRef.value) {
-//     updateNRef();
-//     return;
-//   }
-//   const fileList = displayUploadingFiles.value.map((item: any) => item.file);
-//   const notificationOptions: NotificationOptions = {
-//     title: 'uploading',
-//     content: () => h(FileUploading, { fileList: fileList, onRemove: handleRemoveFile }),
-//     onClose: () => {
-//       const uploading = uploadingFiles.value.filter((item: any) => {
-//         if (item.status === 'uploading' || item.status === 'pending') {
-//           return true;
-//         }
-//         return false;
-//       });
-//       if (uploading && uploading.length > 0) {
-//         message.error(t('Uploadunfinished'));
-//         return false;
-//       }
-//       return true;
-//     },
-//   };
-//   nRef.value = notification.create(notificationOptions);
-// };
-
-// const updateNRef = () => {
-//   if (nRef.value) {
-//     const fileList = displayUploadingFiles.value.map((item: any) => item.file);
-//     nRef.value.content = () => h(FileUploading, { fileList: fileList, onRemove: handleRemoveFile });
-//   }
-// };
 
 const processUploadQueue = async () => {
   while (isUploading.value && uploadingFiles.value.length > 0) {
@@ -473,37 +439,114 @@ const processUploadQueue = async () => {
       continue;
     }
     const { uploadOptions, folder } = UploadItem;
-    uploadOptions.file.status = 'uploading';
-    displayUploadingFiles.value.push(uploadOptions.file);
-    // createnRef();
-    await uploadFile(uploadOptions, folder);
-    uploadOptions.file.status = 'finished';
-    // updateNRef();
+
+    try {
+      uploadOptions.file.status = 'uploading';
+      await uploadFile(uploadOptions, folder);
+      uploadOptions.file.status = 'finished';
+      setTimeout(() => {
+        handleRemoveFile(uploadOptions.file);
+      }, 1000 * 5); // 延迟5秒后移除上传文件
+    } catch (error) {
+      console.error('Error processing upload queue:', error);
+      message.error(t('FileUploadError') + ': ' + error);
+      uploadOptions.file.status = 'error';
+    }
   }
   isUploading.value = false;
 };
 
+const fakeProcessInterval = ref<number | null>(null);
+
 const uploadFile = async (options: UploadCustomRequestOptions, folder: GuacamoleFile) => {
-  if (!guacClient.value || !guacClient.value.createClipboardStream) {
-    console.warn('Guacamole client is not initialized yet.');
-    return;
+  // 参数验证
+  if (!options || !options.file) {
+    const error = new Error('Upload options or file is missing');
+    console.error('Upload failed:', error.message);
+    message.error(t('FileUploadError') + ': ' + error.message);
+    throw error;
   }
+
+  if (!folder || !folder.streamName) {
+    const error = new Error('Target folder is invalid or missing stream name');
+    console.error('Upload failed:', error.message);
+    message.error(t('FileUploadError') + ': ' + error.message);
+    throw error;
+  }
+
+  // Guacamole 客户端验证
+  if (!guacClient.value || !guacClient.value.createClipboardStream) {
+    const error = new Error('Guacamole client is not initialized');
+    console.error('Upload failed:', error.message);
+    message.error(t('GuacamoleClientNotInitialized'));
+    throw error;
+  }
+
+  // 文件系统对象验证
+  if (!currentGuacFsObject.value) {
+    const error = new Error('Guacamole file system object is not available');
+    console.error('Upload failed:', error.message);
+    message.error(t('FileSystemError') + ': ' + error.message);
+    throw error;
+  }
+
   const file = options.file;
   const { onFinish, onError } = options;
+
+  // 文件大小验证（可选）
+  const maxFileSize = 100 * 1024 * 1024; // 100MB
+  if (file.file && file.file.size > maxFileSize) {
+    const error = new Error(`File size exceeds maximum limit of ${maxFileSize / 1024 / 1024}MB`);
+    console.error('Upload failed:', error.message);
+    message.error(t('FileUploadError') + ': ' + error.message);
+    throw error;
+  }
+
+  // 文件名验证
+  if (!file.name || file.name.trim() === '') {
+    const error = new Error('File name is empty or invalid');
+    console.error('Upload failed:', error.message);
+    message.error(t('FileUploadError') + ': ' + error.message);
+    throw error;
+  }
+
   const streamName = folder.streamName + '/' + sanitizeFilename(file.name).replace(/[:]+/g, '_');
   console.log('Uploading file:', file.name, 'to stream:', streamName);
+
+  if (fakeProcessInterval.value) {
+    clearInterval(fakeProcessInterval.value);
+    fakeProcessInterval.value = null;
+  }
+
+  fakeProcessInterval.value = setInterval(() => {
+    if (file.percentage && file.percentage < 97) {
+      file.percentage += 1;
+    } else {
+      if (fakeProcessInterval.value) {
+        clearInterval(fakeProcessInterval.value);
+        fakeProcessInterval.value = null;
+      }
+    }
+  }, 1000 * 2);
+
   const progressCallback = (e: any) => {
     console.log('Upload progress:', e.loaded, '/', e.total, 'for file:', file.name);
-    options.file.percentage = (e.loaded / e.total) * 100;
+    options.file.percentage = (e.loaded / e.total) * 100 - 40;
   };
+
   try {
     await uploadGuacamoleFile(file.file, currentGuacFsObject.value, streamName, progressCallback);
-    console.log('File uploaded successfully:', file.name);
     onFinish();
   } catch (error) {
-    message.error(t('FileUploadError') + ': ' + error);
+    console.error('Error uploading file:', error);
     onError();
-    return;
+    throw error; // 重新抛出异常，让调用者知道上传失败
+  } finally {
+    // 确保无论成功还是失败都清理 interval
+    if (fakeProcessInterval.value) {
+      clearInterval(fakeProcessInterval.value);
+      fakeProcessInterval.value = null;
+    }
   }
 };
 
@@ -984,6 +1027,7 @@ document.addEventListener(
             @open-folder="handleFolderOpen"
             @download-file="handleDownloadFile"
             @upload-file="handleUploadFile"
+            @remove-upload-file="handleRemoveFile"
           />
         </n-tab-pane>
         <n-tab-pane name="share-collaboration" tab="分享会话"> 分享会话 </n-tab-pane>
