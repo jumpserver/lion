@@ -27,7 +27,16 @@ interface GuacamoleClient {
   getDisplay: () => GuacamoleDisplay;
   disconnect(): () => void;
   createClipboardStream: (type: string) => any;
+  createAudioStream: (type: string) => any;
+  sendKeyEvent: (pressed: number, keyCode: number, keyChar?: string) => void;
 }
+
+interface GuacamoleTunnel {
+  uuid: string;
+  connect: () => void;
+  disconnect: () => void;
+}
+
 const FileType = {
   NORMAL: 'NORMAL',
   DIRECTORY: 'DIRECTORY',
@@ -56,9 +65,12 @@ const fileFsloading = ref(false);
 const remoteClipboardText = ref<string>('');
 const hasClipboardPermission = ref(false);
 const enableFilesystem = ref(false);
-// const keyboard = ref<Guacamole.Keyboard | null>(null);
+const autoFit = ref<boolean>(true);
 const debouncedResize = useDebounceFn(() => {
   updateScale();
+  if (!autoFit.value) {
+    return;
+  }
   if (guacClient.value && guacDisplay.value) {
     console.log('Sending resize to Guacamole client:', width.value, height.value);
     guacClient.value.sendSize(width.value, height.value);
@@ -81,6 +93,7 @@ const updateScale = () => {
     console.log(`Guacamole display scaled from ${scale.value} to ${newScale}`);
     scale.value = newScale;
     guacDisplay.value.scale(newScale);
+    fitPercentage.value = Math.floor(newScale * 100);
   }
 };
 
@@ -126,6 +139,7 @@ const clientStateChanged = (state: any) => {
     case 3:
       loading.value = false;
       connectStatus.value = 'Connected';
+      requestAudioStream(guacClient.value);
       break;
     case 4:
       connectStatus.value = 'Disconnecting';
@@ -137,6 +151,21 @@ const clientStateChanged = (state: any) => {
       guacDisplay.value?.getElement()?.remove();
       break;
   }
+};
+
+const requestAudioStream = (client: any) => {
+  if (!guacClient.value || !guacClient.value.createClipboardStream) {
+    console.warn('Guacamole client is not initialized or does not support audio stream');
+    return;
+  }
+  const AUDIO_INPUT_MIMETYPE = 'audio/L16;rate=44100,channels=2';
+  const audioStream = client.createAudioStream(AUDIO_INPUT_MIMETYPE);
+  const recorder = Guacamole.AudioRecorder.getInstance(audioStream, AUDIO_INPUT_MIMETYPE);
+  if (!recorder) {
+    audioStream.sendEnd();
+    return;
+  }
+  recorder.onclose = requestAudioStream.bind(this, client); // 重新请求音频流
 };
 
 const onJmsEvent = (event: any, data: any) => {
@@ -493,15 +522,6 @@ const uploadFile = async (options: UploadCustomRequestOptions, folder: Guacamole
   const file = options.file;
   const { onFinish, onError } = options;
 
-  // 文件大小验证（可选）
-  const maxFileSize = 100 * 1024 * 1024; // 100MB
-  if (file.file && file.file.size > maxFileSize) {
-    const error = new Error(`File size exceeds maximum limit of ${maxFileSize / 1024 / 1024}MB`);
-    console.error('Upload failed:', error.message);
-    message.error(t('FileUploadError') + ': ' + error.message);
-    throw error;
-  }
-
   // 文件名验证
   if (!file.name || file.name.trim() === '') {
     const error = new Error('File name is empty or invalid');
@@ -537,6 +557,7 @@ const uploadFile = async (options: UploadCustomRequestOptions, folder: Guacamole
   try {
     await uploadGuacamoleFile(file.file, currentGuacFsObject.value, streamName, progressCallback);
     onFinish();
+    file.percentage = 100;
   } catch (error) {
     console.error('Error uploading file:', error);
     onError();
@@ -764,6 +785,8 @@ const onclipboard = (stream: object, mimetype: string) => {
   }
 };
 
+const showOsk = ref<boolean>(false);
+
 const fileDrop = (event: any) => {
   event.stopPropagation();
   event.preventDefault();
@@ -848,7 +871,7 @@ const connectGuacamole = async (connectString: string) => {
     localCursor.value = true;
   };
 
-  const mouse = new Guacamole.Mouse(displayRef);
+  const mouse = new Guacamole.Mouse(display.getElement());
   const sendScaledMouseState = (mouseState: any) => {
     const scaledState = new Guacamole.Mouse.State(
       mouseState.x / display.getScale(),
@@ -997,6 +1020,73 @@ document.addEventListener(
   },
   false,
 );
+import Osk from '@/components/Osk.vue';
+import KeyboardOption from '@/components/KeyboardOption.vue';
+import OtherOption from '@/components/OtherOption.vue';
+const keyboardLayout = ref<string>('en-us-qwerty');
+
+const handleScreenKeyboard = (name: string, keysym: any) => {
+  console.log('Screen keyboard change:', name, keysym);
+  if (!guacClient.value) {
+    console.warn('Guacamole client is not initialized yet.');
+    return;
+  }
+  switch (name) {
+    case 'keydown':
+      guacClient.value.sendKeyEvent(1, keysym);
+      break;
+    case 'keyup':
+      guacClient.value.sendKeyEvent(0, keysym);
+      break;
+    default:
+      console.warn('Unknown screen keyboard event:', name);
+  }
+};
+
+const fitPercentage = ref<number>(100);
+
+watch(
+  [autoFit],
+  ([newAutoFit]) => {
+    if (newAutoFit) {
+      debouncedResize();
+    }
+  },
+  { immediate: true },
+);
+
+const handleCombineKeys = (keys: string[]) => {
+  if (!guacClient.value) {
+    console.warn('Guacamole client is not initialized yet.');
+    return;
+  }
+  const client = guacClient.value;
+  keys.forEach((keysym: any) => {
+    client.sendKeyEvent(1, keysym);
+  });
+  setTimeout(() => {
+    keys.forEach((keysym: any) => {
+      client.sendKeyEvent(0, keysym);
+    });
+  }, 100);
+};
+
+const scaleGuacDisplay = (value: number) => {
+  if (!guacDisplay.value) {
+    console.warn('Guacamole display is not initialized yet.');
+    return;
+  }
+  if (value <= 0) {
+    console.warn('Invalid scale value:', scale);
+    return;
+  }
+  console.log('Scaling Guacamole display to:', value);
+  const newScale = value / 100; // 限制缩放范围在0.1到5之间
+
+  guacDisplay.value.scale(newScale);
+  scale.value = newScale;
+  fitPercentage.value = Math.floor(newScale * 100);
+};
 </script>
 
 <template>
@@ -1006,7 +1096,9 @@ document.addEventListener(
       </n-spin>
     </div>
     <div id="display" v-show="!loading" class="w-screen h-screen"></div>
+    <Osk v-if="showOsk" :keyboard="keyboardLayout" @keyboard-change="handleScreenKeyboard" />
   </div>
+
   <n-drawer v-model:show="drawShow" :min-width="502" :default-width="502" resizable>
     <n-drawer-content>
       <n-tabs default-value="settings" justify-content="space-evenly" type="line">
@@ -1015,6 +1107,16 @@ document.addEventListener(
             :disabled="!hasClipboardPermission"
             :remote-text="remoteClipboardText"
             @update:text="ClipBoardTextChange"
+          />
+          <br />
+          <KeyboardOption v-model:opened="showOsk" v-model:keyboard="keyboardLayout" />
+          <br />
+          <OtherOption
+            v-model:auto-fit="autoFit"
+            :fit-percentage="fitPercentage"
+            @combine-keys="handleCombineKeys"
+            @update-scale="scaleGuacDisplay"
+            :is-remote-app="false"
           />
         </n-tab-pane>
         <n-tab-pane name="file-manager" tab="文件管理">
