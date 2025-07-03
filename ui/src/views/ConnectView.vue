@@ -1087,6 +1087,8 @@ const scaleGuacDisplay = (value: number) => {
   scale.value = newScale;
   fitPercentage.value = Math.floor(newScale * 100);
 };
+import SessionShare from '@/components/SessionShare.vue';
+
 </script>
 
 <template>
@@ -1132,7 +1134,9 @@ const scaleGuacDisplay = (value: number) => {
             @remove-upload-file="handleRemoveFile"
           />
         </n-tab-pane>
-        <n-tab-pane name="share-collaboration" tab="分享会话"> 分享会话 </n-tab-pane>
+        <n-tab-pane name="share-collaboration" tab="分享会话">
+          <SessionShare />
+        </n-tab-pane>
       </n-tabs>
     </n-drawer-content>
   </n-drawer>
