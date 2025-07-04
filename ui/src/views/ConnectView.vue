@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { nextTick, onMounted, onUnmounted, ref, useTemplateRef, watch, h } from 'vue';
+import { nextTick, onMounted, onUnmounted, ref, useTemplateRef, watch, h, computed } from 'vue';
 import { set, useWindowSize } from '@vueuse/core';
 import { useDebounceFn } from '@vueuse/core';
 // @ts-ignore
@@ -212,6 +212,7 @@ const onJmsEvent = (event: any, data: any) => {
     }
     case 'share_users': {
       onlineUsersMap.value = dataObj;
+      console.log('Online users updated:', onlineUsersMap.value);
       break;
     }
     case 'perm_expired': {
@@ -1089,6 +1090,16 @@ const scaleGuacDisplay = (value: number) => {
 };
 import SessionShare from '@/components/SessionShare.vue';
 
+const onlineUsers = computed(() => {
+  const users: any = [];
+  for (const userId in onlineUsersMap.value) {
+    const user = onlineUsersMap.value[userId];
+    if (user) {
+      users.push(user);
+    }
+  }
+  return users;
+});
 </script>
 
 <template>
@@ -1134,8 +1145,8 @@ import SessionShare from '@/components/SessionShare.vue';
             @remove-upload-file="handleRemoveFile"
           />
         </n-tab-pane>
-        <n-tab-pane name="share-collaboration" tab="分享会话">
-          <SessionShare />
+        <n-tab-pane name="share-collaboration" tab="分享会话" v-if="sessionObject">
+          <SessionShare :session="sessionObject.id" :users="onlineUsers" />
         </n-tab-pane>
       </n-tabs>
     </n-drawer-content>

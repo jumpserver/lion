@@ -10,6 +10,7 @@ declare module 'vue' {
   export interface GlobalComponents {
     Clip: typeof import('./src/components/clip.vue')['default']
     ClipBoardText: typeof import('./src/components/ClipBoardText.vue')['default']
+    CreateShare: typeof import('./src/components/CreateShare.vue')['default']
     FileManager: typeof import('./src/components/FileManager.vue')['default']
     FileUploading: typeof import('./src/components/FileUploading.vue')['default']
     IconCommunity: typeof import('./src/components/icons/IconCommunity.vue')['default']
@@ -37,6 +38,7 @@ declare module 'vue' {
     NGi: typeof import('naive-ui')['NGi']
     NGrid: typeof import('naive-ui')['NGrid']
     NInput: typeof import('naive-ui')['NInput']
+    NInputOtp: typeof import('naive-ui')['NInputOtp']
     NList: typeof import('naive-ui')['NList']
     NListItem: typeof import('naive-ui')['NListItem']
     NMessageProvider: typeof import('naive-ui')['NMessageProvider']
