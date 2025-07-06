@@ -112,6 +112,7 @@ import { LanguageCode } from '@/locales';
 
 import { lunaCommunicator } from '@/utils/lunaBus.ts';
 import { ErrorStatusCodes, ConvertGuacamoleError } from '@/utils/status';
+import { nextTick } from 'vue';
 export async function getSupportedGuacAudios(): Promise<string[]> {
   return Guacamole.AudioPlayer.getSupportedTypes();
 }
@@ -157,16 +158,6 @@ interface GuacamoleFile {
   is_dir?: boolean;
 }
 
-interface GuacamoleClient {
-  sendSize: (width: number, height: number) => void;
-  connect: (connectString: string) => void;
-  getDisplay: () => GuacamoleDisplay;
-  disconnect(): () => void;
-  createClipboardStream: (type: string) => any;
-  createAudioStream: (type: string) => any;
-  sendKeyEvent: (pressed: number, keyCode: number, keyChar?: string) => void;
-}
-
 export function useGuacamoleClient(t: any) {
   const pixelDensity = window.devicePixelRatio || 1;
   const guaClient = ref<Guacamole.Client | null>(null);
@@ -189,6 +180,8 @@ export function useGuacamoleClient(t: any) {
   const currentHeight = ref(window.innerHeight);
   const fakeProcessInterval = ref<number | null>(null);
   const message = useMessage();
+  const sink = new Guacamole.InputSink();
+  const keyboard = new Guacamole.Keyboard();
   function connectToGuacamole(
     wsUrl: string,
     connectParams: Record<string, any>,
@@ -290,9 +283,15 @@ export function useGuacamoleClient(t: any) {
       if (displayEl) displayEl.style.cursor = 'none';
       display.showCursor(true);
       document.body.focus();
+      nextTick(() => {
+          sink.focus()
+      })
     };
     const handleMouseLeave = () => {
       if (displayEl) displayEl.style.cursor = 'default';
+      nextTick(() => {
+        keyboard.reset();
+      })
     };
     displayEl.addEventListener('mouseenter', handleMouseEnter);
     displayEl.addEventListener('mouseleave', handleMouseLeave);
@@ -440,8 +439,6 @@ export function useGuacamoleClient(t: any) {
       console.warn('Guacamole display is not available');
       return;
     }
-    const sink = new Guacamole.InputSink();
-    const keyboard = new Guacamole.Keyboard();
     keyboard.listenTo(sink.getElement());
 
     keyboard.onkeydown = (keysym: any) => {
