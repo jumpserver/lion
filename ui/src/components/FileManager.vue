@@ -63,28 +63,13 @@ interface RowData {
   [key: string]: any;
 }
 
-const props = defineProps({
-  files: {
-    type: Array,
-    default: () => [],
-  },
-  name: {
-    type: String,
-    default: '',
-  },
-  folder: {
-    type: Object,
-    default: () => ({}),
-  },
-  loading: {
-    type: Boolean,
-    default: false,
-  },
-  displayUploadingFiles: {
-    type: Array as () => UploadSettledFileInfo[],
-    default: () => [],
-  },
-});
+const props = defineProps<{
+  files: RowData[];
+  name: string;
+  folder: any;
+  loading: Boolean;
+  displayUploadingFiles: UploadSettledFileInfo[];
+}>();
 
 const handlePathBack = () => {
   if (!props.folder || !props.folder.parent) return;

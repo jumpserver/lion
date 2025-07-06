@@ -70,7 +70,7 @@ export interface LunaMessageEvents {
     data: string;
   };
   [LUNA_MESSAGE_TYPE.CHANGE_MAIN_THEME]: {
-    data: string;
+    data: LunaMessage;
   };
   [LUNA_MESSAGE_TYPE.MOUSE_EVENT]: {
     data: string;

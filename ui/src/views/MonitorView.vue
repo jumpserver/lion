@@ -13,13 +13,13 @@ const params = {
   type: 'monitor',
   SESSION_ID: sessionId,
 };
-const { connectToGuacamole, guaDisplay, loading, resize } = useGuacamoleClient(t);
+const { connectToGuacamole, guaDisplay, loading, resizeGuaScale } = useGuacamoleClient(t);
 
 watch(
   [width, height],
   ([newWidth, newHeight]) => {
     if (guaDisplay.value) {
-      resize(newWidth, newHeight);
+      resizeGuaScale(newWidth, newHeight);
     }
   },
   { immediate: true },

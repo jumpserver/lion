@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
 import { BASE_URL, LanguageCode, ThemeCode } from '@/utils/config';
+import { useDebounceFn } from '@vueuse/core';
 import { alovaInstance } from '@/api';
 import type { GlobalThemeOverrides, NLocale } from 'naive-ui';
-import { onMounted, ref, nextTick, provide } from 'vue';
+import { onMounted, ref, nextTick, provide, onUnmounted } from 'vue';
 import { createThemeOverrides } from './overrides';
 import { darkTheme, dateZhCN, enUS, esAR, jaJP, koKR, ptBR, ruRU, zhCN, zhTW } from 'naive-ui';
 const { mergeLocaleMessage } = useI18n();
+import { lunaCommunicator } from './utils/lunaBus';
+import { LUNA_MESSAGE_TYPE, type LunaMessage } from '@/types/postmessage.type';
 const langCodeMap = new Map(
   Object.entries({
     ko: koKR,
@@ -29,6 +32,12 @@ provide('manual-set-theme', (theme: string) => {
   themeOverrides.value = createThemeOverrides(theme as 'default' | 'deepBlue' | 'darkGary');
 });
 
+const handleMainThemeChange = useDebounceFn((data: LunaMessage) => {
+  console.log('Theme changed to:', data.data);
+  const theme = data.data;
+  themeOverrides.value = createThemeOverrides(theme as 'default' | 'deepBlue' | 'darkGary');
+}, 300);
+
 onMounted(async () => {
   loaded.value = false;
   componentsLocale.value = langCode || enUS;
@@ -48,6 +57,11 @@ onMounted(async () => {
       loaded.value = true;
     });
   }
+  lunaCommunicator.onLuna(LUNA_MESSAGE_TYPE.CHANGE_MAIN_THEME, handleMainThemeChange);
+});
+
+onUnmounted(() => {
+  lunaCommunicator.offLuna(LUNA_MESSAGE_TYPE.CHANGE_MAIN_THEME);
 });
 </script>
 
