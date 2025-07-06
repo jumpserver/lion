@@ -39,8 +39,11 @@ onMounted(() => {
     <div v-if="loading" class="flex justify-center items-center w-screen h-screen">
       <n-spin :show="loading" size="large" :description="`${t('Connecting')}`"> </n-spin>
     </div>
-    <div id="display" v-show="!loading" class="w-screen h-screen flex justify-center relative"></div>
+    <div
+      id="display"
+      v-show="!loading"
+      class="w-screen h-screen flex justify-center relative"
+    ></div>
   </div>
 </template>
-<style scoped>
-</style>
+<style scoped></style>

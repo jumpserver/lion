@@ -139,7 +139,11 @@ onMounted(() => {});
       <n-spin :show="loading" size="large" :description="`${t('Connecting')}: ${connectStatus}`">
       </n-spin>
     </div>
-    <div id="display" v-show="!loading" class="w-screen h-screen flex justify-center relative"></div>
+    <div
+      id="display"
+      v-show="!loading"
+      class="w-screen h-screen flex justify-center relative"
+    ></div>
     <Osk v-if="showOsk" :keyboard="keyboardLayout" @keyboard-change="handleScreenKeyboard" />
   </div>
 
