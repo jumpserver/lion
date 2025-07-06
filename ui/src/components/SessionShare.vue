@@ -6,6 +6,7 @@ import { computed, h, reactive, ref, watch } from 'vue';
 import { NTag, useDialogReactiveList, useMessage } from 'naive-ui';
 import type { Composer } from 'vue-i18n';
 import CreateShareCard from './CreateShare.vue';
+import { removeShareUser } from '@/api';
 
 export type TranslateFunction = Composer['t'];
 
@@ -17,15 +18,13 @@ const props = defineProps<{
     primary: boolean;
     writable: boolean;
   }>;
+  disableCreate?: boolean;
 }>();
 
 const { t } = useI18n();
+const message = useMessage();
 
 const showModal = ref<boolean>(false);
-
-const onlineUsers = ref<
-  Array<{ user_id: string; user: string; primary: boolean; writable: boolean }>
->(props.users || []);
 
 const handleRemoveShareUser = (user: {
   user_id: string;
@@ -33,7 +32,20 @@ const handleRemoveShareUser = (user: {
   primary: boolean;
   writable: boolean;
 }) => {
-  onlineUsers.value = onlineUsers.value.filter((u) => u.user_id !== user.user_id);
+  console.log('Removing user:', user);
+  removeShareUser(user)
+    .then((res: any) => res.json())
+    .then((response) => {
+      if (response.message && !response.success) {
+        message.error(response.message);
+        return;
+      }
+      message.success(t('ShareUserRemoved', { user: user.user }));
+    })
+    .catch((error) => {
+      console.error('Error removing share user:', error);
+      message.error(t('ShareUserRemoveError', { user: user.user }));
+    });
 };
 
 const openModal = () => {
@@ -45,20 +57,23 @@ const openModal = () => {
   <n-flex vertical align="center">
     <n-divider dashed title-placement="left" class="!mb-3 !mt-0">
       <n-text depth="2" class="text-sm opacity-70">
-        {{ t('User') }} {{ onlineUsers?.length || 0 }}
+        {{ t('User') }} {{ props.users?.length || 0 }}
       </n-text>
     </n-divider>
 
-    <n-flex v-if="onlineUsers?.length" class="w-full mb-4">
+    <n-flex v-if="props.users?.length" class="w-full mb-4">
       <n-list class="w-full" bordered hoverable>
-        <n-list-item v-for="user in onlineUsers" :key="user.user_id">
+        <n-list-item v-for="user in props.users" :key="user.user_id">
           <template #suffix>
-            <Delete
-              v-if="!user.primary"
-              :size="18"
-              class="cursor-pointer hover:text-red-500 transition-all duration-200"
-              @click="handleRemoveShareUser(user)"
-            />
+            <n-popconfirm v-if="!user.primary" @positive-click="handleRemoveShareUser(user)">
+              <template #trigger>
+                <Delete
+                  :size="18"
+                  class="cursor-pointer hover:text-red-500 transition-all duration-200"
+                />
+              </template>
+              确定要移除此用户吗？
+            </n-popconfirm>
           </template>
 
           <n-flex vertical>
@@ -79,7 +94,7 @@ const openModal = () => {
         type="primary"
         size="small"
         class="!w-full mt-1"
-        :disabled="false"
+        :disabled="disableCreate"
         @click="openModal"
       >
         <n-text class="text-white text-sm">

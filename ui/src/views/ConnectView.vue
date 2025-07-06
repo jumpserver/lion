@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { nextTick, onMounted, onUnmounted, ref, useTemplateRef, watch, h, computed } from 'vue';
-import { set, useWindowSize } from '@vueuse/core';
+import { useWindowSize } from '@vueuse/core';
 import { useDebounceFn } from '@vueuse/core';
 // @ts-ignore
 // import Guacamole from 'guacamole-common-js';
@@ -815,7 +815,9 @@ const connectGuacamole = async (connectString: string) => {
   tunnel.receiveTimeout = 60 * 1000; // Set receive timeout to 60 seconds
   const client = new Guacamole.Client(tunnel);
   tunnel.onerror = (error: any) => {
-    message.error(t('WebSocketError') + ` tunnel : ${error.message}`);
+    const code = error.code || 0;
+    const messageText = error.message || t('WebSocketError');
+    message.error(t('WebSocketError') + ` tunnel : ${messageText}`);
   };
   tunnel.onuuid = (uuid: string) => {
     tunnel.uuid = uuid;
