@@ -1,9 +1,6 @@
 <script lang="ts" setup>
 import { useI18n } from 'vue-i18n';
-import { useDebounceFn } from '@vueuse/core';
-import { Delete, Undo2 } from 'lucide-vue-next';
-import { NTag, useDialogReactiveList, useMessage } from 'naive-ui';
-import type { Composer } from 'vue-i18n';
+import { useMessage } from 'naive-ui';
 import { getShareSession } from '@/api/index';
 import { nextTick, onMounted, ref, computed } from 'vue';
 import Osk from '@/components/Osk.vue';
@@ -78,6 +75,10 @@ const connectShareSession = (code: string) => {
       if (displayEl) {
         displayEl.appendChild(guaDisplay.value.getElement());
       }
+      if (readonly.value) {
+        return;
+      }
+      registerMouseAndKeyboardHanlder();
     })
     .catch((error) => {
       console.error('Error fetching share session:', error);
@@ -94,7 +95,8 @@ const handleScreenKeyboard = (layout: string) => {
 };
 const connectStatus = ref<string>('Connecting...');
 
-const { connectToGuacamole, guaDisplay, loading, onlineUsersMap } = useGuacamoleClient(t);
+const { connectToGuacamole, guaDisplay, loading, onlineUsersMap, registerMouseAndKeyboardHanlder } =
+  useGuacamoleClient(t);
 
 const drawShow = ref<boolean>(false);
 const sessionObject = ref<Record<string, any>>({});
@@ -137,7 +139,7 @@ onMounted(() => {});
       <n-spin :show="loading" size="large" :description="`${t('Connecting')}: ${connectStatus}`">
       </n-spin>
     </div>
-    <div id="display" v-show="!loading" class="w-screen h-screen"></div>
+    <div id="display" v-show="!loading" class="w-screen h-screen flex justify-center relative"></div>
     <Osk v-if="showOsk" :keyboard="keyboardLayout" @keyboard-change="handleScreenKeyboard" />
   </div>
 

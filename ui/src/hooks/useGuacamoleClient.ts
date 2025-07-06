@@ -167,6 +167,9 @@ export function useGuacamoleClient(t: any) {
   const onlineUsersMap = ref<Record<string, any>>({});
   const warningIntervalId = ref<number | null>(null);
   const loading = ref(true);
+  const scale = ref(1);
+  const currentWidth = ref(window.innerWidth);
+  const currentHeight = ref(window.innerHeight);
   const message = useMessage();
   function connectToGuacamole(
     wsUrl: string,
@@ -174,6 +177,9 @@ export function useGuacamoleClient(t: any) {
     width: any,
     height: any,
   ) {
+    currentWidth.value = width || window.innerWidth;
+    currentHeight.value = height || window.innerHeight;
+
     const tunnel = new Guacamole.WebSocketTunnel(wsUrl);
     tunnel.receiveTimeout = 60 * 1000; // Set receive timeout to 60 secondsa
     const client = new Guacamole.Client(tunnel);
@@ -199,31 +205,14 @@ export function useGuacamoleClient(t: any) {
     };
     client.onfilesystem = onFileSystem;
     client.onfile = clientFileReceived;
-
     client.onstatechange = clientStateChanged;
     client.onerror = onClientError;
     client.onclipboard = onclipboard;
-    window.addEventListener('focus', debouncedSendClipboardToRemote, false);
-
-    registerMouse(client);
-
-    registerTouchScreen(client);
-
-    registerKeyboard(client);
-
     const display = client.getDisplay();
-    const displayEl = display.getElement();
-
-    const handleMouseEnter = () => {
-      if (displayEl) displayEl.style.cursor = 'none';
-      display.showCursor(true);
-      document.body.focus();
+    display.onresize = (resizeEvent: any) => {
+      console.log('Guacamole display resized:', resizeEvent);
+      updateScale();
     };
-    const handleMouseLeave = () => {
-      if (displayEl) displayEl.style.cursor = 'default';
-    };
-    displayEl.addEventListener('mouseenter', handleMouseEnter);
-    displayEl.addEventListener('mouseleave', handleMouseLeave);
     guaDisplay.value = display;
     guaClient.value = client;
     guaTunnel.value = tunnel;
@@ -250,6 +239,58 @@ export function useGuacamoleClient(t: any) {
         client.connect(queryParams.toString());
       });
   }
+  const registerMouseAndKeyboardHanlder = () => {
+    const client: Guacamole.Client = guaClient.value;
+    if (!client || !client.getDisplay) {
+      return console.warn(
+        'Guacamole client is not initialized or does not support mouse and keyboard events',
+      );
+    }
+    window.addEventListener('focus', debouncedSendClipboardToRemote, false);
+    registerMouse(client);
+
+    registerTouchScreen(client);
+
+    registerKeyboard(client);
+    const display = client.getDisplay();
+    const displayEl = display.getElement();
+
+    const handleMouseEnter = () => {
+      if (displayEl) displayEl.style.cursor = 'none';
+      display.showCursor(true);
+      document.body.focus();
+    };
+    const handleMouseLeave = () => {
+      if (displayEl) displayEl.style.cursor = 'default';
+    };
+    displayEl.addEventListener('mouseenter', handleMouseEnter);
+    displayEl.addEventListener('mouseleave', handleMouseLeave);
+  };
+
+  const resize = useDebounceFn((width: number, height: number) => {
+    currentWidth.value = width || window.innerWidth;
+    currentHeight.value = height || window.innerHeight;
+    updateScale();
+  }, 300);
+
+  const updateScale = () => {
+    if (!guaDisplay.value || !guaClient.value) {
+      console.warn('Guacamole display is not initialized yet.');
+      return;
+    }
+    const w = guaDisplay.value.getWidth();
+    const h = guaDisplay.value.getHeight();
+
+    if (h === 0 || w === 0) {
+      return 1;
+    }
+    const newScale = Math.min(currentWidth.value / w, currentHeight.value / h);
+    if (newScale !== scale.value) {
+      console.log(`Guacamole display scaled from ${scale.value} to ${newScale}`);
+      scale.value = newScale;
+      guaDisplay.value.scale(newScale);
+    }
+  };
 
   const onJmsEvent = (event: any, data: any) => {
     console.log('Received JMS event:', event);
@@ -792,7 +833,7 @@ export function useGuacamoleClient(t: any) {
     onJmsEvent,
     sendTextToRemote,
     debouncedSendClipboardToRemote,
-    registerKeyboard,
+    registerMouseAndKeyboardHanlder,
     registerTouchScreen,
     registerMouse,
     onClientError,
@@ -804,5 +845,6 @@ export function useGuacamoleClient(t: any) {
     onclipboard,
     RefreshFileSystem,
     loading,
+    resize,
   };
 }
