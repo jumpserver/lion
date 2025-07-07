@@ -63,7 +63,7 @@ const props = defineProps<{
   files: RowData[];
   name: string;
   folder: any;
-  loading: Boolean;
+  loading: boolean;
   displayUploadingFiles: UploadSettledFileInfo[];
 }>();
 
