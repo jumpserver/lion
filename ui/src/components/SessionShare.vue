@@ -40,11 +40,10 @@ const handleRemoveShareUser = (user: {
         message.error(response.message);
         return;
       }
-      message.success(t('ShareUserRemoved', { user: user.user }));
     })
     .catch((error) => {
       console.error('Error removing share user:', error);
-      message.error(t('ShareUserRemoveError', { user: user.user }));
+      message.error(t('ShareUserRemoveError'));
     });
 };
 
@@ -57,7 +56,7 @@ const openModal = () => {
   <n-flex vertical align="center">
     <n-divider dashed title-placement="left" class="!mb-3 !mt-0">
       <n-text depth="2" class="text-sm opacity-70">
-        {{ t('User') }} {{ props.users?.length || 0 }}
+        {{ t('OnlineUser') }} {{ props.users?.length || 0 }}
       </n-text>
     </n-divider>
 
@@ -72,7 +71,7 @@ const openModal = () => {
                   class="cursor-pointer hover:text-red-500 transition-all duration-200"
                 />
               </template>
-              确定要移除此用户吗？
+              {{ t('RemoveShareUserConfirm') }}
             </n-popconfirm>
           </template>
 
@@ -80,7 +79,7 @@ const openModal = () => {
             <n-text>{{ user.user }}</n-text>
             <n-flex :size="8">
               <NTag :bordered="false" size="small" :type="user.primary ? 'info' : 'default'">
-                {{ user.primary ? '主用户' : '共享用户' }}
+                {{ user.primary ? t('PrimaryUser') : t('ShareUser') }}
               </NTag>
               <NTag :bordered="false" :type="user.writable ? 'warning' : 'success'" size="small">
                 {{ user.writable ? t('Writable') : t('ReadOnly') }}

@@ -141,8 +141,8 @@ export const createThemeOverrides = (
       textColorFocusPrimary: textColor,
     },
     Switch: {
-      railColor: alpha(0.3),
-      railColorActive: primaryColor,
+      railColor: alpha(0.3, '#FFFFFF'),
+      railColorActive: alpha(1, '#FFFFFF'),
       buttonColor: backgroundColor,
       buttonColorPressed: darken(5),
       textColor,

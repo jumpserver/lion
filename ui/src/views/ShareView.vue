@@ -2,10 +2,14 @@
 import { useI18n } from 'vue-i18n';
 import { useMessage } from 'naive-ui';
 import { getShareSession } from '@/api/index';
-import { nextTick, onMounted, ref, computed } from 'vue';
+import { nextTick, onMounted, ref, computed, watch } from 'vue';
 import Osk from '@/components/Osk.vue';
 import { useGuacamoleClient } from '@/hooks/useGuacamoleClient';
 import SessionShare from '@/components/SessionShare.vue';
+
+import { useWindowSize, useDebounceFn } from '@vueuse/core';
+
+const { width, height } = useWindowSize();
 const message = useMessage();
 const { t } = useI18n();
 const wsUrl = '/lion/ws/share/';
@@ -19,6 +23,18 @@ const onFinish = () => {
     connectShareSession(shareCode.value);
   });
 };
+
+const debouncedResize = useDebounceFn(() => {
+ resizeGuaScale(width.value, height.value);
+}, 300);
+
+watch(
+  [width, height],
+  ([newWidth, newHeight]) => {
+    debouncedResize();
+  },
+  { immediate: true },
+);
 
 const params = ref<Record<string, string>>({
   type: 'share',
@@ -89,13 +105,12 @@ const connectShareSession = (code: string) => {
 const showOsk = ref<boolean>(false);
 const keyboardLayout = ref<string>('default');
 const handleScreenKeyboard = (layout: string) => {
-  console.log('Keyboard layout changed:', layout);
   keyboardLayout.value = layout;
   showOsk.value = true;
 };
 const connectStatus = ref<string>('Connecting...');
 
-const { connectToGuacamole, guaDisplay, loading, onlineUsersMap, registerMouseAndKeyboardHanlder } =
+const { connectToGuacamole, guaDisplay, loading, onlineUsersMap, registerMouseAndKeyboardHanlder,resizeGuaScale } =
   useGuacamoleClient(t);
 
 const drawShow = ref<boolean>(false);
@@ -111,7 +126,15 @@ const onlineUsers = computed(() => {
   }
   return users;
 });
-onMounted(() => {});
+onMounted(() => {
+  if (route.query.code) {
+    shareCode.value = route.query.code as string;
+     showModal.value = false;
+     nextTick(() => {
+       connectShareSession(shareCode.value);
+     });
+  }
+});
 </script>
 
 <template>

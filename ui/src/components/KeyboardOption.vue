@@ -28,20 +28,19 @@ const handleUpdateValue = (value: string) => {
 
 const handleSwitchOpen = (value: boolean) => {
   emit('update:opened', value);
-  console.log('handleSwitchOpen', value);
 };
 </script>
 
 <template>
-  <n-card title="虚拟键盘" class="w-full">
+  <n-card :title="t('VirtualKeyboard')" class="w-full">
     <n-grid x-gap="12" :cols="4">
       <n-gi>
-        <n-form-item label="开启" label-placement="left">
+        <n-form-item :label="t('Enable')" label-placement="left">
           <n-switch :value="props.opened" @update:value="handleSwitchOpen" />
         </n-form-item>
       </n-gi>
       <n-gi :span="3">
-        <n-form-item label="键盘布局" label-placement="left">
+        <n-form-item :label="t('KeyboardLayout')" label-placement="left">
           <n-select
             :value="props.keyboard"
             :options="generalOptions"

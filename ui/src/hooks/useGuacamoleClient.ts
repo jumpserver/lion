@@ -199,7 +199,7 @@ export function useGuacamoleClient(t: any) {
     tunnel.onerror = (error: any) => {
       const code = error.code || 0;
       const messageText = error.message || t('WebSocketError');
-      message.error(t('WebSocketError') + ` tunnel : ${code} ${messageText}`);
+      message.error(t('WebSocketError'));
     };
     tunnel.onuuid = (uuid: string) => {
       tunnel.uuid = uuid;
@@ -284,14 +284,14 @@ export function useGuacamoleClient(t: any) {
       display.showCursor(true);
       document.body.focus();
       nextTick(() => {
-          sink.focus()
-      })
+        sink.focus();
+      });
     };
     const handleMouseLeave = () => {
       if (displayEl) displayEl.style.cursor = 'default';
       nextTick(() => {
         keyboard.reset();
-      })
+      });
     };
     displayEl.addEventListener('mouseenter', handleMouseEnter);
     displayEl.addEventListener('mouseleave', handleMouseLeave);
@@ -590,7 +590,6 @@ export function useGuacamoleClient(t: any) {
       case 5:
         connectStatus.value = 'Disconnected';
         lunaCommunicator.sendLuna(LUNA_MESSAGE_TYPE.CLOSE, '');
-        message.error(t('Connection disconnected'));
         guaDisplay.value?.getElement()?.remove();
         break;
     }
@@ -1053,5 +1052,6 @@ export function useGuacamoleClient(t: any) {
     driverName,
     currentFolder,
     currentFolderFiles,
+    fileFsloading,
   };
 }

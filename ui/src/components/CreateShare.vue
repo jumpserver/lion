@@ -52,7 +52,10 @@ const actionsPermOptions = reactive([
   { label: t('ReadOnly'), value: 'readonly' },
 ]);
 
-const cardTitle = ref<string>(t('CreateShareLink'));
+const createTitle = t('CreateLink');
+const shareLinkTitle = t('LinkAddr');
+
+const cardTitle = ref<string>(createTitle);
 const loading = ref<boolean>(false);
 const showCreateForm = ref<boolean>(true);
 const searchLoading = ref<boolean>(false);
@@ -137,6 +140,7 @@ const handleShareURlCreated = () => {
       shareInfo.value.shareId = res.id;
       shareInfo.value.shareCode = res.verify_code;
       showCreateForm.value = false;
+      cardTitle.value = shareLinkTitle;
     })
     .catch((error: any) => {
       message.error(t('CreateLinkFailed'));

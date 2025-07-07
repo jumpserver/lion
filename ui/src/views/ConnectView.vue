@@ -9,35 +9,16 @@ import type { UploadCustomRequestOptions, UploadFileInfo, UploadSettledFileInfo 
 import { NSpin, useMessage, NTabPane } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
 import { getCurrentConnectParams, BaseAPIURL } from '@/utils/common';
-import { getSupportedGuacMimeTypes } from '@/utils/guacamole_helper';
-import type { GuacamoleDisplay } from '@/types/guacamole.type';
 import { lunaCommunicator } from '@/utils/lunaBus.ts';
 import { LUNA_MESSAGE_TYPE } from '@/types/postmessage.type';
-import { ErrorStatusCodes, ConvertGuacamoleError } from '@/utils/status';
-import { LanguageCode } from '@/locales';
 import ClipBoardText from '@/components/ClipBoardText.vue';
 import SessionShare from '@/components/SessionShare.vue';
 import FileManager from '@/components/FileManager.vue';
 import { readClipboardText } from '@/utils/clipboard';
-
-import {
-  NFlex,
-  NButton,
-  NInput,
-  NText,
-  NScrollbar,
-  NDataTable,
-  NCard,
-  NModal,
-  NUpload,
-  NUploadTrigger,
-  NDrawer,
-  NDrawerContent,
-  NPopover,
-  NIcon,
-  NProgress,
-  useNotification,
-} from 'naive-ui';
+import Osk from '@/components/Osk.vue';
+import KeyboardOption from '@/components/KeyboardOption.vue';
+import OtherOption from '@/components/OtherOption.vue';
+import { NDrawer, NDrawerContent } from 'naive-ui';
 
 const message = useMessage();
 const { t } = useI18n();
@@ -65,6 +46,7 @@ const {
   currentFolder,
   currentFolderFiles,
   hasClipboardPermission,
+  fileFsloading,
 } = useGuacamoleClient(t);
 
 const apiPrefix = ref('');
@@ -72,7 +54,6 @@ const wsPrefix = ref('');
 
 const drawShow = ref(false);
 const connectStatus = ref('Connecting');
-const fileFsloading = ref(false);
 
 const remoteClipboardText = ref<string>('');
 const autoFit = ref<boolean>(true);
@@ -120,10 +101,11 @@ const handleUploadFile = (options: UploadCustomRequestOptions, folder: any) => {
   uploadingFiles.value.push(item);
   if (isUploading.value) {
     console.warn('Already uploading files, skipping new upload:', options.file.name);
+    message.info(t('FileAddUploadingList') + ': ' + options.file.name);
     return;
   }
   isUploading.value = true;
-
+  message.info(t('FileUploadStart') + ': ' + options.file.name);
   processUploadQueue().then(() => {
     handleFolderOpen(currentFolder.value);
   });
@@ -260,10 +242,21 @@ document.addEventListener(
   },
   false,
 );
-import Osk from '@/components/Osk.vue';
-import KeyboardOption from '@/components/KeyboardOption.vue';
-import OtherOption from '@/components/OtherOption.vue';
-const keyboardLayout = ref<string>('en-us-qwerty');
+
+const getKeyboardLayout = () => {
+  const lunaSetting = localStorage.getItem('LunaSetting');
+  if (lunaSetting) {
+    const setting = JSON.parse(lunaSetting);
+    const graphics = setting['graphics'] || {};
+    const keyboardLayout = graphics['keyboardLayout'] || setting['keyboardLayout'];
+    if (keyboardLayout) {
+      return keyboardLayout;
+    }
+  }
+  return 'en-us-qwerty'; // 默认键盘布局
+};
+
+const keyboardLayout = ref<string>(getKeyboardLayout());
 
 const handleScreenKeyboard = (name: string, keysym: any) => {
   console.log('Screen keyboard change:', name, keysym);
