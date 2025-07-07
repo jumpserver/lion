@@ -2,9 +2,6 @@
 import { nextTick, onMounted, onUnmounted, ref, useTemplateRef, watch, h, computed } from 'vue';
 import { useWindowSize } from '@vueuse/core';
 import { useDebounceFn } from '@vueuse/core';
-// @ts-ignore
-// import Guacamole from 'guacamole-common-js';
-import Guacamole from '@dushixiang/guacamole-common-js';
 import type { UploadCustomRequestOptions, UploadFileInfo, UploadSettledFileInfo } from 'naive-ui';
 import { NSpin, useMessage, NTabPane } from 'naive-ui';
 import { useI18n } from 'vue-i18n';

@@ -1,6 +1,5 @@
 //@ts-ignore
-// import Guacamole from 'guacamole-common-js';
-import Guacamole from '@dushixiang/guacamole-common-js';
+import Guacamole from 'guacamole-common-js';
 
 const supportImages: any[] = [];
 const pendingTests: any[] = [];

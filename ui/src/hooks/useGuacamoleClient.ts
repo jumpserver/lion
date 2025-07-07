@@ -1,7 +1,6 @@
 import { ref } from 'vue';
 // @ts-ignore
-// import Guacamole from 'guacamole-common-js';
-import Guacamole from '@dushixiang/guacamole-common-js';
+import Guacamole from 'guacamole-common-js';
 
 import { useDebounceFn } from '@vueuse/core';
 import { BaseAPIURL } from '@/utils/common';

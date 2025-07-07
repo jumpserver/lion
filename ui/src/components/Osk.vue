@@ -1,7 +1,6 @@
 <script lang="ts" setup>
 // @ts-ignore
-// import Guacamole from 'guacamole-common-js';
-import Guacamole from '@dushixiang/guacamole-common-js';
+import Guacamole from 'guacamole-common-js';
 
 import dedeqwertz from '@/assets/layouts/de-de-qwertz.json';
 import enusqwerty from '@/assets/layouts/en-us-qwerty.json';

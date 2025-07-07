@@ -15,7 +15,6 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
-    "@dushixiang/guacamole-common-js": "^1.6.0",
     "@tailwindcss/vite": "^4.1.10",
     "@vueuse/core": "^13.4.0",
     "alova": "^3.3.3",
