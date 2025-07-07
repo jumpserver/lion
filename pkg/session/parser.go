@@ -11,9 +11,10 @@ import (
 	"time"
 
 	"lion/pkg/guacd"
-	"lion/pkg/jms-sdk-go/model"
-	"lion/pkg/jms-sdk-go/service"
 	"lion/pkg/logger"
+
+	"github.com/jumpserver-dev/sdk-go/model"
+	"github.com/jumpserver-dev/sdk-go/service"
 )
 
 var (
@@ -208,7 +209,7 @@ func (p *Parser) sendCommandRecord() {
 		p.cmdRecordChan <- &ExecutedCommand{
 			Command:     p.command,
 			CreatedDate: p.cmdCreateDate,
-			RiskLevel:   model.LessRiskFlag,
+			RiskLevel:   model.NormalLevel,
 			User:        p.currentActiveUser,
 		}
 		p.command = ""
@@ -228,7 +229,7 @@ type ExecutedCommand struct {
 	Command     string
 	Output      string
 	CreatedDate time.Time
-	RiskLevel   string
+	RiskLevel   int
 	User        CurrentActiveUser
 }
 

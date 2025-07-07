@@ -1,9 +1,10 @@
 package session
 
 import (
-	"lion/pkg/common"
 	"lion/pkg/guacd"
-	"lion/pkg/jms-sdk-go/model"
+
+	"github.com/jumpserver-dev/sdk-go/common"
+	"github.com/jumpserver-dev/sdk-go/model"
 )
 
 type TunnelSession struct {

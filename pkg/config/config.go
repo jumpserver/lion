@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"lion/pkg/common"
+	"github.com/jumpserver-dev/sdk-go/common"
 
 	"github.com/spf13/viper"
 )

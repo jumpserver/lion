@@ -18,18 +18,19 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 
-	"lion/pkg/common"
 	"lion/pkg/config"
-	"lion/pkg/jms-sdk-go/model"
-	"lion/pkg/jms-sdk-go/service"
-	"lion/pkg/jms-sdk-go/service/panda"
-	"lion/pkg/jms-sdk-go/service/videoworker"
 	"lion/pkg/logger"
 	"lion/pkg/middleware"
 	"lion/pkg/proxy"
 	"lion/pkg/session"
 	"lion/pkg/storage"
 	"lion/pkg/tunnel"
+
+	"github.com/jumpserver-dev/sdk-go/common"
+	"github.com/jumpserver-dev/sdk-go/model"
+	"github.com/jumpserver-dev/sdk-go/service"
+	"github.com/jumpserver-dev/sdk-go/service/panda"
+	"github.com/jumpserver-dev/sdk-go/service/videoworker"
 )
 
 var (
@@ -475,15 +476,22 @@ func uploadRemainReplay(jmsService *service.JMService, remainFiles map[string]st
 		if err != nil {
 			logger.Errorf("Upload replay failed: %s", err)
 			reason := model.SessionReplayErrUploadFailed
-			if err1 := jmsService.SessionReplayFailed(sid, reason); err1 != nil {
+			if _, err1 := jmsService.SessionReplayFailed(sid, reason); err1 != nil {
 				logger.Errorf("Update Session[%s] status %s failed: %s", sid, reason, err1)
 			}
 			continue
 		}
+
+		absGzFileInfo, err := os.Stat(absGzPath)
+		if err != nil {
+			logger.Errorf("Get file info %s failed: %s", absGzPath, err)
+			continue
+		}
+
 		logger.Infof("Upload remain session replay %s success", absGzPath)
 		// 上传成功删除文件
 		_ = os.Remove(absGzPath)
-		if err = jmsService.FinishReply(sid); err != nil {
+		if _, err = jmsService.FinishReplyWithSize(sid, absGzFileInfo.Size()); err != nil {
 			logger.Errorf("Finish reply to core api failed: %s", err)
 		}
 	}
@@ -498,12 +506,12 @@ func scanRemainReplay(jmsService *service.JMService, replayDir string) map[strin
 		sidFilename := info.Name()
 		var sid string
 		sidFilename = strings.TrimSuffix(sidFilename, session.ReplayFileNameSuffix)
-		if common.ValidUUIDString(sidFilename) {
+		if common.IsUUID(sidFilename) {
 			sid = sidFilename
 		}
 		if sid != "" {
 			allRemainFiles[sid] = path
-			if err = jmsService.SessionFinished(sid, common.NewUTCTime(info.ModTime())); err != nil {
+			if _, err = jmsService.SessionFinished(sid, common.NewUTCTime(info.ModTime())); err != nil {
 				logger.Errorf("Session[%s] finished err: %s", sid, err)
 			}
 		}
@@ -528,7 +536,7 @@ func uploadRemainSessionPartReplay(jmsService *service.JMService, sessionDir str
 	terminalConf, _ := jmsService.GetTerminalConfig()
 	for _, sessionEntry := range sessions {
 		sessionId := sessionEntry.Name()
-		if !common.ValidUUIDString(sessionId) {
+		if !common.IsUUID(sessionId) {
 			continue
 		}
 		sessionRootPath := filepath.Join(sessionDir, sessionId)
@@ -585,6 +593,7 @@ func MustRegisterTerminalAccount() (key model.AccessKey) {
 	conf := config.GlobalConfig
 	for i := 0; i < 10; i++ {
 		terminal, err := service.RegisterTerminalAccount(conf.CoreHost,
+			string(model.Lion),
 			conf.Name, conf.BootstrapToken)
 		if err != nil {
 			logger.Error(err.Error())

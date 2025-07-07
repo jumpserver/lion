@@ -15,9 +15,10 @@ import (
 
 	"github.com/go-redis/redis/v8"
 
-	"lion/pkg/common"
 	"lion/pkg/guacd"
 	"lion/pkg/logger"
+
+	"github.com/jumpserver-dev/sdk-go/common"
 )
 
 const (

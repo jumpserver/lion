@@ -2,7 +2,8 @@ package session
 
 import (
 	"lion/pkg/config"
-	"lion/pkg/jms-sdk-go/model"
+
+	"github.com/jumpserver-dev/sdk-go/model"
 )
 
 type ActionPermission struct {

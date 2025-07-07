@@ -9,9 +9,10 @@ import (
 	"sync"
 
 	"lion/pkg/guacd"
-	"lion/pkg/jms-sdk-go/model"
 	"lion/pkg/logger"
 	"lion/pkg/proxy"
+
+	"github.com/jumpserver-dev/sdk-go/model"
 )
 
 type OutputStreamInterceptingFilter struct {
