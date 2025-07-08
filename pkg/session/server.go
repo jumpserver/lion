@@ -315,6 +315,7 @@ func (s *Server) Create(ctx *gin.Context, opts ...TunnelOption) (sess TunnelSess
 		AssetID:    sess.Asset.ID,
 		AccountID:  opt.Account.ID,
 		Comment:    comment,
+		Type:       model.NORMALType,
 	}
 	sess.ModelSession = &jmsSession
 	sess.ConnectedCallback = s.RegisterConnectedCallback(jmsSession)
