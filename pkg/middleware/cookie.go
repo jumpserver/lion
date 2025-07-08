@@ -8,9 +8,10 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"lion/pkg/config"
-	"lion/pkg/jms-sdk-go/model"
-	"lion/pkg/jms-sdk-go/service"
 	"lion/pkg/logger"
+
+	"github.com/jumpserver-dev/sdk-go/model"
+	"github.com/jumpserver-dev/sdk-go/service"
 )
 
 func JmsCookieAuth(jmsService *service.JMService) gin.HandlerFunc {

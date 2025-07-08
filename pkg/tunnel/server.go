@@ -14,15 +14,16 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 
-	"lion/pkg/common"
 	"lion/pkg/config"
 	"lion/pkg/gateway"
 	"lion/pkg/guacd"
-	"lion/pkg/jms-sdk-go/model"
-	"lion/pkg/jms-sdk-go/service"
 	"lion/pkg/logger"
 	"lion/pkg/proxy"
 	"lion/pkg/session"
+
+	"github.com/jumpserver-dev/sdk-go/common"
+	"github.com/jumpserver-dev/sdk-go/model"
+	"github.com/jumpserver-dev/sdk-go/service"
 )
 
 const (
@@ -284,7 +285,7 @@ func (g *GuacamoleTunnelServer) DownloadFile(ctx *gin.Context) {
 		fileLog := model.FTPLog{
 			ID:         common.UUID(),
 			User:       tun.Sess.User.String(),
-			Hostname:   tun.Sess.Asset.String(),
+			Asset:      tun.Sess.Asset.String(),
 			OrgID:      tun.Sess.Asset.OrgID,
 			Account:    tun.Sess.Account.String(),
 			RemoteAddr: ctx.ClientIP(),
@@ -343,7 +344,7 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 		fileLog := model.FTPLog{
 			ID:         common.UUID(),
 			User:       tun.Sess.User.String(),
-			Hostname:   tun.Sess.Asset.String(),
+			Asset:      tun.Sess.Asset.String(),
 			OrgID:      tun.Sess.Asset.OrgID,
 			Account:    tun.Sess.Account.String(),
 			RemoteAddr: ctx.ClientIP(),

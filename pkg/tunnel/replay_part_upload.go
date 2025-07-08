@@ -9,12 +9,13 @@ import (
 	"strings"
 	"time"
 
-	"lion/pkg/common"
 	"lion/pkg/guacd"
-	"lion/pkg/jms-sdk-go/model"
-	"lion/pkg/jms-sdk-go/service"
 	"lion/pkg/logger"
 	"lion/pkg/storage"
+
+	"github.com/jumpserver-dev/sdk-go/common"
+	"github.com/jumpserver-dev/sdk-go/model"
+	"github.com/jumpserver-dev/sdk-go/service"
 )
 
 /*
@@ -75,7 +76,7 @@ func (p *PartUploader) preCheckSessionMeta() error {
 		endTime := GetMaxModTime(p.partFiles)
 		p.replayMeta.DateEnd = common.NewUTCTime(endTime)
 		// api finish time
-		if err1 := p.ApiClient.SessionFinished(p.SessionId, p.replayMeta.DateEnd); err1 != nil {
+		if _, err1 := p.ApiClient.SessionFinished(p.SessionId, p.replayMeta.DateEnd); err1 != nil {
 			logger.Errorf("PartUploader %s finish session error: %v", p.SessionId, err1)
 			return err
 		}
@@ -205,10 +206,17 @@ func (p *PartUploader) uploadToStorage(uploadPath string) {
 	dateRoot := p.replayMeta.DateStart.Format(recordDirTimeFormat)
 	targetRoot := strings.Join([]string{dateRoot, p.SessionId}, "/")
 	logger.Infof("PartUploader %s upload replay files: %v, type: %s", p.SessionId, uploadFiles, storageType)
+	totalSize := int64(0)
 	for _, uploadFile := range uploadFiles {
 		if uploadFile.IsDir() {
 			continue
 		}
+		fileInfo, err := uploadFile.Info()
+		if err != nil {
+			logger.Errorf("PartUploader %s get file info %s error: %v", p.SessionId, uploadFile.Name(), err)
+			continue
+		}
+		totalSize += fileInfo.Size()
 		uploadFilePath := filepath.Join(uploadPath, uploadFile.Name())
 		targetFile := strings.Join([]string{targetRoot, uploadFile.Name()}, "/")
 		if err1 := replayStorage.Upload(uploadFilePath, targetFile); err1 != nil {
@@ -219,7 +227,7 @@ func (p *PartUploader) uploadToStorage(uploadPath string) {
 		}
 		logger.Debugf("PartUploader %s upload file %s success", p.SessionId, uploadFilePath)
 	}
-	if err = p.ApiClient.FinishReply(p.SessionId); err != nil {
+	if _, err = p.ApiClient.FinishReplyWithSize(p.SessionId, totalSize); err != nil {
 		logger.Errorf("PartUploader %s finish replay error: %v", p.SessionId, err)
 		return
 	}

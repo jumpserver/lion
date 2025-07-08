@@ -3,7 +3,8 @@ package tunnel
 import (
 	"sync"
 
-	"lion/pkg/common"
+	"github.com/jumpserver-dev/sdk-go/common"
+
 	"lion/pkg/guacd"
 	"lion/pkg/logger"
 )

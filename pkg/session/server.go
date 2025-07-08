@@ -9,14 +9,15 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"lion/pkg/common"
 	"lion/pkg/guacd"
-	"lion/pkg/jms-sdk-go/model"
-	"lion/pkg/jms-sdk-go/service"
-	"lion/pkg/jms-sdk-go/service/panda"
-	"lion/pkg/jms-sdk-go/service/videoworker"
 	"lion/pkg/logger"
 	"lion/pkg/storage"
+
+	"github.com/jumpserver-dev/sdk-go/common"
+	"github.com/jumpserver-dev/sdk-go/model"
+	"github.com/jumpserver-dev/sdk-go/service"
+	"github.com/jumpserver-dev/sdk-go/service/panda"
+	"github.com/jumpserver-dev/sdk-go/service/videoworker"
 )
 
 const (
@@ -314,6 +315,7 @@ func (s *Server) Create(ctx *gin.Context, opts ...TunnelOption) (sess TunnelSess
 		AssetID:    sess.Asset.ID,
 		AccountID:  opt.Account.ID,
 		Comment:    comment,
+		Type:       model.NORMALType,
 	}
 	sess.ModelSession = &jmsSession
 	sess.ConnectedCallback = s.RegisterConnectedCallback(jmsSession)
@@ -356,25 +358,29 @@ func (s *Server) CreateRDPAndVNCSession(opt *tunnelOption) (TunnelSession, error
 
 func (s *Server) RegisterConnectedCallback(sess model.Session) func() error {
 	return func() error {
-		return s.JmsService.CreateSession(sess)
+		_, err := s.JmsService.CreateSession(sess)
+		return err
 	}
 }
 
 func (s *Server) RegisterConnectedSuccessCallback(sess model.Session) func() error {
 	return func() error {
-		return s.JmsService.SessionSuccess(sess.ID)
+		_, err := s.JmsService.SessionSuccess(sess.ID)
+		return err
 	}
 }
 
 func (s *Server) RegisterConnectedFailedCallback(sess model.Session) func(err error) error {
 	return func(err error) error {
-		return s.JmsService.SessionFailed(sess.ID, err)
+		_, err1 := s.JmsService.SessionFailed(sess.ID, err)
+		return err1
 	}
 }
 
 func (s *Server) RegisterDisConnectedCallback(sess model.Session) func() error {
 	return func() error {
-		return s.JmsService.SessionDisconnect(sess.ID)
+		_, err1 := s.JmsService.SessionDisconnect(sess.ID)
+		return err1
 	}
 }
 
@@ -427,9 +433,9 @@ func (s *Server) GetCommandRecorder(tunnel *TunnelSession) *CommandRecorder {
 	return &cmdR
 }
 
-func (s *Server) GenerateCommandItem(tunnel *TunnelSession, user, input, output string,
-	riskLevel int64, createdDate time.Time) *model.Command {
+func (s *Server) GenerateCommandItem(tunnel *TunnelSession, user, input, output string, item *ExecutedCommand) *model.Command {
 	server := tunnel.Asset.String()
+	createdDate := item.CreatedDate
 	return &model.Command{
 		SessionID:   tunnel.ID,
 		OrgID:       tunnel.Asset.OrgID,
@@ -439,8 +445,7 @@ func (s *Server) GenerateCommandItem(tunnel *TunnelSession, user, input, output 
 		Input:       input,
 		Output:      output,
 		Timestamp:   createdDate.Unix(),
-		RiskLevel:   riskLevel,
-		Protocol:    tunnel.Protocol,
+		RiskLevel:   int64(item.RiskLevel),
 		DateCreated: createdDate.UTC(),
 	}
 }

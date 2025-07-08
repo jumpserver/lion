@@ -10,9 +10,10 @@ import (
 
 	gossh "golang.org/x/crypto/ssh"
 
-	"lion/pkg/common"
-	"lion/pkg/jms-sdk-go/model"
 	"lion/pkg/logger"
+
+	"github.com/jumpserver-dev/sdk-go/common"
+	"github.com/jumpserver-dev/sdk-go/model"
 )
 
 var ErrNoAvailable = errors.New("no available domain")

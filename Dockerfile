@@ -1,5 +1,5 @@
 FROM jumpserver/guacd:1.6.0-bullseye AS stage-guacd
-FROM jumpserver/lion-base:20250707_055554 AS stage-build
+FROM jumpserver/lion-base:20250707_094706 AS stage-build
 ARG TARGETARCH
 
 ARG GOPROXY=https://goproxy.io

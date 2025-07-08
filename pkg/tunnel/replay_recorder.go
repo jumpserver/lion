@@ -11,11 +11,12 @@ import (
 	"strconv"
 	"sync"
 
-	"lion/pkg/common"
+	"github.com/jumpserver-dev/sdk-go/common"
+	"github.com/jumpserver-dev/sdk-go/model"
+	"github.com/jumpserver-dev/sdk-go/service"
+
 	"lion/pkg/config"
 	"lion/pkg/guacd"
-	"lion/pkg/jms-sdk-go/model"
-	"lion/pkg/jms-sdk-go/service"
 	"lion/pkg/logger"
 	"lion/pkg/session"
 )

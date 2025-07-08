@@ -1,8 +1,9 @@
 package storage
 
 import (
-	"lion/pkg/jms-sdk-go/model"
 	"lion/pkg/logger"
+
+	"github.com/jumpserver-dev/sdk-go/model"
 )
 
 func NewNullStorage() (storage NullStorage) {

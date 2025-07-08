@@ -13,8 +13,9 @@ import (
 	"github.com/elastic/go-elasticsearch/v6/esapi"
 	elasticsearch8 "github.com/elastic/go-elasticsearch/v8"
 
-	"lion/pkg/jms-sdk-go/model"
 	"lion/pkg/logger"
+
+	"github.com/jumpserver-dev/sdk-go/model"
 )
 
 type ESCommandStorage struct {

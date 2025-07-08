@@ -4,8 +4,8 @@ import (
 	"net/url"
 	"strings"
 
-	"lion/pkg/jms-sdk-go/model"
-	"lion/pkg/jms-sdk-go/service"
+	"github.com/jumpserver-dev/sdk-go/model"
+	"github.com/jumpserver-dev/sdk-go/service"
 )
 
 type StorageType interface {
