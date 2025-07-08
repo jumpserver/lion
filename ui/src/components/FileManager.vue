@@ -18,7 +18,6 @@ import {
   useMessage,
 } from 'naive-ui';
 
-import { NAvatar, useNotification } from 'naive-ui';
 
 import type {
   UploadCustomRequestOptions,
@@ -43,7 +42,6 @@ import {
 } from 'lucide-vue-next';
 
 import { useI18n } from 'vue-i18n';
-import { defineEmits } from 'vue';
 import { useDebounceFn } from '@vueuse/core';
 
 const { t } = useI18n();
