@@ -1052,5 +1052,6 @@ export function useGuacamoleClient(t: any) {
     currentFolder,
     currentFolderFiles,
     fileFsLoading,
+    currentGuacFsObject,
   };
 }

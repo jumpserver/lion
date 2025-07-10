@@ -44,6 +44,7 @@ const {
   currentFolderFiles,
   hasClipboardPermission,
   fileFsLoading,
+  currentGuacFsObject,
 } = useGuacamoleClient(t);
 
 const apiPrefix = ref('');
@@ -271,8 +272,11 @@ const handleDownloadFile = (file: GuacamoleFile) => {
     console.warn('Cannot download file, file is not valid:', file);
     return;
   }
-  console.log('Downloading file:', file.name);
-  clientFileReceived(file.streamName, file.name, file.mimetype);
+  const path = file.streamName;
+  const downloadStream = (stream: any, mimetype: any) => {
+    clientFileReceived(stream, mimetype, file.name);
+  };
+  currentGuacFsObject.value.requestInputStream(path, downloadStream);
 };
 
 const fitPercentage = computed(() => {
@@ -338,7 +342,13 @@ const onlineUsers = computed(() => {
     <Osk v-if="showOsk" :keyboard="keyboardLayout" @keyboard-change="handleScreenKeyboard" />
   </div>
 
-  <n-drawer v-model:show="drawShow" :max-width="800"  :min-width="502" :default-width="502" resizable>
+  <n-drawer
+    v-model:show="drawShow"
+    :max-width="800"
+    :min-width="502"
+    :default-width="502"
+    resizable
+  >
     <n-drawer-content>
       <n-tabs default-value="settings" justify-content="space-evenly" type="line">
         <n-tab-pane name="settings" :tab="t('Settings')">
