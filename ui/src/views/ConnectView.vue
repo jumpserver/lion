@@ -326,6 +326,8 @@ const onlineUsers = computed(() => {
   }
   return users;
 });
+
+const currentTab = ref('settings');
 </script>
 
 <template>
@@ -350,7 +352,7 @@ const onlineUsers = computed(() => {
     resizable
   >
     <n-drawer-content>
-      <n-tabs default-value="settings" justify-content="space-evenly" type="line">
+      <n-tabs default-value="settings" justify-content="space-evenly" type="line" v-model:value="currentTab">
         <n-tab-pane name="settings" :tab="t('Settings')">
           <ClipBoardText
             :disabled="!hasClipboardPermission"
