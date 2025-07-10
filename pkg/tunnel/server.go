@@ -504,7 +504,13 @@ func (g *GuacamoleTunnelServer) GetShare(ctx *gin.Context) {
 	recordRet, err := g.JmsService.JoinShareRoom(data)
 	if err != nil {
 		logger.Errorf("Validate join session err: %s", err)
-		ctx.JSON(http.StatusBadRequest, ErrorResponse(err))
+		errResponse := ErrorResponse(err)
+		if recordRet.Err != nil {
+			logger.Errorf("Join share room err: %s", recordRet.Err)
+			msg := fmt.Errorf("%+v", recordRet.Err)
+			errResponse = ErrorResponse(msg)
+		}
+		ctx.JSON(http.StatusBadRequest, errResponse)
 		return
 	}
 	if recordRet.Err != nil {

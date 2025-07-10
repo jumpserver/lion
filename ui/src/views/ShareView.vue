@@ -58,6 +58,8 @@ const shareId = route.params.id as string;
 // 从 route 中获取 id
 const recordObj = ref<Record<string, any>>({});
 
+const errMessage = ref<string>('');
+
 const connectShareSession = (code: string) => {
   const data = {
     code: code,
@@ -69,6 +71,8 @@ const connectShareSession = (code: string) => {
 
       if (res.message && !res.success) {
         message.error(res.message || t('ShareSessionError'));
+        loading.value = false;
+        errMessage.value = res.message || t('ShareSessionError');
         return;
       }
 
@@ -165,16 +169,19 @@ onMounted(() => {
   </n-modal>
   <div v-if="!showModal" class="w-full h-full justify-center flex flex-col">
     <div v-if="loading" class="flex justify-center items-center w-screen h-screen">
-      <n-spin :show="loading" size="large" :description="`${t('Connecting')}: ${connectStatus}`">
+      <n-spin :show="loading && !errMessage" size="large" :description="`${t('Connecting')}: ${connectStatus}`">
       </n-spin>
     </div>
     <div
       id="display"
-      v-show="!loading"
+      v-show="!loading && !errMessage"
       class="w-screen h-screen flex justify-center relative"
     ></div>
     <Osk v-if="showOsk" :keyboard="keyboardLayout" @keyboard-change="handleScreenKeyboard" />
+    <div v-if="errMessage" class="text-red-900 font-bold text-xl"> {{ errMessage }}</div>
   </div>
+ 
+
 
   <n-drawer v-model:show="drawShow" :min-width="502" :default-width="502" resizable>
     <n-drawer-content>
