@@ -43,7 +43,7 @@ const {
   currentFolder,
   currentFolderFiles,
   hasClipboardPermission,
-  fileFsloading,
+  fileFsLoading,
 } = useGuacamoleClient(t);
 
 const apiPrefix = ref('');
@@ -210,17 +210,14 @@ onMounted(async () => {
   );
   displayEl.addEventListener('drop', fileDrop, false);
   registerMouseAndKeyboardHanlder();
-  window.addEventListener('focus', () => {
-    console.log('Window focused, sending clipboard text to remote');
-    debouncedSendClipboardToRemote();
-  });
+  window.addEventListener('focus', debouncedSendClipboardToRemote);
 });
 
 onUnmounted(() => {
   disconnectGuaclient();
   lunaCommunicator.offLuna(LUNA_MESSAGE_TYPE.OPEN);
   lunaCommunicator.sendLuna(LUNA_MESSAGE_TYPE.CLOSE, '');
-  window.removeEventListener, 'focus';
+  window.removeEventListener('focus', debouncedSendClipboardToRemote);
 });
 
 const ClipBoardTextChange = (text: string) => {
@@ -303,7 +300,7 @@ const handleCombineKeys = (keys: string[]) => {
   }, 100);
 };
 
-const scaleGuacDisplay = (value: number) => {
+const scaleGuaDisplay = (value: number) => {
   if (value <= 0) {
     console.warn('Invalid scale value:', scale);
     return;
@@ -344,7 +341,7 @@ const onlineUsers = computed(() => {
   <n-drawer v-model:show="drawShow" :min-width="502" :default-width="502" resizable>
     <n-drawer-content>
       <n-tabs default-value="settings" justify-content="space-evenly" type="line">
-        <n-tab-pane name="settings" tab="设置">
+        <n-tab-pane name="settings" :tab="t('Settings')">
           <ClipBoardText
             :disabled="!hasClipboardPermission"
             :remote-text="remoteClipboardText"
@@ -357,13 +354,13 @@ const onlineUsers = computed(() => {
             v-model:auto-fit="autoFit"
             :fit-percentage="fitPercentage"
             @combine-keys="handleCombineKeys"
-            @update-scale="scaleGuacDisplay"
+            @update-scale="scaleGuaDisplay"
             :is-remote-app="false"
           />
         </n-tab-pane>
-        <n-tab-pane name="file-manager" tab="文件管理">
+        <n-tab-pane name="file-manager" :tab="t('FileManagement')">
           <FileManager
-            :loading="fileFsloading"
+            :loading="fileFsLoading"
             :files="currentFolderFiles"
             :name="driverName"
             :folder="currentFolder"
@@ -374,7 +371,7 @@ const onlineUsers = computed(() => {
             @remove-upload-file="handleRemoveFile"
           />
         </n-tab-pane>
-        <n-tab-pane name="share-collaboration" tab="分享会话" v-if="sessionObject">
+        <n-tab-pane name="share-collaboration" :tab="t('SessionShare')" v-if="sessionObject">
           <SessionShare :session="sessionObject.id" :users="onlineUsers" />
         </n-tab-pane>
       </n-tabs>

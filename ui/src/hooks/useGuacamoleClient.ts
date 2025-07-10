@@ -603,14 +603,14 @@ export function useGuacamoleClient(t: any) {
     enableFilesystem.value = true;
     fsObject.value = obj;
     currentFolderObject.value = obj;
-    driverName.value = name;
+    driverName.value = t(name);
     currentGuacFsObject.value = obj;
     const defaultFolder: GuacamoleFile = {
       mimetype: Guacamole.Object.STREAM_INDEX_MIMETYPE,
       streamName: Guacamole.Object.ROOT_STREAM,
       type: 'DIRECTORY',
       is_dir: true,
-      name: name,
+      name: t(name),
       parent: null,
     };
     currentFolder.value = defaultFolder;
@@ -637,7 +637,7 @@ export function useGuacamoleClient(t: any) {
   const current_files = ref<any>({});
   const currentFolder = ref<GuacamoleFile | null>(null);
   const currentFolderObject = ref<Guacamole.File | null>(null);
-  const fileFsloading = ref(false);
+  const fileFsLoading = ref(false);
   const enableFilesystem = ref(false);
   const currentGuacFsObject = ref<Guacamole.File | null>(null);
   const handleFolderOpen = (row: any) => {
@@ -647,7 +647,7 @@ export function useGuacamoleClient(t: any) {
     }
     currentFolder.value = row;
     currentFolderObject.value = row;
-    fileFsloading.value = true;
+    fileFsLoading.value = true;
     RefreshFileSystem(currentGuacFsObject.value, row)
       .then((files: any) => {
         current_files.value = files;
@@ -675,7 +675,7 @@ export function useGuacamoleClient(t: any) {
         message.error(t('FileSystemError') + ': ' + error.message);
       })
       .finally(() => {
-        fileFsloading.value = false;
+        fileFsLoading.value = false;
       });
   };
   const clientFileReceived = (stream: any, mimetype: any, filename: any) => {
@@ -732,9 +732,9 @@ export function useGuacamoleClient(t: any) {
     streamName: any,
     progressCallback: CallableFunction,
   ): Promise<void> => {
-    const clinet = guaClient.value;
+    const client = guaClient.value;
     const tunnel = guaTunnel.value;
-    if (!clinet || !tunnel) {
+    if (!client || !tunnel) {
       return Promise.reject(new Error('Guacamole client or tunnel is not initialized'));
     }
     const uuid = tunnel.uuid;
@@ -1051,6 +1051,6 @@ export function useGuacamoleClient(t: any) {
     driverName,
     currentFolder,
     currentFolderFiles,
-    fileFsloading,
+    fileFsLoading,
   };
 }
