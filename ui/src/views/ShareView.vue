@@ -88,6 +88,7 @@ const connectShareSession = (code: string) => {
         SESSION_ID: sessionId,
         SHARE_ID: shareId,
         RECORD_ID: recordId,
+        Writable: readonly.value ? 'false' : 'true',
       };
 
       connectToGuacamole(wsUrl, shareParams, window.innerWidth, window.innerHeight);
