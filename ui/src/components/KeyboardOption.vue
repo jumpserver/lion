@@ -11,13 +11,13 @@ const props = defineProps<{
 }>();
 
 const generalOptions = ref([
-  { label: t('German (Qwertz)'), value: 'de-de-qwertz' },
-  { label: t('US English (Qwerty)'), value: 'en-us-qwerty' },
-  { label: t('Spanish (Qwerty)'), value: 'es-es-qwerty' },
-  { label: t('French (Azerty)'), value: 'fr-fr-azerty' },
-  { label: t('Italian (Qwerty)'), value: 'it-it-qwerty' },
-  { label: t('Dutch (QWERTY)'), value: 'nl-nl-qwerty' },
-  { label: t('Russian (QWERTY)'), value: 'ru-ru-qwerty' },
+  { label: 'German (Qwertz)', value: 'de-de-qwertz' },
+  { label: 'US English (Qwerty)', value: 'en-us-qwerty' },
+  { label: 'Spanish (Qwerty)', value: 'es-es-qwerty' },
+  { label: 'French (Azerty)', value: 'fr-fr-azerty' },
+  { label: 'Italian (Qwerty)', value: 'it-it-qwerty' },
+  { label: 'Dutch (QWERTY)', value: 'nl-nl-qwerty' },
+  { label: 'Russian (QWERTY)', value: 'ru-ru-qwerty' },
 ]);
 
 const emit = defineEmits(['update:keyboard', 'update:opened']);

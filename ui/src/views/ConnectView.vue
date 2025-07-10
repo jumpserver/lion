@@ -338,7 +338,7 @@ const onlineUsers = computed(() => {
     <Osk v-if="showOsk" :keyboard="keyboardLayout" @keyboard-change="handleScreenKeyboard" />
   </div>
 
-  <n-drawer v-model:show="drawShow" :min-width="502" :default-width="502" resizable>
+  <n-drawer v-model:show="drawShow" :max-width="800"  :min-width="502" :default-width="502" resizable>
     <n-drawer-content>
       <n-tabs default-value="settings" justify-content="space-evenly" type="line">
         <n-tab-pane name="settings" :tab="t('Settings')">
