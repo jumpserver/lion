@@ -315,7 +315,7 @@ const handleUploadFinish = (options: any) => {
 
 const handleUploadError = (options: any) => {
   // 处理上传错误事件
-  message.error(t('UploadError') + ': ' + options.file.name);
+  // message.error(t('UploadError') + ': ' + options.file.name);
 };
 
 const removeUploadList = (options: any) => {

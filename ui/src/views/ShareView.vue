@@ -170,7 +170,11 @@ onMounted(() => {
   </n-modal>
   <div v-if="!showModal" class="w-full h-full justify-center flex flex-col">
     <div v-if="loading" class="flex justify-center items-center w-screen h-screen">
-      <n-spin :show="loading && !errMessage" size="large" :description="`${t('Connecting')}: ${connectStatus}`">
+      <n-spin
+        :show="loading && !errMessage"
+        size="large"
+        :description="`${t('Connecting')}: ${connectStatus}`"
+      >
       </n-spin>
     </div>
     <div
@@ -179,10 +183,8 @@ onMounted(() => {
       class="w-screen h-screen flex justify-center relative"
     ></div>
     <Osk v-if="showOsk" :keyboard="keyboardLayout" @keyboard-change="handleScreenKeyboard" />
-    <div v-if="errMessage" class="text-red-900 font-bold text-xl"> {{ errMessage }}</div>
+    <div v-if="errMessage" class="text-red-900 font-bold text-xl">{{ errMessage }}</div>
   </div>
- 
-
 
   <n-drawer v-model:show="drawShow" :min-width="502" :default-width="502" resizable>
     <n-drawer-content>

@@ -347,7 +347,7 @@ export function useGuacamoleClient(t: any) {
         action_permission.value = dataObj.action_permission || {};
         enableShare.value = action_permission.value.enable_share || false;
         hasClipboardPermission.value = action.enable_copy || action.enable_paste;
-        console.log('Session object hasClipboardPermission:', hasClipboardPermission);
+        console.log('Session object hasClipboardPermission:', hasClipboardPermission, enableShare);
 
         break;
       }
