@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { nextTick, onMounted, onUnmounted, ref, useTemplateRef, watch, h, computed } from 'vue';
+import { nextTick, onMounted, onUnmounted, ref, watch, computed } from 'vue';
 import { useWindowSize } from '@vueuse/core';
 import { useDebounceFn } from '@vueuse/core';
 import type { UploadCustomRequestOptions, UploadFileInfo, UploadSettledFileInfo } from 'naive-ui';
@@ -22,6 +22,7 @@ const { t } = useI18n();
 const { width, height } = useWindowSize();
 
 import { useGuacamoleClient } from '@/hooks/useGuacamoleClient';
+import { ErrorStatusCodes } from '@/utils/status';
 
 const {
   guaDisplay,
@@ -45,6 +46,7 @@ const {
   hasClipboardPermission,
   fileFsLoading,
   currentGuacFsObject,
+  enableShare,
 } = useGuacamoleClient(t);
 
 const apiPrefix = ref('');
@@ -134,13 +136,16 @@ const processUploadQueue = async () => {
       uploadOptions.file.status = 'uploading';
       await uploadFile(uploadOptions, folder);
       uploadOptions.file.status = 'finished';
+    } catch (statusError: any) {
+      console.error('Error processing upload queue:', statusError);
+      let msg = statusError.message as string;
+      msg = t(ErrorStatusCodes[statusError.code]) || msg;
+      message.error(msg);
+      uploadOptions.file.status = 'error';
+    } finally {
       setTimeout(() => {
         handleRemoveFile(uploadOptions.file);
       }, 1000 * 5); // 延迟5秒后移除上传文件
-    } catch (error) {
-      console.error('Error processing upload queue:', error);
-      message.error(t('FileUploadError') + ': ' + error);
-      uploadOptions.file.status = 'error';
     }
   }
   isUploading.value = false;
@@ -352,7 +357,12 @@ const currentTab = ref('settings');
     resizable
   >
     <n-drawer-content>
-      <n-tabs default-value="settings" justify-content="space-evenly" type="line" v-model:value="currentTab">
+      <n-tabs
+        default-value="settings"
+        justify-content="space-evenly"
+        type="line"
+        v-model:value="currentTab"
+      >
         <n-tab-pane name="settings" :tab="t('Settings')">
           <ClipBoardText
             :disabled="!hasClipboardPermission"
@@ -384,7 +394,11 @@ const currentTab = ref('settings');
           />
         </n-tab-pane>
         <n-tab-pane name="share-collaboration" :tab="t('SessionShare')" v-if="sessionObject">
-          <SessionShare :session="sessionObject.id" :users="onlineUsers" />
+          <SessionShare
+            :session="sessionObject.id"
+            :users="onlineUsers"
+            :disable-create="!enableShare"
+          />
         </n-tab-pane>
       </n-tabs>
     </n-drawer-content>
