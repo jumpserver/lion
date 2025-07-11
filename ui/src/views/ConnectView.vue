@@ -47,6 +47,7 @@ const {
   fileFsLoading,
   currentGuacFsObject,
   enableShare,
+  action_permission,
 } = useGuacamoleClient(t);
 
 const apiPrefix = ref('');
@@ -277,11 +278,19 @@ const handleDownloadFile = (file: GuacamoleFile) => {
     console.warn('Cannot download file, file is not valid:', file);
     return;
   }
+  if (action_permission.value && !action_permission.value.enable_download) {
+    message.warning(t('FileDownloadDenied'));
+    return;
+  }
   const path = file.streamName;
   const downloadStream = (stream: any, mimetype: any) => {
     clientFileReceived(stream, mimetype, file.name);
   };
-  currentGuacFsObject.value.requestInputStream(path, downloadStream);
+  try {
+    currentGuacFsObject.value.requestInputStream(path, downloadStream);
+  } catch (error) {
+    console.error('Error during file download:', error);
+  }
 };
 
 const fitPercentage = computed(() => {
