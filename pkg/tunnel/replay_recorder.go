@@ -84,6 +84,26 @@ func (r *ReplayRecorder) WriteSessionMeta(t common.UTCTime) {
 	logger.Infof("ReplayRecorder(%s) Write session meta file %s success", r.SessionId, metaFilename)
 }
 
+func (r *ReplayRecorder) IsConnectFailed() bool {
+	// 检测录像文件是否存在，且大小大于 1KB 只检测第一个录像文件大小
+	partFilename := r.GetPartFilenameByIndex(0)
+	partFilePath := filepath.Join(r.RootPath, partFilename)
+	fi, err := os.Stat(partFilePath)
+	if err != nil {
+		logger.Errorf("ReplayRecorder %s get part file %s error: %v", r.SessionId, partFilename, err)
+		return true
+	}
+	if fi.IsDir() {
+		logger.Warnf("ReplayRecorder %s part file %s is a directory, not connect failed", r.SessionId, partFilename)
+		return true
+	}
+	if fi.Size() <= 1024 {
+		logger.Infof("ReplayRecorder %s part file %s size %d < 1KB, not connect failed", r.SessionId, partFilename, fi.Size())
+		return true
+	}
+	return false
+}
+
 func (r *ReplayRecorder) Stop() {
 	r.wg.Wait()
 	r.WriteSessionMeta(common.NewNowUTCTime())
@@ -93,13 +113,25 @@ func (r *ReplayRecorder) Stop() {
 		ApiClient: r.apiClient,
 		TermCfg:   r.tunnelSession.TerminalConfig,
 	}
-	go uploader.Start()
 
+	// 检测会话文件大小是否满足录像要求，否则判断连接失败，不上传录像文件。
+	if r.IsConnectFailed() {
+		logger.Warnf("ReplayRecorder %s connect failed, not upload replay parts", r.SessionId)
+		if err := os.RemoveAll(r.RootPath); err != nil {
+			logger.Errorf("ReplayRecorder %s remove root path %s error: %v", r.SessionId, r.RootPath, err)
+		}
+		return
+	}
+	go uploader.Start()
 	logger.Infof("Replay recorder %s stop and uploading replay parts", r.SessionId)
 }
 
 func (r *ReplayRecorder) GetPartFilename() string {
 	return fmt.Sprintf("%s.%d.part", r.SessionId, r.currentIndex)
+}
+
+func (r *ReplayRecorder) GetPartFilenameByIndex(index int) string {
+	return fmt.Sprintf("%s.%d.part", r.SessionId, index)
 }
 
 type PartMeta struct {
