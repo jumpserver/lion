@@ -585,6 +585,7 @@ export function useGuacamoleClient(t: any) {
         break;
       case 4:
         connectStatus.value = 'Disconnecting';
+        loading.value = false;
         break;
       case 5:
         connectStatus.value = 'Disconnected';
