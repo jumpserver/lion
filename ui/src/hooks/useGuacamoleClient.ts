@@ -542,8 +542,8 @@ export function useGuacamoleClient(t: any) {
     let msg = status.message || t('UnknownError');
     const currentLang = LanguageCode;
     msg = ErrorStatusCodes[code]
-      ? t(ErrorStatusCodes[code])
-      : t(ConvertGuacamoleError(status.message));
+      ? t(ErrorStatusCodes[code], { PLACEHOLDER: status.message })
+      : t(ConvertGuacamoleError(status.message), { PLACEHOLDER: status.message });
     console.log('Guacamole error message:', msg);
     switch (code) {
       case 1005:
