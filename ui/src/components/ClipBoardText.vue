@@ -88,7 +88,7 @@ const maxlength = 1024 * 4;
       :maxlength="maxlength"
       show-count
       clearable
-      placeholder="点击输入框自动读取剪贴板内容"
+      :placeholder="t('autoPasteOnClick')"
       :disabled="props.disabled"
     >
     </n-input>
