@@ -16,7 +16,7 @@ import Osk from '@/components/Osk.vue';
 import KeyboardOption from '@/components/KeyboardOption.vue';
 import OtherOption from '@/components/OtherOption.vue';
 import { NDrawer, NDrawerContent } from 'naive-ui';
-import { FolderKanban, Keyboard as KeyboardIcon, Share2} from 'lucide-vue-next';
+import { FolderKanban, Keyboard as KeyboardIcon, Share2 } from 'lucide-vue-next';
 const message = useMessage();
 const { t } = useI18n();
 const { width, height } = useWindowSize();
