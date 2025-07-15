@@ -32,6 +32,30 @@ const handleSwitchOpen = (value: boolean) => {
 </script>
 
 <template>
+  <div>
+    <n-divider title-placement="left" dashed class="!mb-3 !mt-0">
+      <n-text depth="2" class="text-sm opacity-70"> {{ t('VirtualKeyboard') }} </n-text>
+    </n-divider>
+    <n-grid x-gap="12" :cols="4">
+      <n-gi>
+        <n-form-item :label="t('Enable')" label-placement="left">
+          <n-switch :value="props.opened" @update:value="handleSwitchOpen" />
+        </n-form-item>
+      </n-gi>
+      <n-gi :span="3">
+        <n-form-item :label="t('KeyboardLayout')" label-placement="left">
+          <n-select
+            :value="props.keyboard"
+            :options="generalOptions"
+            @update:value="handleUpdateValue"
+          />
+        </n-form-item>
+      </n-gi>
+    </n-grid>
+  </div>
+</template>
+
+<!-- <template>
   <n-card :title="t('VirtualKeyboard')" class="w-full">
     <n-grid x-gap="12" :cols="4">
       <n-gi>
@@ -50,4 +74,4 @@ const handleSwitchOpen = (value: boolean) => {
       </n-gi>
     </n-grid>
   </n-card>
-</template>
+</template> -->

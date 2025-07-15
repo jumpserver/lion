@@ -23,6 +23,7 @@ const { width, height } = useWindowSize();
 
 import { useGuacamoleClient } from '@/hooks/useGuacamoleClient';
 import { ErrorStatusCodes } from '@/utils/status';
+import CombinationKey from '@/components/CombinationKey.vue';
 
 const {
   guaDisplay,
@@ -341,7 +342,7 @@ const onlineUsers = computed(() => {
   return users;
 });
 
-const currentTab = ref('settings');
+const currentTab = ref('general');
 
 const assetName = computed(() => {
   if (!sessionObject.value) {
@@ -377,17 +378,12 @@ const assetName = computed(() => {
     :style="{ top: '1px' }"
   >
     <n-drawer-content closable :title="assetName">
-      <n-tabs
-        default-value="settings"
-        justify-content="space-evenly"
-        type="line"
-        v-model:value="currentTab"
-      >
-        <n-tab-pane name="settings" :tab="t('Settings')">
+      <n-tabs default-value="general" type="line" v-model:value="currentTab">
+        <n-tab-pane name="general" :tab="t('General')">
           <template #tab>
             <n-flex align="center">
               <KeyboardIcon :size="16" />
-              <span>{{ t('Settings') }}</span>
+              <span>{{ t('General') }}</span>
             </n-flex>
           </template>
           <ClipBoardText
@@ -397,6 +393,8 @@ const assetName = computed(() => {
           />
           <br />
           <KeyboardOption v-model:opened="showOsk" v-model:keyboard="keyboardLayout" />
+          <br />
+          <CombinationKey :is-remote-app="false" @combine-keys="handleCombineKeys" />
           <br />
           <OtherOption
             v-model:auto-fit="autoFit"

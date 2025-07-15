@@ -9,12 +9,15 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     ClipBoardText: typeof import('./src/components/ClipBoardText.vue')['default']
+    CombinationKey: typeof import('./src/components/CombinationKey.vue')['default']
     CreateShare: typeof import('./src/components/CreateShare.vue')['default']
     FileManager: typeof import('./src/components/FileManager.vue')['default']
     KeyboardOption: typeof import('./src/components/KeyboardOption.vue')['default']
     NButton: typeof import('naive-ui')['NButton']
     NButtonGroup: typeof import('naive-ui')['NButtonGroup']
     NCard: typeof import('naive-ui')['NCard']
+    NCollapse: typeof import('naive-ui')['NCollapse']
+    NCollapseItem: typeof import('naive-ui')['NCollapseItem']
     NConfigProvider: typeof import('naive-ui')['NConfigProvider']
     NDialogProvider: typeof import('naive-ui')['NDialogProvider']
     NDivider: typeof import('naive-ui')['NDivider']
