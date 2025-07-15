@@ -77,6 +77,28 @@ const maxlength = 1024 * 4;
 </script>
 
 <template>
+  <div>
+    <n-divider title-placement="left" dashed class="!mb-3 !mt-0">
+      <n-text depth="2" class="text-sm opacity-70"> {{ t('Clipboard') }} </n-text>
+    </n-divider>
+    <n-input
+      v-model:value="inputValue"
+      @input="handleInput"
+      @focus="handleFocus"
+      type="textarea"
+      :allow-input="noSideSpace"
+      :autosize="size"
+      :maxlength="maxlength"
+      show-count
+      clearable
+      :placeholder="t('AutoPasteOnClick')"
+      :disabled="props.disabled"
+    >
+    </n-input>
+  </div>
+</template>
+
+<!-- <template>
   <n-card class="w-full" :title="t('Clipboard')">
     <n-input
       v-model:value="inputValue"
@@ -92,18 +114,18 @@ const maxlength = 1024 * 4;
       :disabled="props.disabled"
     >
     </n-input>
-  </n-card>
-  <!-- <n-space vertical> -->
+  </n-card> -->
+<!-- <n-space vertical> -->
 
-  <!-- <n-space> -->
-  <!-- <n-button 
+<!-- <n-space> -->
+<!-- <n-button 
         @click="loadClipboardText" 
         type="primary"
         size="small"
       >
        从剪贴板粘贴
       </n-button> -->
-  <!-- <n-button
+<!-- <n-button
         @click="loadRemoteClipboardText"
         type="primary"
         size="small"
@@ -111,8 +133,8 @@ const maxlength = 1024 * 4;
       >
         显示远程同步的剪贴板信息</n-button
       > -->
-  <!-- </n-space> -->
-  <!-- <n-input
+<!-- </n-space> -->
+<!-- <n-input
       v-if="showRemoteText"
       :value="props.remoteText"
       type="textarea"
@@ -121,5 +143,5 @@ const maxlength = 1024 * 4;
       placeholder="远程同步的剪贴板内容"
       :disabled="props.disabled"
     /> -->
-  <!-- </n-space> -->
-</template>
+<!-- </n-space> -->
+<!-- </template> -->

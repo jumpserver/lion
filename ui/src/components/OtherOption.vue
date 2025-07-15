@@ -109,7 +109,27 @@ const handleCirclePlusClick = (e: any) => {
 </script>
 
 <template>
-  <n-card :title="t('Other')" class="w-full">
+  <div>
+    <n-divider title-placement="left" dashed class="!mb-3 !mt-0">
+      <n-text depth="2" class="text-sm opacity-70"> {{ t('Other') }} </n-text>
+    </n-divider>
+    <n-grid x-gap="12" :cols="2">
+      <n-gi>
+        <n-form-item :label="t('AutoFit')" label-placement="left">
+          <n-switch
+            :value="props.autoFit"
+            @update:value="handleAutoFitUpdate"
+            style="padding-right: 5px"
+          />
+          <CircleMinus @click="handleCircleMinusClick" /><span class="text-xs"
+            >{{ props.fitPercentage }}%</span
+          >
+          <CirclePlus @click="handleCirclePlusClick" />
+        </n-form-item>
+      </n-gi>
+    </n-grid>
+  </div>
+  <!-- <n-card :title="t('Other')" class="w-full">
     <n-grid x-gap="12" :cols="2">
       <n-gi>
         <n-dropdown trigger="hover" :options="options" @select="handleSelect">
@@ -126,5 +146,5 @@ const handleCirclePlusClick = (e: any) => {
         </n-form-item>
       </n-gi>
     </n-grid>
-  </n-card>
+  </n-card> -->
 </template>
