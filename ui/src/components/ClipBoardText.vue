@@ -88,7 +88,7 @@ const maxlength = 1024 * 4;
       :maxlength="maxlength"
       show-count
       clearable
-      :placeholder="t('autoPasteOnClick')"
+      :placeholder="t('AutoPasteOnClick')"
       :disabled="props.disabled"
     >
     </n-input>
