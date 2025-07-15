@@ -16,7 +16,7 @@ import Osk from '@/components/Osk.vue';
 import KeyboardOption from '@/components/KeyboardOption.vue';
 import OtherOption from '@/components/OtherOption.vue';
 import { NDrawer, NDrawerContent } from 'naive-ui';
-
+import { FolderKanban, Keyboard as KeyboardIcon, Share2} from 'lucide-vue-next';
 const message = useMessage();
 const { t } = useI18n();
 const { width, height } = useWindowSize();
@@ -342,6 +342,14 @@ const onlineUsers = computed(() => {
 });
 
 const currentTab = ref('settings');
+
+const assetName = computed(() => {
+  if (!sessionObject.value) {
+    return '';
+  }
+  const asset = sessionObject.value.asset || {};
+  return asset.name;
+});
 </script>
 
 <template>
@@ -364,8 +372,11 @@ const currentTab = ref('settings');
     :min-width="502"
     :default-width="502"
     resizable
+    :mask-closable="false"
+    :show-mask="false"
+    :style="{ top: '1px' }"
   >
-    <n-drawer-content>
+    <n-drawer-content closable :title="assetName">
       <n-tabs
         default-value="settings"
         justify-content="space-evenly"
@@ -373,6 +384,12 @@ const currentTab = ref('settings');
         v-model:value="currentTab"
       >
         <n-tab-pane name="settings" :tab="t('Settings')">
+          <template #tab>
+            <n-flex align="center">
+              <KeyboardIcon :size="16" />
+              <span>{{ t('Settings') }}</span>
+            </n-flex>
+          </template>
           <ClipBoardText
             :disabled="!hasClipboardPermission"
             :remote-text="remoteClipboardText"
@@ -390,6 +407,12 @@ const currentTab = ref('settings');
           />
         </n-tab-pane>
         <n-tab-pane name="file-manager" :tab="t('FileManagement')">
+          <template #tab>
+            <n-flex align="center">
+              <FolderKanban :size="16" />
+              <span>{{ t('FileManagement') }}</span>
+            </n-flex>
+          </template>
           <FileManager
             :loading="fileFsLoading"
             :files="currentFolderFiles"
@@ -403,6 +426,12 @@ const currentTab = ref('settings');
           />
         </n-tab-pane>
         <n-tab-pane name="share-collaboration" :tab="t('SessionShare')" v-if="sessionObject">
+          <template #tab>
+            <n-flex align="center">
+              <Share2 :size="16" />
+              <span>{{ t('SessionShare') }}</span>
+            </n-flex>
+          </template>
           <SessionShare
             :session="sessionObject.id"
             :users="onlineUsers"

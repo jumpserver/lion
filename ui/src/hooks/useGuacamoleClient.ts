@@ -158,7 +158,7 @@ interface GuacamoleFile {
 }
 
 export function useGuacamoleClient(t: any) {
-  const pixelDensity = window.devicePixelRatio || 1;
+  const pixelDensity = 1;
   const guaClient = ref<Guacamole.Client | null>(null);
   const guaTunnel = ref<Guacamole.Tunnel | null>(null);
   const guaDisplay = ref<Guacamole.Display | null>(null);
