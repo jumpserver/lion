@@ -351,6 +351,16 @@ const assetName = computed(() => {
   const asset = sessionObject.value.asset || {};
   return asset.name;
 });
+
+const isRemoteApp = computed(() => {
+  if (!sessionObject.value) {
+    return false;
+  }
+  if (!sessionObject.value.remote_app) {
+    return false;
+  }
+  return true;
+});
 </script>
 
 <template>
@@ -394,14 +404,14 @@ const assetName = computed(() => {
           <br />
           <KeyboardOption v-model:opened="showOsk" v-model:keyboard="keyboardLayout" />
           <br />
-          <CombinationKey :is-remote-app="false" @combine-keys="handleCombineKeys" />
+          <CombinationKey :is-remote-app="isRemoteApp" @combine-keys="handleCombineKeys" />
           <br />
           <OtherOption
             v-model:auto-fit="autoFit"
             :fit-percentage="fitPercentage"
             @combine-keys="handleCombineKeys"
             @update-scale="scaleGuaDisplay"
-            :is-remote-app="false"
+            :is-remote-app="isRemoteApp"
           />
         </n-tab-pane>
         <n-tab-pane name="file-manager" :tab="t('FileManagement')">
