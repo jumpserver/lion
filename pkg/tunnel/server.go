@@ -501,7 +501,14 @@ func (g *GuacamoleTunnelServer) GetShare(ctx *gin.Context) {
 		UserId:     user.ID,
 		RemoteAddr: ctx.ClientIP(),
 	}
-	recordRet, err := g.JmsService.JoinShareRoom(data)
+	apiClient := g.JmsService.Copy()
+	if acceptLang := ctx.GetHeader("Accept-Language"); acceptLang != "" {
+		apiClient.SetHeader("Accept-Language", acceptLang)
+	}
+	if cookieLang, err2 := ctx.Cookie("django_language"); err2 == nil {
+		apiClient.SetCookie("django_language", cookieLang)
+	}
+	recordRet, err := apiClient.JoinShareRoom(data)
 	if err != nil {
 		logger.Errorf("Validate join session err: %s", err)
 		errResponse := ErrorResponse(err)
