@@ -160,6 +160,10 @@ const shareURL = computed(() => {
 
 const handleBack = () => {
   loading.value = false;
+  resetForm();
+};
+
+const resetForm = () => {
   showCreateForm.value = true;
   shareLinkRequest.expiredTime = 10;
   shareLinkRequest.actionPerm = 'writable';
@@ -182,6 +186,7 @@ const copyShareURLHandler = () => {
 
 const handleModalClose = () => {
   emit('update:show', false);
+  resetForm();
 };
 </script>
 
@@ -192,7 +197,7 @@ const handleModalClose = () => {
       bordered
       :title="cardTitle"
       size="medium"
-      closable="true"
+      :closable="true"
       @close="handleModalClose"
     >
       <Transition name="fade" mode="out-in">
