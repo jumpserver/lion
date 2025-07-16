@@ -489,7 +489,7 @@ const tableHeight = computed(() => {
           :columns="columns"
           :row-props="rowProps"
           :data="dataList"
-          :style="{ height: 'calc(100vh - ' + tableHeight + 'px)' }"
+          :style="{ height: 'calc(100vh - 420px)' }"
         >
           <template #empty>
             <n-empty class="w-full h-full justify-center" :description="t('NoData')" />
