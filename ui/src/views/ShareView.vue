@@ -183,7 +183,7 @@ onMounted(() => {
       class="w-screen h-screen flex justify-center relative"
     ></div>
     <Osk v-if="showOsk" :keyboard="keyboardLayout" @keyboard-change="handleScreenKeyboard" />
-    <div v-if="errMessage" class="text-red-900 font-bold text-xl">{{ errMessage }}</div>
+    <n-gradient-text type="error" v-if="errMessage">{{ errMessage }}</n-gradient-text>
   </div>
 
   <n-drawer v-model:show="drawShow" :min-width="502" :default-width="502" resizable>
