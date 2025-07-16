@@ -163,7 +163,7 @@ onMounted(() => {
       :length="4"
       size="large"
       class="justify-center pb-3"
-      :placeholder="t('VerifyCodePlaceholder')"
+      :placeholder="t('InputVerifyCode')"
       show-password-on="mousedown"
       @keyup="handleKeyUp"
     />
