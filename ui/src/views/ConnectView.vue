@@ -414,7 +414,7 @@ const isRemoteApp = computed(() => {
             :is-remote-app="isRemoteApp"
           />
         </n-tab-pane>
-        <n-tab-pane name="file-manager" :tab="t('FileManagement')">
+        <n-tab-pane name="file-manager" :tab="t('FileManagement')" v-if="driverName">
           <template #tab>
             <n-flex align="center">
               <FolderKanban :size="16" />
