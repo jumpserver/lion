@@ -32,6 +32,7 @@ var (
 	enableMenuAnimations     = DisplayParameter{Key: guacd.RDPEnableMenuAnimations, DefaultValue: "", valueType: Boolean}
 	disableBitmapCaching     = DisplayParameter{Key: guacd.RDPDisableBitmapCaching, DefaultValue: "", valueType: Boolean}
 	disableOffscreenCaching  = DisplayParameter{Key: guacd.RDPDisableOffscreenCaching, DefaultValue: "", valueType: Boolean}
+	vncCursorRender          = DisplayParameter{Key: guacd.VNCCursor, DefaultValue: "", valueType: String}
 )
 
 type Display struct {
@@ -70,7 +71,8 @@ var RDPDisplay = Display{data: map[string]DisplayParameter{
 }}
 
 var VNCDisplay = Display{data: map[string]DisplayParameter{
-	"JUMPSERVER_COLOR_DEPTH": colorDepth,
+	"JUMPSERVER_COLOR_DEPTH":       colorDepth,
+	"JUMPSERVER_VNC_CURSOR_RENDER": vncCursorRender,
 }}
 
 var RDPBuiltIn = map[string]string{

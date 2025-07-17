@@ -12,11 +12,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 
-	"lion/pkg/common"
 	"lion/pkg/guacd"
-	"lion/pkg/jms-sdk-go/model"
 	"lion/pkg/logger"
 	"lion/pkg/session"
+
+	"github.com/jumpserver-dev/sdk-go/common"
+	"github.com/jumpserver-dev/sdk-go/model"
 )
 
 const (
@@ -470,10 +471,9 @@ func (t *Connection) recordCommand(cmdRecordChan chan *session.ExecutedCommand) 
 // generateCommandResult 生成命令结果
 func (t *Connection) generateCommandResult(item *session.ExecutedCommand) *model.Command {
 	var (
-		input     string
-		output    string
-		riskLevel int64
-		user      string
+		input  string
+		output string
+		user   string
 	)
 	user = item.User.User
 	if len(item.Command) > 128 {
@@ -481,13 +481,7 @@ func (t *Connection) generateCommandResult(item *session.ExecutedCommand) *model
 	} else {
 		input = item.Command
 	}
-	switch item.RiskLevel {
-	case model.HighRiskFlag:
-		riskLevel = model.DangerLevel
-	default:
-		riskLevel = model.NormalLevel
-	}
-	return t.Service.GenerateCommandItem(t.Sess, user, input, output, riskLevel, item.CreatedDate)
+	return t.Service.GenerateCommandItem(t.Sess, user, input, output, item)
 }
 
 func (t *Connection) handleEvent(eventMsg *Event) {

@@ -14,15 +14,16 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 
-	"lion/pkg/common"
 	"lion/pkg/config"
 	"lion/pkg/gateway"
 	"lion/pkg/guacd"
-	"lion/pkg/jms-sdk-go/model"
-	"lion/pkg/jms-sdk-go/service"
 	"lion/pkg/logger"
 	"lion/pkg/proxy"
 	"lion/pkg/session"
+
+	"github.com/jumpserver-dev/sdk-go/common"
+	"github.com/jumpserver-dev/sdk-go/model"
+	"github.com/jumpserver-dev/sdk-go/service"
 )
 
 const (
@@ -284,7 +285,7 @@ func (g *GuacamoleTunnelServer) DownloadFile(ctx *gin.Context) {
 		fileLog := model.FTPLog{
 			ID:         common.UUID(),
 			User:       tun.Sess.User.String(),
-			Hostname:   tun.Sess.Asset.String(),
+			Asset:      tun.Sess.Asset.String(),
 			OrgID:      tun.Sess.Asset.OrgID,
 			Account:    tun.Sess.Account.String(),
 			RemoteAddr: ctx.ClientIP(),
@@ -343,7 +344,7 @@ func (g *GuacamoleTunnelServer) UploadFile(ctx *gin.Context) {
 		fileLog := model.FTPLog{
 			ID:         common.UUID(),
 			User:       tun.Sess.User.String(),
-			Hostname:   tun.Sess.Asset.String(),
+			Asset:      tun.Sess.Asset.String(),
 			OrgID:      tun.Sess.Asset.OrgID,
 			Account:    tun.Sess.Account.String(),
 			RemoteAddr: ctx.ClientIP(),
@@ -500,10 +501,23 @@ func (g *GuacamoleTunnelServer) GetShare(ctx *gin.Context) {
 		UserId:     user.ID,
 		RemoteAddr: ctx.ClientIP(),
 	}
-	recordRet, err := g.JmsService.JoinShareRoom(data)
+	apiClient := g.JmsService.Copy()
+	if acceptLang := ctx.GetHeader("Accept-Language"); acceptLang != "" {
+		apiClient.SetHeader("Accept-Language", acceptLang)
+	}
+	if cookieLang, err2 := ctx.Cookie("django_language"); err2 == nil {
+		apiClient.SetCookie("django_language", cookieLang)
+	}
+	recordRet, err := apiClient.JoinShareRoom(data)
 	if err != nil {
 		logger.Errorf("Validate join session err: %s", err)
-		ctx.JSON(http.StatusBadRequest, ErrorResponse(err))
+		errResponse := ErrorResponse(err)
+		if recordRet.Err != nil {
+			logger.Errorf("Join share room err: %s", recordRet.Err)
+			msg := fmt.Errorf("%+v", recordRet.Err)
+			errResponse = ErrorResponse(msg)
+		}
+		ctx.JSON(http.StatusBadRequest, errResponse)
 		return
 	}
 	if recordRet.Err != nil {

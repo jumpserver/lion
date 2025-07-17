@@ -8,10 +8,11 @@ import (
 
 	"github.com/spf13/viper"
 
-	"lion/pkg/common"
 	"lion/pkg/config"
 	"lion/pkg/guacd"
-	"lion/pkg/jms-sdk-go/model"
+
+	"github.com/jumpserver-dev/sdk-go/common"
+	"github.com/jumpserver-dev/sdk-go/model"
 )
 
 type ConnectionConfiguration interface {

@@ -10,8 +10,9 @@ import (
 	"github.com/gorilla/websocket"
 
 	"lion/pkg/guacd"
-	"lion/pkg/jms-sdk-go/model"
 	"lion/pkg/logger"
+
+	"github.com/jumpserver-dev/sdk-go/model"
 )
 
 type MonitorCon struct {
