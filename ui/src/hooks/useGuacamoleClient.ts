@@ -429,15 +429,36 @@ export function useGuacamoleClient(t: any) {
       writer.sendBlob(data.data);
     }
   };
-  // 禁用 command + p 组合键
-  const BLOCKED_KEY_COMBINATION = [65511, 112];
+  // 禁用 组合键
+  // chrome_app control+n
+
+  const commandKeySym = 65511;
+  const BLOCKED_KEY_COMBINATIONS = [
+    [65511, 112], // command + p
+    [65511, 117], // command + u
+    [65511, 105], // command + i
+    [65511, 107], // command + k
+    [65511, 108], // command + l
+    [65511, 120], // command + x
+  ];
   const pressedKeys = ref<Set<number>>(new Set());
-  const isBlockedCombination = (currentKeysym: number): boolean => {
+  const isBlockedCombination = (keysym: number): boolean => {
     if (!isRemoteApp.value) {
       return false;
     }
-    const allPressedKeys = Array.from(pressedKeys.value).concat(currentKeysym);
-    return BLOCKED_KEY_COMBINATION.every((key) => allPressedKeys.includes(key));
+    if (pressedKeys.value.size < 1) {
+      return false;
+    }
+    if (!pressedKeys.value.has(commandKeySym)) {
+      return false;
+    }
+    const allPressedKeys = Array.from(pressedKeys.value).concat(keysym);
+    for (const combination of BLOCKED_KEY_COMBINATIONS) {
+      if (combination.every((key) => allPressedKeys.includes(key))) {
+        return true;
+      }
+    }
+    return false;
   };
   const registerKeyboard = (client: Guacamole.Client) => {
     if (!client || !client.getDisplay) {
@@ -461,7 +482,7 @@ export function useGuacamoleClient(t: any) {
       lunaCommunicator.sendLuna(LUNA_MESSAGE_TYPE.KEYBOARDEVENT, '');
     };
     keyboard.onkeyup = (keysym: any) => {
-      if (isBlockedCombination(keysym)) {
+      if (keysym !== commandKeySym && isBlockedCombination(keysym)) {
         console.warn('Keyup Blocked key combination detected:', keysym);
         return;
       }
