@@ -2,7 +2,7 @@
 import { ref, watch, nextTick } from 'vue';
 import { readClipboardText } from '@/utils/clipboard';
 import { useDebounceFn } from '@vueuse/core';
-import { NInput, NButton, NSpace,NSpin, useMessage } from 'naive-ui';
+import { NInput, NButton, NSpace, NSpin, useMessage } from 'naive-ui';
 const emit = defineEmits(['update:text']);
 import { useI18n } from 'vue-i18n';
 const { t } = useI18n();
@@ -66,14 +66,12 @@ const loadRemoteClipboardText = async () => {
   showRemoteText.value = true;
   debouncedHiden();
 };
-
 const size = {
   minRows: 4,
   maxRows: 6,
 };
 
 const maxlength = 1024 * 4;
-
 </script>
 
 <!--<template>
@@ -117,15 +115,8 @@ const maxlength = 1024 * 4;
     </n-input>
   </n-card>
   <n-space vertical>
-
     <n-space>
-      <n-button
-        @click="loadClipboardText"
-        type="primary"
-        size="small"
-      >
-        从剪贴板粘贴
-      </n-button>
+      <n-button @click="loadClipboardText" type="primary" size="small"> 从剪贴板粘贴 </n-button>
       <n-button
         @click="loadRemoteClipboardText"
         type="primary"
