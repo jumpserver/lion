@@ -174,6 +174,7 @@ export function useGuacamoleClient(t: any) {
   const onlineUsersMap = ref<Record<string, any>>({});
   const warningIntervalId = ref<number | null>(null);
   const loading = ref(true);
+  const remoteClipboardText = ref<string>('');
   const scale = ref(1);
   const currentWidth = ref(window.innerWidth);
   const currentHeight = ref(window.innerHeight);
@@ -525,11 +526,11 @@ export function useGuacamoleClient(t: any) {
     const mouse = new Guacamole.Mouse(display.getElement());
     mouse.onmousedown =
       mouse.onmouseup =
-      mouse.onmousemove =
-        (mouseState: any) => {
-          // Send mouse state, hide cursor if necessary
-          sendMouseState(mouseState);
-        };
+        mouse.onmousemove =
+          (mouseState: any) => {
+            // Send mouse state, hide cursor if necessary
+            sendMouseState(mouseState);
+          };
     mouse.onmouseout = (mouseState: any) => {
       // Send mouse state, hide cursor if necessary
       display.showCursor(false);
@@ -904,6 +905,7 @@ export function useGuacamoleClient(t: any) {
       // Set clipboard contents once stream is finished
       reader.onend = async () => {
         console.log('clipboard received from remote: ', data);
+        remoteClipboardText.value = data;
         if (navigator.clipboard) {
           await navigator.clipboard.writeText(data);
         }
@@ -1054,5 +1056,6 @@ export function useGuacamoleClient(t: any) {
     currentFolderFiles,
     fileFsLoading,
     currentGuacFsObject,
+    remoteClipboardText,
   };
 }
