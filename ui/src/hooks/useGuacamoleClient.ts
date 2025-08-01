@@ -181,6 +181,7 @@ export function useGuacamoleClient(t: any) {
   const message = useMessage();
   const sink = new Guacamole.InputSink();
   const keyboard = new Guacamole.Keyboard();
+  const isRemoteApp = ref<boolean>(false);
   function connectToGuacamole(
     wsUrl: string,
     connectParams: Record<string, any>,
@@ -192,7 +193,7 @@ export function useGuacamoleClient(t: any) {
     currentHeight.value = height || window.innerHeight;
 
     const tunnel = new Guacamole.WebSocketTunnel(wsUrl);
-    tunnel.receiveTimeout = 60 * 1000; // Set receive timeout to 60 secondsa
+    tunnel.receiveTimeout = 60 * 1000; // Set receive timeout to 60 seconds
     const client = new Guacamole.Client(tunnel);
 
     tunnel.onerror = (error: any) => {
@@ -347,6 +348,7 @@ export function useGuacamoleClient(t: any) {
         action_permission.value = dataObj.action_permission || {};
         enableShare.value = action_permission.value.enable_share || false;
         hasClipboardPermission.value = action.enable_copy || action.enable_paste;
+        isRemoteApp.value = dataObj.remote_app;
         console.log('Session object hasClipboardPermission:', hasClipboardPermission, enableShare);
 
         break;
@@ -427,7 +429,16 @@ export function useGuacamoleClient(t: any) {
       writer.sendBlob(data.data);
     }
   };
-
+  // 禁用 command + p 组合键
+  const BLOCKED_KEY_COMBINATION = [65511, 112];
+  const pressedKeys = ref<Set<number>>(new Set());
+  const isBlockedCombination = (currentKeysym: number): boolean => {
+    if (!isRemoteApp.value) {
+      return false;
+    }
+    const allPressedKeys = Array.from(pressedKeys.value).concat(currentKeysym);
+    return BLOCKED_KEY_COMBINATION.every((key) => allPressedKeys.includes(key));
+  };
   const registerKeyboard = (client: Guacamole.Client) => {
     if (!client || !client.getDisplay) {
       console.warn('Guacamole client is not initialized or does not support keyboard events');
@@ -441,10 +452,20 @@ export function useGuacamoleClient(t: any) {
     keyboard.listenTo(sink.getElement());
 
     keyboard.onkeydown = (keysym: any) => {
+      if (isBlockedCombination(keysym)) {
+        console.warn('Keydown Blocked key combination detected:', keysym);
+        return;
+      }
+      pressedKeys.value.add(keysym);
       client.sendKeyEvent(1, keysym);
       lunaCommunicator.sendLuna(LUNA_MESSAGE_TYPE.KEYBOARDEVENT, '');
     };
     keyboard.onkeyup = (keysym: any) => {
+      if (isBlockedCombination(keysym)) {
+        console.warn('Keyup Blocked key combination detected:', keysym);
+        return;
+      }
+      pressedKeys.value.delete(keysym);
       client.sendKeyEvent(0, keysym);
     };
     display.getElement().appendChild(sink.getElement());
