@@ -960,7 +960,7 @@ export function useGuacamoleClient(t: any) {
           stream.sendAck('Ready', Guacamole.Status.Code.SUCCESS);
 
           // Read stream as JSON
-          const reader = new Guacamole.JSONReader(stream);
+          var reader = new Guacamole.JSONReader(stream);
 
           // Acknowledge received JSON blobs
           reader.onprogress = function onprogress() {
@@ -973,23 +973,23 @@ export function useGuacamoleClient(t: any) {
             const files: any = {};
 
             // Determine the expected filename prefix of each stream
-            let expectedPrefix = file.streamName;
+            var expectedPrefix = file.streamName;
             if (expectedPrefix.charAt(expectedPrefix.length - 1) !== '/') {
               expectedPrefix += '/';
             }
 
             // For each received stream name
-            const mimetypes = reader.getJSON();
-            for (const name in mimetypes) {
+            var mimetypes = reader.getJSON();
+            for (var name in mimetypes) {
               // Assert prefix is correct
               if (name.substring(0, expectedPrefix.length) !== expectedPrefix) {
                 continue;
               }
 
               // Extract filename from stream name
-              const filename = name.substring(expectedPrefix.length);
+              var filename = name.substring(expectedPrefix.length);
               // Deduce type from mimetype
-              let type = FileType.NORMAL;
+              var type = FileType.NORMAL;
               if (mimetypes[name] === Guacamole.Object.STREAM_INDEX_MIMETYPE) {
                 type = FileType.DIRECTORY;
               }
