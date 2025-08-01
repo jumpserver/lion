@@ -526,11 +526,11 @@ export function useGuacamoleClient(t: any) {
     const mouse = new Guacamole.Mouse(display.getElement());
     mouse.onmousedown =
       mouse.onmouseup =
-        mouse.onmousemove =
-          (mouseState: any) => {
-            // Send mouse state, hide cursor if necessary
-            sendMouseState(mouseState);
-          };
+      mouse.onmousemove =
+        (mouseState: any) => {
+          // Send mouse state, hide cursor if necessary
+          sendMouseState(mouseState);
+        };
     mouse.onmouseout = (mouseState: any) => {
       // Send mouse state, hide cursor if necessary
       display.showCursor(false);
@@ -960,7 +960,7 @@ export function useGuacamoleClient(t: any) {
           stream.sendAck('Ready', Guacamole.Status.Code.SUCCESS);
 
           // Read stream as JSON
-          var reader = new Guacamole.JSONReader(stream);
+          const reader = new Guacamole.JSONReader(stream);
 
           // Acknowledge received JSON blobs
           reader.onprogress = function onprogress() {
@@ -973,23 +973,23 @@ export function useGuacamoleClient(t: any) {
             const files: any = {};
 
             // Determine the expected filename prefix of each stream
-            var expectedPrefix = file.streamName;
+            let expectedPrefix = file.streamName;
             if (expectedPrefix.charAt(expectedPrefix.length - 1) !== '/') {
               expectedPrefix += '/';
             }
 
             // For each received stream name
-            var mimetypes = reader.getJSON();
-            for (var name in mimetypes) {
+            const mimetypes = reader.getJSON();
+            for (const name in mimetypes) {
               // Assert prefix is correct
               if (name.substring(0, expectedPrefix.length) !== expectedPrefix) {
                 continue;
               }
 
               // Extract filename from stream name
-              var filename = name.substring(expectedPrefix.length);
+              const filename = name.substring(expectedPrefix.length);
               // Deduce type from mimetype
-              var type = FileType.NORMAL;
+              let type = FileType.NORMAL;
               if (mimetypes[name] === Guacamole.Object.STREAM_INDEX_MIMETYPE) {
                 type = FileType.DIRECTORY;
               }
