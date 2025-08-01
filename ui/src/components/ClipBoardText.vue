@@ -1,12 +1,13 @@
 <script lang="ts" setup>
-    import { ref, computed, onMounted, nextTick, watch } from 'vue';
-    import { readClipboardText } from '@/utils/clipboard';
-    import { useDebounceFn } from '@vueuse/core';
-    import { NInput, NButton, NSpace } from 'naive-ui';
+    import {nextTick, ref, watch} from 'vue';
+    import {readClipboardText} from '@/utils/clipboard';
+    import {useDebounceFn} from '@vueuse/core';
+    import {useMessage} from 'naive-ui';
+    import {useI18n} from 'vue-i18n';
+
     const emit = defineEmits(['update:text']);
-    import { NSpin, useMessage } from 'naive-ui';
-    import { useI18n } from 'vue-i18n';
-    const { t } = useI18n();
+
+    const {t} = useI18n();
     // 内部输入值
     const inputValue = ref<string>('');
     const isLoading = ref<boolean>(false);
@@ -90,14 +91,14 @@
                 handleInput(newRemoteText);
             }
         },
-        { immediate: true }
+        {immediate: true}
     );
 </script>
 
 <template>
   <div>
     <n-divider title-placement="left" dashed class="!mb-3 !mt-0">
-      <n-text depth="2" class="text-sm opacity-70"> {{ t('Clipboard') }} </n-text>
+      <n-text depth="2" class="text-sm opacity-70"> {{ t('Clipboard') }}</n-text>
     </n-divider>
     <n-input
       v-model:value="inputValue"
