@@ -39,8 +39,12 @@ export function pasteFromClipboard(): Promise<string> {
         });
     } else {
       // Fallback for browsers that do not support the Clipboard API
+      // 保存当前焦点元素
+      const activeElement = document.activeElement as HTMLElement;
       const textArea = document.createElement('textarea');
       textArea.style.position = 'fixed'; // Prevent scrolling to bottom of page in MS Edge.
+      textArea.style.opacity = '0'; // 使其不可见
+      textArea.style.pointerEvents = 'none'; // 防止意外交互
       document.body.appendChild(textArea);
       textArea.focus();
       textArea.select();
@@ -53,6 +57,10 @@ export function pasteFromClipboard(): Promise<string> {
         resolve(''); // Return empty string on error
       } finally {
         document.body.removeChild(textArea);
+        // 恢复原来的焦点
+        if (activeElement && activeElement.focus) {
+          activeElement.focus();
+        }
       }
     }
   });
