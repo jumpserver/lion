@@ -1,10 +1,9 @@
 <script lang="ts" setup>
-import { ref, watch } from 'vue';
+import { ref, watch, nextTick } from 'vue';
 import { readClipboardText } from '@/utils/clipboard';
 import { useDebounceFn } from '@vueuse/core';
-import { NInput, NButton, NSpace } from 'naive-ui';
+import { NInput, NButton, NSpace,NSpin, useMessage } from 'naive-ui';
 const emit = defineEmits(['update:text']);
-import { NSpin, useMessage } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
 const { t } = useI18n();
 // 内部输入值
@@ -75,27 +74,18 @@ const size = {
 
 const maxlength = 1024 * 4;
 
-// 监听远程剪贴板变化，自动更新textarea内容
-watch(
-  () => props.remoteText,
-  (newRemoteText) => {
-    if (newRemoteText && newRemoteText !== inputValue.value) {
-      inputValue.value = newRemoteText;
-      handleInput(newRemoteText);
-    }
-  },
-  { immediate: true },
-);
 </script>
 
-<template>
+<!--<template>
   <div>
     <n-divider title-placement="left" dashed class="!mb-3 !mt-0">
       <n-text depth="2" class="text-sm opacity-70"> {{ t('Clipboard') }} </n-text>
     </n-divider>
     <n-input
+      ref="inputRef"
       v-model:value="inputValue"
       @input="handleInput"
+      @focus="handleFocus"
       type="textarea"
       :allow-input="noSideSpace"
       :autosize="size"
@@ -107,9 +97,9 @@ watch(
     >
     </n-input>
   </div>
-</template>
+</template>-->
 
-<!-- <template>
+<template>
   <n-card class="w-full" :title="t('Clipboard')">
     <n-input
       v-model:value="inputValue"
@@ -125,27 +115,27 @@ watch(
       :disabled="props.disabled"
     >
     </n-input>
-  </n-card> -->
-<!-- <n-space vertical> -->
+  </n-card>
+  <n-space vertical>
 
-<!-- <n-space> -->
-<!-- <n-button
+    <n-space>
+      <n-button
         @click="loadClipboardText"
         type="primary"
         size="small"
       >
-       从剪贴板粘贴
-      </n-button> -->
-<!-- <n-button
+        从剪贴板粘贴
+      </n-button>
+      <n-button
         @click="loadRemoteClipboardText"
         type="primary"
         size="small"
         :disabled="props.disabled"
       >
         显示远程同步的剪贴板信息</n-button
-      > -->
-<!-- </n-space> -->
-<!-- <n-input
+      >
+    </n-space>
+    <n-input
       v-if="showRemoteText"
       :value="props.remoteText"
       type="textarea"
@@ -153,6 +143,6 @@ watch(
       readonly
       placeholder="远程同步的剪贴板内容"
       :disabled="props.disabled"
-    /> -->
-<!-- </n-space> -->
-<!-- </template> -->
+    />
+  </n-space>
+</template>
