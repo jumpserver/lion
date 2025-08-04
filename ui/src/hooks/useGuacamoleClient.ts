@@ -182,6 +182,7 @@ export function useGuacamoleClient(t: any) {
   const sink = new Guacamole.InputSink();
   const keyboard = new Guacamole.Keyboard();
   const isRemoteApp = ref<boolean>(false);
+  const isHttpProtocol = ref<boolean>(false);
   function connectToGuacamole(
     wsUrl: string,
     connectParams: Record<string, any>,
@@ -344,6 +345,8 @@ export function useGuacamoleClient(t: any) {
       }
       case 'session': {
         sessionObject.value = dataObj;
+        const protocol = dataObj.protocol;
+        isHttpProtocol.value = protocol.toLowerCase().includes('http');
         const action = dataObj.action_permission || {};
         action_permission.value = dataObj.action_permission || {};
         enableShare.value = action_permission.value.enable_share || false;
@@ -430,9 +433,8 @@ export function useGuacamoleClient(t: any) {
     }
   };
   // 禁用 组合键
-  // chrome_app control+n
-
   const commandKeySym = 65511;
+  const controlKeySym = 65507;
   const BLOCKED_KEY_COMBINATIONS = [
     [65511, 112], // command + p
     [65511, 117], // command + u
@@ -440,6 +442,10 @@ export function useGuacamoleClient(t: any) {
     [65511, 107], // command + k
     [65511, 108], // command + l
     [65511, 120], // command + x
+  ];
+  // 禁用 组合键 control + n
+  const HttpBlockedKeys = [
+    [65507, 110], // control + n
   ];
   const pressedKeys = ref<Set<number>>(new Set());
   const isBlockedCombination = (keysym: number): boolean => {
@@ -449,13 +455,20 @@ export function useGuacamoleClient(t: any) {
     if (pressedKeys.value.size < 1) {
       return false;
     }
-    if (!pressedKeys.value.has(commandKeySym)) {
-      return false;
-    }
     const allPressedKeys = Array.from(pressedKeys.value).concat(keysym);
-    for (const combination of BLOCKED_KEY_COMBINATIONS) {
-      if (combination.every((key) => allPressedKeys.includes(key))) {
-        return true;
+    if (pressedKeys.value.has(commandKeySym)) {
+      for (const combination of BLOCKED_KEY_COMBINATIONS) {
+        if (combination.every((key) => allPressedKeys.includes(key))) {
+          return true;
+        }
+      }
+    }
+
+    if (isHttpProtocol.value && pressedKeys.value.has(controlKeySym)) {
+      for (const combination of HttpBlockedKeys) {
+        if (combination.every((key) => allPressedKeys.includes(key))) {
+          return true;
+        }
       }
     }
     return false;
