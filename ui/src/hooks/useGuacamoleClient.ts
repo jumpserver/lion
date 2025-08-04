@@ -518,7 +518,7 @@ export function useGuacamoleClient(t: any) {
     const touchScreen = new Guacamole.Mouse.Touchscreen(display.getElement());
     const handleEmulatedMouseDown = (mouseState: any) => {
       // Emulate mouse down event
-      if (client || display) {
+      if (!client || !display) {
         return;
       }
       lunaCommunicator.sendLuna(LUNA_MESSAGE_TYPE.MOUSE_EVENT, '');
@@ -529,7 +529,7 @@ export function useGuacamoleClient(t: any) {
 
     const handleEmulatedMouseState = (mouseState: any) => {
       // Emulate mouse move/up event
-      if (client || display) {
+      if (!client || !display) {
         return;
       }
       lunaCommunicator.sendLuna(LUNA_MESSAGE_TYPE.MOUSE_EVENT, '');
