@@ -442,10 +442,15 @@ export function useGuacamoleClient(t: any) {
     [65511, 107], // command + k
     [65511, 108], // command + l
     [65511, 120], // command + x
+    [65511, 65505, 112], // command + shift + p
+    [65507, 65511, 109], // control + command + m
   ];
   // 禁用 组合键 control + n
   const HttpBlockedKeys = [
     [65507, 110], // control + n
+    // [65507, 65505, 80], // control+shift + p
+    [65507, 65505, 79], // control+shift + o
+    [65507, 65505, 78], // control+shift + n
   ];
   const pressedKeys = ref<Set<number>>(new Set());
   const isBlockedCombination = (keysym: number): boolean => {
