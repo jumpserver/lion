@@ -449,6 +449,8 @@ export function useGuacamoleClient(t: any) {
   ];
   // 禁用 组合键 control + n
   const HttpBlockedKeys = [
+    [65507, 104], // control + h
+    [65507, 106], // control + j
     [65507, 110], // control + n
     // [65507, 65505, 80], // control+shift + p
     [65507, 65505, 79], // control+shift + o
