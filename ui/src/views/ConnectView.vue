@@ -140,10 +140,14 @@ const processUploadQueue = async () => {
       uploadOptions.file.status = 'finished';
     } catch (statusError: any) {
       console.error('Error processing upload queue:', statusError);
-      let msg = statusError.message as string;
-      msg = t(ErrorStatusCodes[statusError.code]) || msg;
-      message.error(msg);
       uploadOptions.file.status = 'error';
+      let msg = statusError.message as string;
+      if (statusError.code && ErrorStatusCodes[statusError.code]) {
+        msg = t(ErrorStatusCodes[statusError.code]);
+      } else {
+        msg = t('FileUploadError') + ': ' + uploadOptions.file.name;
+      }
+      message.error(msg);
     } finally {
       setTimeout(() => {
         handleRemoveFile(uploadOptions.file);
@@ -162,10 +166,30 @@ const fileDrop = (event: any) => {
   if (files.length === 0) {
     return;
   }
-  console.log('Files dropped:', files);
-  // Handle file drop logic here
-  // For example, you can upload the files or process them as needed
-  // This is a placeholder for actual file handling logic
+  Array.from(files).forEach((fileObj: any) => {
+    const uploadOptions: UploadCustomRequestOptions = {
+      file: {
+        id:`batch-id-${fileObj.name}`,
+        name: fileObj.name,
+        batchId:`batch-id-${fileObj.name}`,
+        percentage:0,
+        type: fileObj.type,
+        status: 'pending',
+        file: fileObj,
+      } as UploadFileInfo as UploadSettledFileInfo,
+      onProgress: (e) => {
+        // console.log('Upload progress:', e);
+      },
+      onFinish: () => {
+        message.success(t('UploadSuccess') + ': ' + fileObj.name);
+      },
+      onError: () => {
+        // console.error('Upload error:', );
+        // message.error(t('FileUploadError') + ': ' + fileObj.name);
+      },
+    };
+    handleUploadFile(uploadOptions, currentFolder.value);
+  });
 };
 
 const debouncedSendClipboardToRemote = useDebounceFn(async () => {
