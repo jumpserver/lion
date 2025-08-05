@@ -169,10 +169,10 @@ const fileDrop = (event: any) => {
   Array.from(files).forEach((fileObj: any) => {
     const uploadOptions: UploadCustomRequestOptions = {
       file: {
-        id:`batch-id-${fileObj.name}`,
+        id: `batch-id-${fileObj.name}`,
         name: fileObj.name,
-        batchId:`batch-id-${fileObj.name}`,
-        percentage:0,
+        batchId: `batch-id-${fileObj.name}`,
+        percentage: 0,
         type: fileObj.type,
         status: 'pending',
         file: fileObj,
