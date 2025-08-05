@@ -443,6 +443,7 @@ export function useGuacamoleClient(t: any) {
     [65511, 108], // command + l
     [65511, 120], // command + x
     [65511, 65505, 112], // command + shift + p
+    [65511, 65505, 80], // command + shift + p 中文输入下
     [65507, 65511, 109], // control + command + m
   ];
   // 禁用 组合键 control + n
