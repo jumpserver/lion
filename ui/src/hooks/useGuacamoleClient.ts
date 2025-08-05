@@ -883,7 +883,7 @@ export function useGuacamoleClient(t: any) {
     }
 
     // Guacamole 客户端验证
-    if (!guaClient.value || !guaClient.value.createClipboardStream) {
+    if (!guaClient.value) {
       const error = new Error('Guacamole client is not initialized');
       console.error('Upload failed:', error.message);
       message.error(t('GuacamoleClientNotInitialized'));
