@@ -38,22 +38,7 @@ export function pasteFromClipboard(): Promise<string> {
           resolve(''); // Return empty string on error
         });
     } else {
-      // Fallback for browsers that do not support the Clipboard API
-      const textArea = document.createElement('textarea');
-      textArea.style.position = 'fixed'; // Prevent scrolling to bottom of page in MS Edge.
-      document.body.appendChild(textArea);
-      textArea.focus();
-      textArea.select();
-      try {
-        const text = document.execCommand('paste') ? textArea.value : '';
-        resolve(text);
-      } catch (err) {
-        console.error('Failed to read from clipboard:', err);
-        // reject(err);
-        resolve(''); // Return empty string on error
-      } finally {
-        document.body.removeChild(textArea);
-      }
+      resolve(''); // Return empty string on error
     }
   });
 }

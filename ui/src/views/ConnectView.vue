@@ -9,7 +9,7 @@ import { getCurrentConnectParams, BaseAPIURL } from '@/utils/common';
 import { lunaCommunicator } from '@/utils/lunaBus.ts';
 import { LUNA_MESSAGE_TYPE } from '@/types/postmessage.type';
 import ClipBoardText from '@/components/ClipBoardText.vue';
-import SessionShare from '@/components/SessionShare.vue';
+import SessionShare from '@/components/SessionShare/index.vue';
 import FileManager from '@/components/FileManager.vue';
 import { readClipboardText } from '@/utils/clipboard';
 import Osk from '@/components/Osk.vue';
@@ -49,6 +49,7 @@ const {
   currentGuacFsObject,
   enableShare,
   action_permission,
+  remoteClipboardText,
 } = useGuacamoleClient(t);
 
 const apiPrefix = ref('');
@@ -57,7 +58,6 @@ const wsPrefix = ref('');
 const drawShow = ref(false);
 const connectStatus = ref('Connecting');
 
-const remoteClipboardText = ref<string>('');
 const autoFit = ref<boolean>(true);
 const debouncedResize = useDebounceFn(() => {
   resizeGuaScale(width.value, height.value);
@@ -404,73 +404,76 @@ const isRemoteApp = computed(() => {
   <n-drawer
     v-model:show="drawShow"
     :max-width="800"
-    :min-width="502"
-    :default-width="502"
+    :min-width="600"
+    :default-width="600"
     resizable
     :mask-closable="false"
     :show-mask="false"
-    :style="{ top: '1px' }"
+    class="relative"
+    :style="{ top: '1px', bottom: '2px' }"
   >
     <n-drawer-content closable :title="assetName">
-      <n-tabs default-value="general" type="line" v-model:value="currentTab">
-        <n-tab-pane name="general" :tab="t('General')">
-          <template #tab>
-            <n-flex align="center">
-              <KeyboardIcon :size="16" />
-              <span>{{ t('General') }}</span>
-            </n-flex>
-          </template>
-          <ClipBoardText
-            :disabled="!hasClipboardPermission"
-            :remote-text="remoteClipboardText"
-            @update:text="ClipBoardTextChange"
-          />
-          <br />
-          <KeyboardOption v-model:opened="showOsk" v-model:keyboard="keyboardLayout" />
-          <br />
-          <CombinationKey :is-remote-app="isRemoteApp" @combine-keys="handleCombineKeys" />
-          <br />
-          <OtherOption
-            v-model:auto-fit="autoFit"
-            :fit-percentage="fitPercentage"
-            @combine-keys="handleCombineKeys"
-            @update-scale="scaleGuaDisplay"
-            :is-remote-app="isRemoteApp"
-          />
-        </n-tab-pane>
-        <n-tab-pane name="file-manager" :tab="t('FileManagement')" v-if="driverName">
-          <template #tab>
-            <n-flex align="center">
-              <FolderKanban :size="16" />
-              <span>{{ t('FileManagement') }}</span>
-            </n-flex>
-          </template>
-          <FileManager
-            :loading="fileFsLoading"
-            :files="currentFolderFiles"
-            :name="driverName"
-            :folder="currentFolder"
-            :display-uploading-files="displayUploadingFiles"
-            @open-folder="handleFolderOpen"
-            @download-file="handleDownloadFile"
-            @upload-file="handleUploadFile"
-            @remove-upload-file="handleRemoveFile"
-          />
-        </n-tab-pane>
-        <n-tab-pane name="share-collaboration" :tab="t('SessionShare')" v-if="sessionObject">
-          <template #tab>
-            <n-flex align="center">
-              <Share2 :size="16" />
-              <span>{{ t('SessionShare') }}</span>
-            </n-flex>
-          </template>
-          <SessionShare
-            :session="sessionObject.id"
-            :users="onlineUsers"
-            :disable-create="!enableShare"
-          />
-        </n-tab-pane>
-      </n-tabs>
+      <n-card bordered>
+        <n-tabs default-value="general" size="medium" type="segment" v-model:value="currentTab">
+          <n-tab-pane name="general" :tab="t('General')">
+            <template #tab>
+              <n-flex align="center">
+                <KeyboardIcon :size="16" />
+                <span>{{ t('General') }}</span>
+              </n-flex>
+            </template>
+            <ClipBoardText
+              :disabled="!hasClipboardPermission"
+              :remote-text="remoteClipboardText"
+              @update:text="ClipBoardTextChange"
+            />
+            <br />
+            <KeyboardOption v-model:opened="showOsk" v-model:keyboard="keyboardLayout" />
+            <br />
+            <CombinationKey :is-remote-app="isRemoteApp" @combine-keys="handleCombineKeys" />
+            <br />
+            <OtherOption
+              v-model:auto-fit="autoFit"
+              :fit-percentage="fitPercentage"
+              @combine-keys="handleCombineKeys"
+              @update-scale="scaleGuaDisplay"
+              :is-remote-app="isRemoteApp"
+            />
+          </n-tab-pane>
+          <n-tab-pane name="file-manager" :tab="t('FileManagement')" v-if="driverName">
+            <template #tab>
+              <n-flex align="center">
+                <FolderKanban :size="16" />
+                <span>{{ t('FileManagement') }}</span>
+              </n-flex>
+            </template>
+            <FileManager
+              :loading="fileFsLoading"
+              :files="currentFolderFiles"
+              :name="driverName"
+              :folder="currentFolder"
+              :display-uploading-files="displayUploadingFiles"
+              @open-folder="handleFolderOpen"
+              @download-file="handleDownloadFile"
+              @upload-file="handleUploadFile"
+              @remove-upload-file="handleRemoveFile"
+            />
+          </n-tab-pane>
+          <n-tab-pane name="share-collaboration" :tab="t('SessionShare')" v-if="sessionObject">
+            <template #tab>
+              <n-flex align="center">
+                <Share2 :size="16" />
+                <span>{{ t('SessionShare') }}</span>
+              </n-flex>
+            </template>
+            <SessionShare
+              :session="sessionObject.id"
+              :users="onlineUsers"
+              :disable-create="!enableShare"
+            />
+          </n-tab-pane>
+        </n-tabs>
+      </n-card>
     </n-drawer-content>
   </n-drawer>
 </template>
