@@ -183,6 +183,7 @@ export function useGuacamoleClient(t: any) {
   const keyboard = new Guacamole.Keyboard();
   const isRemoteApp = ref<boolean>(false);
   const isHttpProtocol = ref<boolean>(false);
+  const remoteClipboardText = ref<string>('');
   function connectToGuacamole(
     wsUrl: string,
     connectParams: Record<string, any>,
@@ -968,6 +969,7 @@ export function useGuacamoleClient(t: any) {
       // Set clipboard contents once stream is finished
       reader.onend = async () => {
         console.log('clipboard received from remote: ', data);
+        remoteClipboardText.value = data;
         if (navigator.clipboard) {
           await navigator.clipboard.writeText(data);
         }
@@ -1118,5 +1120,6 @@ export function useGuacamoleClient(t: any) {
     currentFolderFiles,
     fileFsLoading,
     currentGuacFsObject,
+    remoteClipboardText,
   };
 }

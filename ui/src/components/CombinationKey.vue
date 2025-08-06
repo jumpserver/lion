@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import CardContainer from '@/components/CardContainer/index.vue';
 const { t } = useI18n();
 
 const props = defineProps<{
@@ -76,10 +77,7 @@ const keyboardList = computed(() => {
 </script>
 
 <template>
-  <div>
-    <n-divider title-placement="left" dashed class="!mb-3 !mt-0">
-      <n-text depth="2" class="text-sm opacity-70">{{ t('AvailableShortcutKey') }} </n-text>
-    </n-divider>
+  <CardContainer :title="t('AvailableShortcutKey')">
     <n-grid x-gap="8" y-gap="8" :cols="2">
       <n-gi v-for="item in keyboardList" :key="item.label">
         <n-card
@@ -98,5 +96,5 @@ const keyboardList = computed(() => {
         </n-card>
       </n-gi>
     </n-grid>
-  </div>
+  </CardContainer>
 </template>
