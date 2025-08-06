@@ -352,8 +352,6 @@ export function useGuacamoleClient(t: any) {
         enableShare.value = action_permission.value.enable_share || false;
         hasClipboardPermission.value = action.enable_copy || action.enable_paste;
         isRemoteApp.value = dataObj.remote_app;
-        console.log('Session object hasClipboardPermission:', hasClipboardPermission, enableShare);
-
         break;
       }
       case 'current_user': {
@@ -452,6 +450,8 @@ export function useGuacamoleClient(t: any) {
     [65507, 104], // control + h
     [65507, 106], // control + j
     [65507, 110], // control + n
+    [65507, 116], // control + t
+    [65507, 117], // control + u
     // [65507, 65505, 80], // control+shift + p
     [65507, 65505, 79], // control+shift + o
     [65507, 65505, 78], // control+shift + n
