@@ -1,4 +1,4 @@
-FROM jumpserver/guacd:1.6.0-bullseye AS stage-guacd
+FROM jumpserver/guacd:1.5.5-bullseye AS stage-guacd
 FROM jumpserver/lion-base:20250710_033831 AS stage-build
 ARG TARGETARCH
 
