@@ -57,6 +57,7 @@ const handleRemoveShareUser = (user: {
       <n-flex v-if="props.users && props.users?.length > 0" class="w-full mb-4">
         <UserItem
           v-for="currentUser in props.users"
+          :meta="currentUser"
           :key="currentUser.user_id"
           :username="currentUser.user"
           :primary="currentUser.primary"
