@@ -50,7 +50,7 @@ const handleRemoveShareUser = (user: {
       <template #custom-header>
         <n-text class="text-xs-plus"> {{ t('OnlineUser') }} </n-text>
         <NTag round :bordered="false" type="success" size="small" class="ml-2">
-          {{ props.users?.length || 0 }} 人
+          {{ props.users?.length || 0 }}
         </NTag>
       </template>
 
@@ -67,7 +67,7 @@ const handleRemoveShareUser = (user: {
         />
       </n-flex>
     </CardContainer>
-    <CardContainer :title="t('CreateLink')">
+    <CardContainer :title="t('ShareLink')">
       <CreateLink :session="session" :disabled-create-link="props.disableCreate" />
     </CardContainer>
   </n-flex>
