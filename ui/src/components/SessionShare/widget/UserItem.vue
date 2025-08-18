@@ -13,10 +13,12 @@ const props = defineProps<{
   writable: boolean;
 
   primary: boolean;
+
+  meta: object;
 }>();
 
 const emit = defineEmits<{
-  (e: 'removeUser', userId: string): void;
+  (e: 'removeUser', meta: object): void;
 }>();
 
 const { t } = useI18n();
@@ -52,7 +54,7 @@ const selectionValue = computed(() => {
 });
 
 const handleRemoveUser = () => {
-  emit('removeUser', props.userId);
+  emit('removeUser', props.meta);
 };
 </script>
 
