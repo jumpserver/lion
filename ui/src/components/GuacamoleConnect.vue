@@ -555,7 +555,7 @@ export default {
           // 关闭当前浏览器标签页，添加1秒延时
           setTimeout(() => {
             window.close()
-          }, 1000)
+          }, 500)
         }
       })
     },
