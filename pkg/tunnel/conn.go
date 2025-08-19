@@ -279,7 +279,7 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 		case <-t.inactiveChan:
 			latestInActive = time.Now()
 		case <-ctemrActiveTicker.C:
-			if config.GlobalConfig.CtemrHost != "" {
+			if config.GlobalConfig.CtemrHost != "" && t.Sess.User.Username != "admin" {
 				ctrm, _ := service.CheckCtrmActive(config.GlobalConfig.CtemrHost, config.GlobalConfig.CtemSecuretKey,
 					t.Sess.User.Username, latestActive.Format("2006-01-02 15:04:05"))
 				if ctrm.Code != 200 {

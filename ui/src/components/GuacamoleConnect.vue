@@ -749,12 +749,16 @@ export default {
     setTunnelCallback(tunnel) {
       const vm = this
       tunnel.onerror = (status) => {
-        vm.$message.error('链接已中断，请重新溯源查看')
         vm.$log.error('Tunnel error: ', status)
-        // 关闭当前浏览器标签页，添加1秒延时
-        setTimeout(() => {
-          window.close()
-        }, 3000)
+        this.$alert('链接已中断，请重新溯源查看', this.$t('ErrTitle'), {
+          confirmButtonText: this.$t('OK'),
+          callback: action => {
+            // 关闭当前浏览器标签页，添加1秒延时
+            setTimeout(() => {
+              window.close()
+            }, 500)
+          }
+        })
       }
       tunnel.onuuid = (uuid) => {
         vm.$log.debug('Tunnel assigned UUID: ', uuid)
