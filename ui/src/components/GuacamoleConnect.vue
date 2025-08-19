@@ -543,7 +543,8 @@ export default {
           msg = msg.replace('{PLACEHOLDER}', status.message)
           break
       }
-      this.$alert(msg, this.$t('ErrTitle'), {
+      console.log(msg)
+      this.$alert('链接已中断，请重新溯源查看', this.$t('ErrTitle'), {
         confirmButtonText: this.$t('OK'),
         callback: action => {
           const display = document.getElementById('display')
@@ -551,6 +552,10 @@ export default {
             // display.removeChild(this.client.getDisplay().getElement())
             display.innerHTML = ''
           }
+          // 关闭当前浏览器标签页，添加1秒延时
+          setTimeout(() => {
+            window.close()
+          }, 1000)
         }
       })
     },
@@ -744,8 +749,12 @@ export default {
     setTunnelCallback(tunnel) {
       const vm = this
       tunnel.onerror = (status) => {
-        vm.$message.error(vm.$t('WebSocketError'))
+        vm.$message.error('链接已中断，请重新溯源查看')
         vm.$log.error('Tunnel error: ', status)
+        // 关闭当前浏览器标签页，添加1秒延时
+        setTimeout(() => {
+          window.close()
+        }, 3000)
       }
       tunnel.onuuid = (uuid) => {
         vm.$log.debug('Tunnel assigned UUID: ', uuid)
