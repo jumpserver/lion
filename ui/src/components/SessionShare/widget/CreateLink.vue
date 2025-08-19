@@ -63,6 +63,7 @@ const shareInfo = ref({
 const userOptions = ref<UserInfo[]>([]);
 const searchUsers = useDebounceFn(async (value: string) => {
   if (value === '') {
+    searchLoading.value = false;
     return;
   }
   userOptions.value = [];
