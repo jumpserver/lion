@@ -1,7 +1,6 @@
 <script lang="ts" setup>
 import { ref, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { NButton, NIcon } from 'naive-ui';
 import { CirclePlus, CircleMinus } from 'lucide-vue-next';
 const { t } = useI18n();
 
@@ -109,10 +108,7 @@ const handleCirclePlusClick = (e: any) => {
 </script>
 
 <template>
-  <div>
-    <n-divider title-placement="left" dashed class="!mb-3 !mt-0">
-      <n-text depth="2" class="text-sm opacity-70"> {{ t('Other') }} </n-text>
-    </n-divider>
+  <CardContainer :title="t('Other')">
     <n-grid x-gap="12" :cols="2">
       <n-gi>
         <n-form-item :label="t('AutoFit')" label-placement="left">
@@ -128,7 +124,7 @@ const handleCirclePlusClick = (e: any) => {
         </n-form-item>
       </n-gi>
     </n-grid>
-  </div>
+  </CardContainer>
   <!-- <n-card :title="t('Other')" class="w-full">
     <n-grid x-gap="12" :cols="2">
       <n-gi>

@@ -1,8 +1,8 @@
 <script lang="ts" setup>
-import { defineComponent, ref, onMounted } from 'vue';
+import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { NButton, NIcon, NSelect } from 'naive-ui';
-
+import { NSelect } from 'naive-ui';
+import CardContainer from '@/components/CardContainer/index.vue';
 const { t } = useI18n();
 
 const props = defineProps<{
@@ -32,10 +32,7 @@ const handleSwitchOpen = (value: boolean) => {
 </script>
 
 <template>
-  <div>
-    <n-divider title-placement="left" dashed class="!mb-3 !mt-0">
-      <n-text depth="2" class="text-sm opacity-70"> {{ t('VirtualKeyboard') }} </n-text>
-    </n-divider>
+  <CardContainer :title="t('VirtualKeyboard')">
     <n-grid x-gap="12" :cols="4">
       <n-gi>
         <n-form-item :label="t('Enable')" label-placement="left">
@@ -52,7 +49,7 @@ const handleSwitchOpen = (value: boolean) => {
         </n-form-item>
       </n-gi>
     </n-grid>
-  </div>
+  </CardContainer>
 </template>
 
 <!-- <template>

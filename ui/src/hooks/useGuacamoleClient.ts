@@ -181,6 +181,9 @@ export function useGuacamoleClient(t: any) {
   const message = useMessage();
   const sink = new Guacamole.InputSink();
   const keyboard = new Guacamole.Keyboard();
+  const isRemoteApp = ref<boolean>(false);
+  const isHttpProtocol = ref<boolean>(false);
+  const remoteClipboardText = ref<string>('');
   function connectToGuacamole(
     wsUrl: string,
     connectParams: Record<string, any>,
@@ -192,7 +195,7 @@ export function useGuacamoleClient(t: any) {
     currentHeight.value = height || window.innerHeight;
 
     const tunnel = new Guacamole.WebSocketTunnel(wsUrl);
-    tunnel.receiveTimeout = 60 * 1000; // Set receive timeout to 60 secondsa
+    tunnel.receiveTimeout = 60 * 1000; // Set receive timeout to 60 seconds
     const client = new Guacamole.Client(tunnel);
 
     tunnel.onerror = (error: any) => {
@@ -343,12 +346,13 @@ export function useGuacamoleClient(t: any) {
       }
       case 'session': {
         sessionObject.value = dataObj;
+        const protocol = dataObj.protocol;
+        isHttpProtocol.value = protocol.toLowerCase().includes('http');
         const action = dataObj.action_permission || {};
         action_permission.value = dataObj.action_permission || {};
         enableShare.value = action_permission.value.enable_share || false;
         hasClipboardPermission.value = action.enable_copy || action.enable_paste;
-        console.log('Session object hasClipboardPermission:', hasClipboardPermission, enableShare);
-
+        isRemoteApp.value = dataObj.remote_app;
         break;
       }
       case 'current_user': {
@@ -427,7 +431,58 @@ export function useGuacamoleClient(t: any) {
       writer.sendBlob(data.data);
     }
   };
+  // 禁用 组合键
+  const commandKeySym = 65511;
+  const controlKeySym = 65507;
+  const BLOCKED_KEY_COMBINATIONS = [
+    [65511, 112], // command + p
+    [65511, 117], // command + u
+    [65511, 105], // command + i
+    [65511, 107], // command + k
+    [65511, 108], // command + l
+    [65511, 120], // command + x
+    [65511, 65505, 112], // command + shift + p
+    [65511, 65505, 80], // command + shift + p 中文输入下
+    [65507, 65511, 109], // control + command + m
+    [65511, 80], // command + shift + p 中文输入下
+  ];
+  // 禁用 组合键 control + n
+  const HttpBlockedKeys = [
+    [65507, 104], // control + h
+    [65507, 106], // control + j
+    [65507, 110], // control + n
+    [65507, 116], // control + t
+    [65507, 117], // control + u
+    // [65507, 65505, 80], // control+shift + p
+    [65507, 65505, 79], // control+shift + o
+    [65507, 65505, 78], // control+shift + n
+  ];
+  const pressedKeys = ref<Set<number>>(new Set());
+  const isBlockedCombination = (keysym: number): boolean => {
+    if (!isRemoteApp.value) {
+      return false;
+    }
+    if (pressedKeys.value.size < 1) {
+      return false;
+    }
+    const allPressedKeys = Array.from(pressedKeys.value).concat(keysym);
+    if (pressedKeys.value.has(commandKeySym)) {
+      for (const combination of BLOCKED_KEY_COMBINATIONS) {
+        if (combination.every((key) => allPressedKeys.includes(key))) {
+          return true;
+        }
+      }
+    }
 
+    if (isHttpProtocol.value && pressedKeys.value.has(controlKeySym)) {
+      for (const combination of HttpBlockedKeys) {
+        if (combination.every((key) => allPressedKeys.includes(key))) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
   const registerKeyboard = (client: Guacamole.Client) => {
     if (!client || !client.getDisplay) {
       console.warn('Guacamole client is not initialized or does not support keyboard events');
@@ -441,10 +496,20 @@ export function useGuacamoleClient(t: any) {
     keyboard.listenTo(sink.getElement());
 
     keyboard.onkeydown = (keysym: any) => {
+      if (isBlockedCombination(keysym)) {
+        console.warn('Keydown Blocked key combination detected:', keysym);
+        return;
+      }
+      pressedKeys.value.add(keysym);
       client.sendKeyEvent(1, keysym);
       lunaCommunicator.sendLuna(LUNA_MESSAGE_TYPE.KEYBOARDEVENT, '');
     };
     keyboard.onkeyup = (keysym: any) => {
+      if (keysym !== commandKeySym && isBlockedCombination(keysym)) {
+        console.warn('Keyup Blocked key combination detected:', keysym);
+        return;
+      }
+      pressedKeys.value.delete(keysym);
       client.sendKeyEvent(0, keysym);
     };
     display.getElement().appendChild(sink.getElement());
@@ -463,7 +528,7 @@ export function useGuacamoleClient(t: any) {
     const touchScreen = new Guacamole.Mouse.Touchscreen(display.getElement());
     const handleEmulatedMouseDown = (mouseState: any) => {
       // Emulate mouse down event
-      if (client || display) {
+      if (!client || !display) {
         return;
       }
       lunaCommunicator.sendLuna(LUNA_MESSAGE_TYPE.MOUSE_EVENT, '');
@@ -474,7 +539,7 @@ export function useGuacamoleClient(t: any) {
 
     const handleEmulatedMouseState = (mouseState: any) => {
       // Emulate mouse move/up event
-      if (client || display) {
+      if (!client || !display) {
         return;
       }
       lunaCommunicator.sendLuna(LUNA_MESSAGE_TYPE.MOUSE_EVENT, '');
@@ -823,7 +888,7 @@ export function useGuacamoleClient(t: any) {
     }
 
     // Guacamole 客户端验证
-    if (!guaClient.value || !guaClient.value.createClipboardStream) {
+    if (!guaClient.value) {
       const error = new Error('Guacamole client is not initialized');
       console.error('Upload failed:', error.message);
       message.error(t('GuacamoleClientNotInitialized'));
@@ -904,6 +969,7 @@ export function useGuacamoleClient(t: any) {
       // Set clipboard contents once stream is finished
       reader.onend = async () => {
         console.log('clipboard received from remote: ', data);
+        remoteClipboardText.value = data;
         if (navigator.clipboard) {
           await navigator.clipboard.writeText(data);
         }
@@ -1054,5 +1120,6 @@ export function useGuacamoleClient(t: any) {
     currentFolderFiles,
     fileFsLoading,
     currentGuacFsObject,
+    remoteClipboardText,
   };
 }

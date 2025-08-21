@@ -5,7 +5,7 @@ import { getShareSession } from '@/api/index';
 import { nextTick, onMounted, ref, computed, watch } from 'vue';
 import Osk from '@/components/Osk.vue';
 import { useGuacamoleClient } from '@/hooks/useGuacamoleClient';
-import SessionShare from '@/components/SessionShare.vue';
+import SessionShare from '@/components/SessionShare/index.vue';
 
 import { useWindowSize, useDebounceFn } from '@vueuse/core';
 

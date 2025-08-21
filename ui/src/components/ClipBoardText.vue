@@ -1,10 +1,11 @@
 <script lang="ts" setup>
-import { ref, computed, onMounted, nextTick } from 'vue';
+import { ref } from 'vue';
 import { readClipboardText } from '@/utils/clipboard';
 import { useDebounceFn } from '@vueuse/core';
-import { NInput, NButton, NSpace } from 'naive-ui';
+import { NInput } from 'naive-ui';
+import CardContainer from '@/components/CardContainer/index.vue';
 const emit = defineEmits(['update:text']);
-import { NSpin, useMessage } from 'naive-ui';
+import { useMessage } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
 const { t } = useI18n();
 // 内部输入值
@@ -24,7 +25,7 @@ const loadClipboardText = async () => {
     isLoading.value = true;
     const text = await readClipboardText();
     inputValue.value = text;
-    handleInput(text);
+    await handleInput(text);
   } catch (error) {
     console.log('Failed to read clipboard text:', error);
     // 可以添加用户友好的错误提示
@@ -55,19 +56,6 @@ const noSideSpace = (value: string) => {
   return !value.startsWith(' ') && !value.endsWith(' ') && !value.startsWith('\n');
 };
 
-const debouncedHiden = useDebounceFn(() => {
-  showRemoteText.value = false;
-}, 1000 * 5);
-
-const loadRemoteClipboardText = async () => {
-  if (!props.remoteText) {
-    message.warning('远程剪贴板未返回内容');
-    return;
-  }
-  showRemoteText.value = true;
-  debouncedHiden();
-};
-
 const size = {
   minRows: 4,
   maxRows: 6,
@@ -77,10 +65,10 @@ const maxlength = 1024 * 4;
 </script>
 
 <template>
-  <div>
-    <n-divider title-placement="left" dashed class="!mb-3 !mt-0">
-      <n-text depth="2" class="text-sm opacity-70"> {{ t('Clipboard') }} </n-text>
-    </n-divider>
+  <CardContainer :title="t('Clipboard')">
+    <n-form-item :label="t('ShowRemoteClip')" label-placement="left">
+      <n-switch v-model:value="showRemoteText" :disabled="props.disabled" />
+    </n-form-item>
     <n-input
       v-model:value="inputValue"
       @input="handleInput"
@@ -95,7 +83,18 @@ const maxlength = 1024 * 4;
       :disabled="props.disabled"
     >
     </n-input>
-  </div>
+    <n-form-item v-if="showRemoteText">
+      <n-input
+        :value="props.remoteText"
+        type="textarea"
+        :autosize="size"
+        readonly
+        placeholder=""
+        show-count
+        :disabled="props.disabled"
+      />
+    </n-form-item>
+  </CardContainer>
 </template>
 
 <!-- <template>
@@ -118,8 +117,8 @@ const maxlength = 1024 * 4;
 <!-- <n-space vertical> -->
 
 <!-- <n-space> -->
-<!-- <n-button 
-        @click="loadClipboardText" 
+<!-- <n-button
+        @click="loadClipboardText"
         type="primary"
         size="small"
       >

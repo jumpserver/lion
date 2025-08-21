@@ -78,6 +78,14 @@ func (r RDPConfiguration) GetGuacdConfiguration() guacd.Configuration {
 		adDomain = parts[0]
 	}
 
+	// 试图从 username@domain 格式的 username 中获取 AD 域的信息
+	if adDomain == "" && strings.Contains(username, `@`) {
+		adParts := strings.Split(username, `@`)
+		if len(adParts) >= 2 {
+			adDomain = adParts[len(adParts)-1]
+		}
+	}
+
 	conf.SetParameter(guacd.RDPUsername, username)
 	conf.SetParameter(guacd.RDPPassword, password)
 	if adDomain != "" {
