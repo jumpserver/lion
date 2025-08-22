@@ -79,12 +79,14 @@ func (r RDPConfiguration) GetGuacdConfiguration() guacd.Configuration {
 	}
 
 	// 试图从 username@domain 格式的 username 中获取 AD 域的信息
-	if adDomain == "" && strings.Contains(username, `@`) {
-		adParts := strings.Split(username, `@`)
-		if len(adParts) >= 2 {
-			adDomain = adParts[len(adParts)-1]
-		}
-	}
+	//if adDomain == "" && strings.Contains(username, `@`) {
+	//	adParts := strings.Split(username, `@`)
+	//	if len(adParts) >= 2 {
+	//		adDomain = adParts[len(adParts)-1]
+	//	}
+	//}
+	// domain 和 用户名 同时设置 AD 域的信息，freerdp 会连接失败
+	// domain 和 用户名 无法同时添加 AD 域 的信息
 
 	conf.SetParameter(guacd.RDPUsername, username)
 	conf.SetParameter(guacd.RDPPassword, password)
