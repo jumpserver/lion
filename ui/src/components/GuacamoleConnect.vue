@@ -181,6 +181,34 @@ export default {
       },
       sink: null,
       keyboard: null,
+      // 按键阻塞相关变量
+      commandKeySym: 65511,
+      controlKeySym: 65507,
+      pressedKeys: new Set(),
+      // 被阻塞的组合键
+      BLOCKED_KEY_COMBINATIONS: [
+        [65511, 112], // command + p
+        [65511, 117], // command + u
+        [65511, 105], // command + i
+        [65511, 107], // command + k
+        [65511, 108], // command + l
+        [65511, 120], // command + x
+        [65511, 65505, 112], // command + shift + p
+        [65511, 65505, 80], // command + shift + p 中文输入下
+        [65507, 65511, 109], // control + command + m
+        [65511, 80] // command + shift + p 中文输入下
+      ],
+      // 禁用 HTTP 协议下的组合键
+      HttpBlockedKeys: [
+        [65507, 104], // control + h
+        [65507, 106], // control + j
+        [65507, 110], // control + n
+        [65507, 116], // control + t
+        [65507, 117], // control + u
+        // [65507, 65505, 80], // control+shift + p
+        [65507, 65505, 79], // control+shift + o
+        [65507, 65505, 78] // control+shift + n
+      ],
       combinationKeys: [
         {
           keys: ['65307'],
@@ -276,6 +304,11 @@ export default {
     },
     isRemoteApp: function() {
       return this.session ? this.session.remote_app : false
+    },
+    isHttpProtocol: function() {
+      // 判断是否为HTTP协议，这里需要根据实际情况修改判断逻辑
+      // 例如可以从session信息或者其他地方获取协议信息
+      return this.session ? this.session.protocol === 'http' || this.session.protocol === 'https' : false
     },
     title: function() {
       if (this.isRemoteApp) {
@@ -398,6 +431,33 @@ export default {
       }
       return `${item} ${minuteLabel}`
     },
+    // 检查是否为被阻塞的组合键
+    isBlockedCombination(keysym) {
+      if (!this.isRemoteApp) {
+        return false
+      }
+      if (this.pressedKeys.size < 1) {
+        return false
+      }
+      const allPressedKeys = Array.from(this.pressedKeys).concat(keysym)
+
+      if (this.pressedKeys.has(this.commandKeySym)) {
+        for (const combination of this.BLOCKED_KEY_COMBINATIONS) {
+          if (combination.every((key) => allPressedKeys.includes(key))) {
+            return true
+          }
+        }
+      }
+
+      if (this.isHttpProtocol && this.pressedKeys.has(this.controlKeySym)) {
+        for (const combination of this.HttpBlockedKeys) {
+          if (combination.every((key) => allPressedKeys.includes(key))) {
+            return true
+          }
+        }
+      }
+      return false
+    },
     shareDialogClosed() {
       this.$log.debug('share dialog closed')
       this.loading = false
@@ -502,6 +562,8 @@ export default {
       window.onblur = () => {
         if (this.keyboard !== null) {
           this.keyboard.reset()
+          // 清空按下的键记录
+          this.pressedKeys.clear()
         }
       }
     },
@@ -1028,10 +1090,22 @@ export default {
       // Keyboard
       const keyboard = new Guacamole.Keyboard(sink.getElement())
       keyboard.onkeydown = (keysym) => {
+        // 检查是否为被阻塞的组合键
+        if (this.isBlockedCombination(keysym)) {
+          this.$log.debug('Blocked key combination detected, keysym:', keysym)
+          return
+        }
+
+        // 记录按下的键
+        this.pressedKeys.add(keysym)
+
         this.sendEventToLuna('KEYBOARDEVENT', '')
         this.client.sendKeyEvent(1, keysym)
       }
       keyboard.onkeyup = (keysym) => {
+        // 移除释放的键
+        this.pressedKeys.delete(keysym)
+
         this.sendEventToLuna('KEYBOARDEVENT', '')
         this.client.sendKeyEvent(0, keysym)
       }
