@@ -196,7 +196,7 @@ export default {
         [65511, 65505, 112], // command + shift + p
         [65511, 65505, 80], // command + shift + p 中文输入下
         [65507, 65511, 109], // control + command + m
-        [65511, 80], // command + shift + p 中文输入下
+        [65511, 80] // command + shift + p 中文输入下
       ],
       // 禁用 HTTP 协议下的组合键
       HttpBlockedKeys: [
@@ -207,7 +207,7 @@ export default {
         [65507, 117], // control + u
         // [65507, 65505, 80], // control+shift + p
         [65507, 65505, 79], // control+shift + o
-        [65507, 65505, 78], // control+shift + n
+        [65507, 65505, 78] // control+shift + n
       ],
       combinationKeys: [
         {
@@ -1095,17 +1095,17 @@ export default {
           this.$log.debug('Blocked key combination detected, keysym:', keysym)
           return
         }
-        
+
         // 记录按下的键
         this.pressedKeys.add(keysym)
-        
+
         this.sendEventToLuna('KEYBOARDEVENT', '')
         this.client.sendKeyEvent(1, keysym)
       }
       keyboard.onkeyup = (keysym) => {
         // 移除释放的键
         this.pressedKeys.delete(keysym)
-        
+
         this.sendEventToLuna('KEYBOARDEVENT', '')
         this.client.sendKeyEvent(0, keysym)
       }
