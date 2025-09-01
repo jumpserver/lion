@@ -1077,6 +1077,13 @@ export function useGuacamoleClient(t: any) {
     });
   };
 
+  const sendInputActive = () => {
+    if (!guaTunnel.value) {
+      return;
+    }
+    guaTunnel.value.sendMessage('INPUT_ACTIVE');
+  };
+
   return {
     guaClient,
     guaTunnel,
@@ -1121,5 +1128,6 @@ export function useGuacamoleClient(t: any) {
     fileFsLoading,
     currentGuacFsObject,
     remoteClipboardText,
+    sendInputActive,
   };
 }

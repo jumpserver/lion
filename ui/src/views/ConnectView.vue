@@ -1,11 +1,10 @@
 <script lang="ts" setup>
-import { nextTick, onMounted, onUnmounted, ref, watch, computed } from 'vue';
-import { useWindowSize } from '@vueuse/core';
-import { useDebounceFn } from '@vueuse/core';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { useDebounceFn, useWindowSize } from '@vueuse/core';
 import type { UploadCustomRequestOptions, UploadFileInfo, UploadSettledFileInfo } from 'naive-ui';
-import { NSpin, useMessage, NTabPane } from 'naive-ui';
+import { NDrawer, NDrawerContent, NSpin, NTabPane, useMessage } from 'naive-ui';
 import { useI18n } from 'vue-i18n';
-import { getCurrentConnectParams, BaseAPIURL } from '@/utils/common';
+import { getCurrentConnectParams } from '@/utils/common';
 import { lunaCommunicator } from '@/utils/lunaBus.ts';
 import { LUNA_MESSAGE_TYPE } from '@/types/postmessage.type';
 import ClipBoardText from '@/components/ClipBoardText.vue';
@@ -15,15 +14,14 @@ import { readClipboardText } from '@/utils/clipboard';
 import Osk from '@/components/Osk.vue';
 import KeyboardOption from '@/components/KeyboardOption.vue';
 import OtherOption from '@/components/OtherOption.vue';
-import { NDrawer, NDrawerContent } from 'naive-ui';
 import { FolderKanban, Keyboard as KeyboardIcon, Share2 } from 'lucide-vue-next';
-const message = useMessage();
-const { t } = useI18n();
-const { width, height } = useWindowSize();
-
 import { useGuacamoleClient } from '@/hooks/useGuacamoleClient';
 import { ErrorStatusCodes } from '@/utils/status';
 import CombinationKey from '@/components/CombinationKey.vue';
+
+const message = useMessage();
+const { t } = useI18n();
+const { width, height } = useWindowSize();
 
 const {
   guaDisplay,
@@ -50,6 +48,7 @@ const {
   enableShare,
   action_permission,
   remoteClipboardText,
+  sendInputActive,
 } = useGuacamoleClient(t);
 
 const apiPrefix = ref('');
@@ -208,7 +207,14 @@ onMounted(async () => {
       drawShow.value = !drawShow.value;
     });
   };
+  const handInputActive = (message: any) => {
+    console.log('Received Input active:', message);
+    nextTick(() => {
+      sendInputActive();
+    });
+  };
   lunaCommunicator.onLuna(LUNA_MESSAGE_TYPE.OPEN, handLunaOpen);
+  lunaCommunicator.onLuna(LUNA_MESSAGE_TYPE.INPUT_ACTIVE, handInputActive);
   const params = getCurrentConnectParams();
   wsPrefix.value = params.ws || '';
   apiPrefix.value = params.api || '';

@@ -78,6 +78,9 @@ export interface LunaMessageEvents {
   [LUNA_MESSAGE_TYPE.KEYBOARDEVENT]: {
     data: string;
   };
+  [LUNA_MESSAGE_TYPE.INPUT_ACTIVE]: {
+    data: string;
+  };
 }
 
 export interface LunaMessage {
@@ -170,4 +173,6 @@ export enum LUNA_MESSAGE_TYPE {
   MOUSE_EVENT = 'MOUSEEVENT',
 
   KEYBOARDEVENT = 'KEYBOARDEVENT',
+
+  INPUT_ACTIVE = 'INPUT_ACTIVE',
 }
