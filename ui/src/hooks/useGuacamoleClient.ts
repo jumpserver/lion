@@ -642,11 +642,17 @@ export function useGuacamoleClient(t: any) {
         break;
       case 2:
         connectStatus.value = 'Connected + waiting';
+        if (loading.value) {
+          requestAudioStream(guaClient.value);
+        }
+        loading.value = false;
         break;
       case 3:
-        loading.value = false;
         connectStatus.value = 'Connected';
-        requestAudioStream(guaClient.value);
+        if (loading.value) {
+          requestAudioStream(guaClient.value);
+        }
+        loading.value = false;
         break;
       case 4:
         connectStatus.value = 'Disconnecting';
@@ -683,7 +689,7 @@ export function useGuacamoleClient(t: any) {
     handleFolderOpen(defaultFolder);
   };
   const requestAudioStream = (client: any) => {
-    if (!client || !client.createClipboardStream) {
+    if (!client || !client.createAudioStream) {
       console.warn('Guacamole client is not initialized or does not support audio stream');
       return;
     }
