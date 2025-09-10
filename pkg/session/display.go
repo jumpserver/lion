@@ -33,6 +33,8 @@ var (
 	disableBitmapCaching     = DisplayParameter{Key: guacd.RDPDisableBitmapCaching, DefaultValue: "", valueType: Boolean}
 	disableOffscreenCaching  = DisplayParameter{Key: guacd.RDPDisableOffscreenCaching, DefaultValue: "", valueType: Boolean}
 	vncCursorRender          = DisplayParameter{Key: guacd.VNCCursor, DefaultValue: "", valueType: String}
+	enableConsoleAudio       = DisplayParameter{Key: guacd.RDPConsoleAudio, DefaultValue: "", valueType: Boolean}
+	enableAudioInput         = DisplayParameter{Key: guacd.RDPEnableAudioInput, DefaultValue: "", valueType: Boolean}
 )
 
 type Display struct {
@@ -68,6 +70,8 @@ var RDPDisplay = Display{data: map[string]DisplayParameter{
 	"JUMPSERVER_ENABLE_MENU_ANIMATIONS":     enableMenuAnimations,
 	"JUMPSERVER_DISABLE_BITMAP_CACHING":     disableBitmapCaching,
 	"JUMPSERVER_DISABLE_OFFSCREEN_CACHING":  disableOffscreenCaching,
+	"JUMPSERVER_ENABLE_CONSOLE_AUDIO":       enableConsoleAudio,
+	"JUMPSERVER_ENABLE_AUDIO_INPUT":         enableAudioInput,
 }}
 
 var VNCDisplay = Display{data: map[string]DisplayParameter{
