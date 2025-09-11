@@ -642,17 +642,11 @@ export function useGuacamoleClient(t: any) {
         break;
       case 2:
         connectStatus.value = 'Connected + waiting';
-        if (loading.value) {
-          requestAudioStream(guaClient.value);
-        }
-        loading.value = false;
         break;
       case 3:
         connectStatus.value = 'Connected';
-        if (loading.value) {
-          requestAudioStream(guaClient.value);
-        }
         loading.value = false;
+        requestAudioStream(guaClient.value);
         break;
       case 4:
         connectStatus.value = 'Disconnecting';
