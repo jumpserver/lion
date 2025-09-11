@@ -1,0 +1,64 @@
+FROM jumpserver/lion-base:20250818_063833 AS stage-build
+ARG TARGETARCH
+
+ARG GOPROXY=https://goproxy.io
+ENV CGO_ENABLED=0
+ENV GO111MODULE=on
+
+COPY . .
+
+WORKDIR /opt/lion/ui
+
+RUN yarn build
+
+WORKDIR /opt/lion/
+
+ARG VERSION
+ENV VERSION=$VERSION
+
+RUN export GOFlAGS="-X 'main.Buildstamp=`date -u '+%Y-%m-%d %I:%M:%S%p'`'" \
+    && export GOFlAGS="${GOFlAGS} -X 'main.Githash=`git rev-parse HEAD`'" \
+    && export GOFlAGS="${GOFlAGS} -X 'main.Goversion=`go version`'" \
+    && export GOFlAGS="${GOFlAGS} -X 'main.Version=${VERSION}'" \
+    && go build -trimpath -x -ldflags "$GOFlAGS" -o lion .
+
+RUN chmod +x entrypoint.sh
+
+FROM guacamole/guacd:1.6.0
+ARG TARGETARCH
+ENV LANG=en_US.UTF-8
+
+USER root
+
+ARG DEPENDENCIES="                    \
+        ca-certificates               \
+        supervisor                    \
+        curl                          \
+        iputils-ping                  \
+        vim                           \
+        wget"
+RUN set -ex \
+    && apk update \
+    && apk add ${DEPENDENCIES}
+
+WORKDIR /opt/lion
+
+COPY --from=stage-build /usr/local/bin/check /usr/local/bin/check
+COPY --from=stage-build /opt/lion/ui/dist ui/dist/
+COPY --from=stage-build /opt/lion/lion .
+COPY --from=stage-build /opt/lion/config_example.yml .
+COPY --from=stage-build /opt/lion/entrypoint.sh .
+COPY --from=stage-build /opt/lion/supervisord.conf /etc/supervisor/supervisord.conf
+
+ARG VERSION
+ENV VERSION=$VERSION
+
+VOLUME /opt/lion/data
+
+ENTRYPOINT ["./entrypoint.sh"]
+
+EXPOSE 8081
+
+STOPSIGNAL SIGQUIT
+
+CMD [ "supervisord", "-c", "/etc/supervisor/supervisord.conf" ]
