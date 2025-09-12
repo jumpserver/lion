@@ -12,7 +12,6 @@ declare module 'vue' {
     ClipBoardText: typeof import('./src/components/ClipBoardText.vue')['default']
     CombinationKey: typeof import('./src/components/CombinationKey.vue')['default']
     CreateLink: typeof import('./src/components/SessionShare/widget/CreateLink.vue')['default']
-    CreateShare: typeof import('./src/components/CreateShare.vue')['default']
     FileManager: typeof import('./src/components/FileManager.vue')['default']
     KeyboardOption: typeof import('./src/components/KeyboardOption.vue')['default']
     NButton: typeof import('naive-ui')['NButton']

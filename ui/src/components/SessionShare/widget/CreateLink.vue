@@ -10,7 +10,7 @@ import { useDebounceFn } from '@vueuse/core';
 export type TranslateFunction = Composer['t'];
 
 import { useColor } from '@/hooks/useColor';
-import { createShareURL, GetUsersInfo } from '@/api';
+import { createShareURL } from '@/api';
 import { writeToClipboard } from '@/utils/clipboard.ts';
 import { BASE_URL } from '@/utils/config.ts';
 const props = defineProps<{
@@ -61,21 +61,65 @@ const shareInfo = ref({
   shareURL: '',
 });
 const userOptions = ref<UserInfo[]>([]);
-const searchUsers = useDebounceFn(async (value: string) => {
-  if (value === '') {
+const currentQuery = ref<string>('');
+const currentPage = ref<number>(1);
+const hasMore = ref<boolean>(true);
+
+const searchUsers = useDebounceFn(async (value: string, isLoadMore: boolean = false) => {
+  if (value === '' && !isLoadMore) {
     searchLoading.value = false;
     return;
   }
-  userOptions.value = [];
+
+  // 如果是新搜索，重置状态
+  if (!isLoadMore || value !== currentQuery.value) {
+    currentQuery.value = value;
+    currentPage.value = 1;
+    userOptions.value = [];
+    hasMore.value = true;
+  }
+
   searchLoading.value = true;
+
   try {
-    const response = await GetUsersInfo(value).then((res: any) => res.json());
-    userOptions.value = response.filter((user: UserInfo) => {
-      const query = value.toLowerCase();
-      const caseInsensitiveMatch = (name: any, query: string) => name.toLowerCase().includes(query);
-      return caseInsensitiveMatch(user.name, query) || caseInsensitiveMatch(user.username, query);
+    // 修改API调用以支持分页参数
+    const params = new URLSearchParams({
+      action: 'suggestion',
+      search: currentQuery.value,
+      page: currentPage.value.toString(),
+      limit: '20', // 每页加载20条数据
     });
+
+    const response = await fetch(`${BASE_URL}/api/v1/users/users/?${params}`).then((res: any) =>
+      res.json(),
+    );
+
+    // 假设分页响应格式为：{ results: [...], count: number, next: string|null }
+    const newUsers = response.results || response; // 兼容非分页格式
+
+    if (isLoadMore && currentPage.value > 1) {
+      // 加载更多时追加数据
+      const filteredUsers = newUsers.filter((user: UserInfo) => {
+        const query = currentQuery.value.toLowerCase();
+        const caseInsensitiveMatch = (name: any, query: string) =>
+          name.toLowerCase().includes(query);
+        return caseInsensitiveMatch(user.name, query) || caseInsensitiveMatch(user.username, query);
+      });
+      userOptions.value = [...userOptions.value, ...filteredUsers];
+    } else {
+      // 新搜索时替换数据
+      userOptions.value = newUsers.filter((user: UserInfo) => {
+        const query = currentQuery.value.toLowerCase();
+        const caseInsensitiveMatch = (name: any, query: string) =>
+          name.toLowerCase().includes(query);
+        return caseInsensitiveMatch(user.name, query) || caseInsensitiveMatch(user.username, query);
+      });
+    }
+
+    // 检查是否还有更多数据
+    hasMore.value = response.next !== null && response.next !== undefined;
   } catch (error) {
+    console.error('Search users error:', error);
     message.error(t('NoUserFound'));
   } finally {
     searchLoading.value = false;
@@ -166,12 +210,18 @@ const renderTag: SelectRenderTag = ({ option, handleClose }) => {
   );
 };
 
-const handleSearch = (query: string) => {
-  searchLoading.value = true;
-  searchUsers(query);
+const scrollSearch = (e: Event) => {
+  const currentTarget = e.currentTarget as HTMLElement;
+  if (currentTarget.scrollTop + currentTarget.clientHeight >= currentTarget.scrollHeight - 10) {
+    // 到达底部，加载更多数据
+    if (!searchLoading.value && hasMore.value && currentQuery.value) {
+      currentPage.value += 1;
+      searchUsers(currentQuery.value, true);
+    }
+  }
 };
 
-const debounceSearch = useDebounceFn(handleSearch, 300);
+const debounceSearch = useDebounceFn((query: string) => searchUsers(query, false), 300);
 const handleChangeExpired = createSingleSelectHandler(
   expiredOptions,
   'value',
@@ -218,6 +268,7 @@ const handleCreateLink = () => {
       shareInfo.value.shareURL = generateShareURL(res.id, res.verify_code);
     })
     .catch((error: any) => {
+      console.error('Create share URL error:', error);
       message.error(t('CreateLinkFailed'));
     })
     .finally(() => {});
@@ -354,7 +405,8 @@ const resetShareState = () => {
           :clear-filter-after-select="false"
           :placeholder="t('GetShareUser')"
           @search="debounceSearch"
-          @focus="debounceSearch('')"
+          @scroll="scrollSearch"
+          @focus="() => debounceSearch('')"
         />
       </n-flex>
     </n-descriptions-item>
