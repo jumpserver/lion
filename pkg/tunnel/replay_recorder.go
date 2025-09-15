@@ -85,7 +85,8 @@ func (r *ReplayRecorder) WriteSessionMeta(t common.UTCTime) {
 }
 
 func (r *ReplayRecorder) IsConnectFailed() bool {
-	// 检测录像文件是否存在，且大小大于 1KB 只检测第一个录像文件大小
+	// 检测录像文件是否存在，且大小大于 5KB 只检测第一个录像文件大小
+	minSize := int64(1024) * 5
 	partFilename := r.GetPartFilenameByIndex(0)
 	partFilePath := filepath.Join(r.RootPath, partFilename)
 	fi, err := os.Stat(partFilePath)
@@ -97,7 +98,7 @@ func (r *ReplayRecorder) IsConnectFailed() bool {
 		logger.Warnf("ReplayRecorder %s part file %s is a directory, not connect failed", r.SessionId, partFilename)
 		return true
 	}
-	if fi.Size() <= 1024 {
+	if fi.Size() <= minSize {
 		logger.Infof("ReplayRecorder %s part file %s size %d < 1KB, not connect failed", r.SessionId, partFilename, fi.Size())
 		return true
 	}
