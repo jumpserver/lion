@@ -99,7 +99,7 @@ func (r *ReplayRecorder) IsConnectFailed() bool {
 		return true
 	}
 	if fi.Size() <= minSize {
-		logger.Infof("ReplayRecorder %s part file %s size %d < 1KB, not connect failed", r.SessionId, partFilename, fi.Size())
+		logger.Infof("ReplayRecorder %s part file %s size %d < 5KB, not connect failed", r.SessionId, partFilename, fi.Size())
 		return true
 	}
 	return false
