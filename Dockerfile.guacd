@@ -1,5 +1,4 @@
-FROM jumpserver/guacd:1.5.5-bullseye AS stage-guacd
-FROM jumpserver/lion-base:20250912_030316 AS stage-build
+FROM jumpserver/lion-base:20250818_063833 AS stage-build
 ARG TARGETARCH
 
 ARG GOPROXY=https://goproxy.io
@@ -25,30 +24,22 @@ RUN export GOFlAGS="-X 'main.Buildstamp=`date -u '+%Y-%m-%d %I:%M:%S%p'`'" \
 
 RUN chmod +x entrypoint.sh
 
-FROM debian:bullseye-slim
+FROM guacamole/guacd:1.6.0
 ARG TARGETARCH
 ENV LANG=en_US.UTF-8
 
+USER root
+
 ARG DEPENDENCIES="                    \
         ca-certificates               \
-        supervisor"
-
-ARG PREFIX_DIR=/opt/guacamole
-ENV LD_LIBRARY_PATH=${PREFIX_DIR}/lib
-
-COPY --from=stage-guacd ${PREFIX_DIR} ${PREFIX_DIR} 
-
-ARG APT_MIRROR=http://deb.debian.org
-
+        supervisor                    \
+        curl                          \
+        iputils-ping                  \
+        vim                           \
+        wget"
 RUN set -ex \
-    && sed -i "s@http://.*.debian.org@${APT_MIRROR}@g" /etc/apt/sources.list \
-    && ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends ${DEPENDENCIES} \
-    && apt-get install -y --no-install-recommends $(cat "${PREFIX_DIR}"/DEPENDENCIES) \
-    && apt-get clean all \
-    && rm -rf /var/lib/apt/lists/* \
-    && mkdir -p /lib32 /libx32
+    && apk update \
+    && apk add ${DEPENDENCIES}
 
 WORKDIR /opt/lion
 
@@ -57,7 +48,7 @@ COPY --from=stage-build /opt/lion/ui/dist ui/dist/
 COPY --from=stage-build /opt/lion/lion .
 COPY --from=stage-build /opt/lion/config_example.yml .
 COPY --from=stage-build /opt/lion/entrypoint.sh .
-COPY --from=stage-build /opt/lion/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY --from=stage-build /opt/lion/supervisord.conf /etc/supervisor/supervisord.conf
 
 ARG VERSION
 ENV VERSION=$VERSION

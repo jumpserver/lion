@@ -240,6 +240,7 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 					}
 					continue
 				}
+
 				if t.lockedStatus.Load() {
 					switch ret.Opcode {
 					case guacd.InstructionClientSync,
@@ -269,6 +270,12 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 					userInputMessageChan <- &session.Message{
 						Opcode: ret.Opcode, Body: ret.Args,
 						Meta: meta}
+				case "INPUT_ACTIVE":
+					select {
+					case activeChan <- struct{}{}:
+					default:
+					}
+					continue
 				default:
 
 				}
