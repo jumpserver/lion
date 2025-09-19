@@ -23,6 +23,10 @@ export const createThemeOverrides = (
   const hoverColor = alpha(0.12, '#FFFFFF');
 
   return {
+    common: {
+      fontSize: '13px',
+      fontFamily: 'Open Sans',
+    },
     Tabs: {
       tabPaddingVerticalSmallLine: '6px 12px 6px 0',
     },
