@@ -385,7 +385,7 @@ const tableHeight = computed(() => {
         <n-upload
           v-model:file-list="uploadFileList"
           abstract
-          :multiple="false"
+          :multiple="true"
           :show-retry-button="false"
           @finish="handleUploadFinish"
           @error="handleUploadError"
