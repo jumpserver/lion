@@ -3,8 +3,8 @@ module lion
 go 1.24.6
 
 require (
-	github.com/Azure/azure-storage-blob-go v0.13.0
-	github.com/aliyun/aliyun-oss-go-sdk v2.2.8+incompatible
+	github.com/Azure/azure-storage-blob-go v0.15.0
+	github.com/aliyun/aliyun-oss-go-sdk v3.0.2+incompatible
 	github.com/aws/aws-sdk-go v1.44.306
 	github.com/elastic/go-elasticsearch/v6 v6.8.10
 	github.com/elastic/go-elasticsearch/v8 v8.14.0
@@ -12,8 +12,8 @@ require (
 	github.com/gin-gonic/gin v1.9.1
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/gorilla/websocket v1.5.3
-	github.com/huaweicloud/huaweicloud-sdk-go-obs v3.21.8+incompatible
-	github.com/jumpserver-dev/sdk-go v0.0.0-20250707090713-6ced19466bc6
+	github.com/huaweicloud/huaweicloud-sdk-go-obs v3.25.4+incompatible
+	github.com/jumpserver-dev/sdk-go v0.0.0-20250925081620-d22b2b8e24d1
 	github.com/spf13/viper v1.21.0
 	golang.org/x/crypto v0.42.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
@@ -78,7 +78,7 @@ require (
 	golang.org/x/net v0.43.0 // indirect
 	golang.org/x/sys v0.36.0 // indirect
 	golang.org/x/text v0.29.0 // indirect
-	golang.org/x/time v0.6.0 // indirect
+	golang.org/x/time v0.12.0 // indirect
 	google.golang.org/protobuf v1.34.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

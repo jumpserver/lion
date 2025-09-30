@@ -141,10 +141,7 @@ func NewFTPFileStorage(jmsService *service.JMService, cfg model.ReplayConfig) FT
 
 func NewCommandStorage(jmsService *service.JMService, conf *model.TerminalConfig) CommandStorage {
 	cf := conf.CommandStorage
-	tp, ok := cf["TYPE"]
-	if !ok {
-		tp = "server"
-	}
+	tp := cf.TypeName
 	/*
 		{
 		'DOC_TYPE': 'command',
@@ -156,17 +153,13 @@ func NewCommandStorage(jmsService *service.JMService, conf *model.TerminalConfig
 	*/
 	switch tp {
 	case "es", "elasticsearch":
-		var hosts = make([]string, len(cf["HOSTS"].([]interface{})))
-		for i, item := range cf["HOSTS"].([]interface{}) {
-			hosts[i] = item.(string)
-		}
-		var skipVerify bool
-		index := cf["INDEX"].(string)
-		docType := cf["DOC_TYPE"].(string)
-		if otherMap, ok := cf["OTHER"].(map[string]interface{}); ok {
-			if insecureSkipVerify, ok := otherMap["IGNORE_VERIFY_CERTS"]; ok {
-				skipVerify = insecureSkipVerify.(bool)
-			}
+		hosts := make([]string, len(cf.Hosts))
+		copy(hosts, cf.Hosts)
+		skipVerify := false
+		index := cf.Index
+		docType := cf.DocType
+		if cf.Other != nil {
+			skipVerify = cf.Other.IgnoreVerifyCerts
 		}
 		if index == "" {
 			index = "jumpserver"
