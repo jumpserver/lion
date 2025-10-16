@@ -154,7 +154,7 @@ func (p *PartUploader) Start() {
 			}
 			// 存储一份 meta 文件
 			metaBuf, _ := json.Marshal(meta)
-			_ = os.WriteFile(filepath.Join(uploadPath, partFile.Name()+".meta"), metaBuf, os.ModePerm)
+			_ = os.WriteFile(filepath.Join(p.RootPath, partFile.Name()+".meta"), metaBuf, os.ModePerm)
 			partFileMeta.PartMeta = meta
 		}
 		p.replayMeta.PartMetas = append(p.replayMeta.PartMetas, partFileMeta)

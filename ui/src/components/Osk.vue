@@ -110,6 +110,36 @@ const setLayout = (layoutName: string) => {
     emit('keyboardChange', 'keyup', key);
   };
 };
+
+// 触摸事件
+const handleTouchStart = (e: TouchEvent) => {
+  if (e.touches.length !== 1) return
+  isDragging.value = true
+  const touch = e.touches[0]
+  dragStartX.value = touch.clientX - keyboardPosition.value.x
+  dragStartY.value = touch.clientY - keyboardPosition.value.y
+}
+
+const handleTouchMove = (e: TouchEvent) => {
+  if (!isDragging.value || e.touches.length !== 1) return
+  const touch = e.touches[0]
+  keyboardPosition.value.x = touch.clientX - dragStartX.value;
+  keyboardPosition.value.y = touch.clientY - dragStartY.value;
+
+  // 限制拖动范围，确保不会拖到屏幕外
+  keyboardPosition.value.x = Math.max(
+    0,
+    Math.min(window.innerWidth - 400, keyboardPosition.value.x),
+  );
+  keyboardPosition.value.y = Math.max(
+    0,
+    Math.min(window.innerHeight - 200, keyboardPosition.value.y),
+  );
+}
+
+const handleTouchEnd = () => {
+  isDragging.value = false
+}
 </script>
 
 <template>
@@ -121,6 +151,9 @@ const setLayout = (layoutName: string) => {
       cursor: isDragging ? 'grabbing' : 'grab',
     }"
     @mousedown="handleMouseDown"
+    @touchstart="handleTouchStart"
+    @touchmove="handleTouchMove"
+    @touchend="handleTouchEnd"
   >
     <!-- 拖动手柄 -->
     <div class="drag-handle">
@@ -145,6 +178,7 @@ const setLayout = (layoutName: string) => {
   z-index: 9999;
   user-select: none;
   border: 2px solid #666;
+  touch-action: none;
 }
 
 .draggable-keyboard:hover {
