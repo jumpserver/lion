@@ -144,3 +144,19 @@ func ValidateSecurityValue(security string) bool {
 	}
 	return false
 }
+
+const (
+	AuthPkgAny      = ""
+	AuthPkgNtlm     = "ntlm"
+	AuthPkgKerberos = "kerberos"
+)
+
+func ValidateAuthPkgValue(authPkg string) bool {
+	switch authPkg {
+	case AuthPkgAny,
+		AuthPkgNtlm,
+		AuthPkgKerberos:
+		return true
+	}
+	return false
+}

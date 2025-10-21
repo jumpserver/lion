@@ -139,6 +139,8 @@ func (r RDPConfiguration) GetGuacdConfiguration() guacd.Configuration {
 
 	// 平台中的设置
 	rdpSecurityValue := SecurityAny
+	rdpAuthPkgValue := AuthPkgAny
+	var rdpKdcURLValue string
 	if r.Platform != nil {
 		if rdpSettings, ok := r.Platform.GetProtocolSetting(rdp); ok {
 			if ValidateSecurityValue(rdpSettings.GetSetting().Security) {
@@ -147,9 +149,21 @@ func (r RDPConfiguration) GetGuacdConfiguration() guacd.Configuration {
 			if rdpSettings.GetSetting().Console {
 				conf.SetParameter(guacd.RDPConsole, BoolTrue)
 			}
+			if v, ok := rdpSettings.Setting["auth_pkg"]; ok {
+				if s, ok := v.(string); ok && ValidateAuthPkgValue(s) {
+					rdpAuthPkgValue = s
+				}
+			}
+			if v, ok := rdpSettings.Setting["kdc_url"]; ok {
+				if s, ok := v.(string); ok && s != "" {
+					rdpKdcURLValue = s
+				}
+			}
 		}
 	}
 	conf.SetParameter(guacd.RDPSecurity, rdpSecurityValue)
+	conf.SetParameter(guacd.RDPAuthPkg, rdpAuthPkgValue)
+	conf.SetParameter(guacd.RDPKdcURL, rdpKdcURLValue)
 	conf.SetParameter(guacd.RDPIgnoreCert, BoolTrue)
 
 	// 设置客户端名称，任务管理器--用户---客户端名称显示

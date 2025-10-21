@@ -13,6 +13,8 @@ const (
 	RDPPassword    = "password"
 	RDPDomain      = "domain"
 	RDPSecurity    = "security" // any | nla | nla-ext | tls | vmconnect | rdp
+	RDPAuthPkg     = "auth-pkg" // any | ntlm | kerberos
+	RDPKdcURL      = "kdc-url"
 	RDPIgnoreCert  = "ignore-cert"
 	RDPDisableAuth = "disable-auth"
 )
