@@ -84,13 +84,12 @@ const searchUsers = useDebounceFn(async (value: string, isLoadMore: boolean = fa
   try {
     // 修改API调用以支持分页参数
     const params = new URLSearchParams({
-      action: 'suggestion',
       search: currentQuery.value,
       page: currentPage.value.toString(),
-      limit: '20', // 每页加载20条数据
+      limit: '10', // 每页加载10条数据
     });
 
-    const response = await fetch(`${BASE_URL}/api/v1/users/users/?${params}`).then((res: any) =>
+    const response = await fetch(`${BASE_URL}/api/v1/users/users/suggestions/?${params}`).then((res: any) =>
       res.json(),
     );
 
