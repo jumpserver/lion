@@ -282,15 +282,12 @@ export function useGuacamoleClient(t: any) {
     const displayEl = display.getElement();
 
     const handleMouseEnter = () => {
-      if (displayEl) displayEl.style.cursor = 'none';
-      display.showCursor(true);
       document.body.focus();
       nextTick(() => {
         sink.focus();
       });
     };
     const handleMouseLeave = () => {
-      if (displayEl) displayEl.style.cursor = 'default';
       nextTick(() => {
         keyboard.reset();
       });
