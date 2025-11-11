@@ -128,7 +128,7 @@ func getDefaultConfig() Config {
 		EnableRemoteAppUpDownLoad: false,
 		EnableRemoteAPPCopyPaste:  false,
 		CleanDriveScheduleTime:    1,
-		PandaHost:                 "http://localhost:9001",
+		PandaHost:                 "http://panda:9001",
 		ReplayMaxSize:             defaultMaxSize,
 	}
 
