@@ -9,7 +9,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"lion/pkg/guacd"
 	"lion/pkg/logger"
 	"lion/pkg/storage"
 
@@ -17,7 +16,6 @@ import (
 	"github.com/jumpserver-dev/sdk-go/model"
 	"github.com/jumpserver-dev/sdk-go/service"
 	"github.com/jumpserver-dev/sdk-go/service/panda"
-	"github.com/jumpserver-dev/sdk-go/service/videoworker"
 )
 
 const (
@@ -43,8 +41,6 @@ var (
 
 type Server struct {
 	JmsService *service.JMService
-
-	VideoWorkerClient *videoworker.Client
 
 	PandaClient *panda.Client
 }
@@ -385,26 +381,6 @@ func (s *Server) RegisterDisConnectedCallback(sess model.Session) func() error {
 }
 
 const ReplayFileNameSuffix = ".replay.gz"
-
-func (s *Server) UploadReplayToVideoWorker(tunnel TunnelSession, info guacd.ClientInformation,
-	dstReplayFilePath string) bool {
-	task, err := s.VideoWorkerClient.CreateReplayTask(tunnel.ID, dstReplayFilePath,
-		videoworker.ReplayMeta{
-			SessionId:     tunnel.ID,
-			ComponentType: "lion",
-			FileType:      ".gz",
-			SessionDate:   tunnel.Created.Format("2006-01-02"),
-			Width:         info.OptimalScreenWidth,
-			Height:        info.OptimalScreenHeight,
-			Bitrate:       1,
-		})
-	if err != nil {
-		logger.Errorf("video worker create replay task failed: %s", err)
-		return false
-	}
-	logger.Infof("video worker create task success: %+v", task)
-	return true
-}
 
 func (s *Server) RecordLifecycleLog(sid string, event model.LifecycleEvent, logObj model.SessionLifecycleLog) {
 	if err := s.JmsService.RecordSessionLifecycleLog(sid, event, logObj); err != nil {

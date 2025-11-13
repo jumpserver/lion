@@ -113,6 +113,7 @@ func (r *ReplayRecorder) Stop() {
 		SessionId: r.SessionId,
 		ApiClient: r.apiClient,
 		TermCfg:   r.tunnelSession.TerminalConfig,
+		Info:      r.info,
 	}
 
 	// 检测会话文件大小是否满足录像要求，否则判断连接失败，不上传录像文件。
