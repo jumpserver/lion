@@ -130,6 +130,7 @@ func getDefaultConfig() Config {
 		CleanDriveScheduleTime:    1,
 		PandaHost:                 "http://panda:9001",
 		ReplayMaxSize:             defaultMaxSize,
+		VideoWorkerHost:           "http://video:9000",
 	}
 
 }
