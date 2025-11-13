@@ -1,4 +1,4 @@
-FROM jumpserver/guacd:1.5.5-bullseye AS stage-guacd
+FROM jumpserver/guacd:1.6.0-trixie AS stage-guacd
 FROM jumpserver/lion-base:20251009_081248 AS stage-build
 ARG TARGETARCH
 
@@ -25,7 +25,7 @@ RUN export GOFlAGS="-X 'main.Buildstamp=`date -u '+%Y-%m-%d %I:%M:%S%p'`'" \
 
 RUN chmod +x entrypoint.sh
 
-FROM debian:bullseye-slim
+FROM debian:trixie-slim
 ARG TARGETARCH
 ENV LANG=en_US.UTF-8
 
