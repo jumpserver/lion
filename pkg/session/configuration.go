@@ -141,10 +141,11 @@ func (r RDPConfiguration) GetGuacdConfiguration() guacd.Configuration {
 	rdpSecurityValue := SecurityAny
 	if r.Platform != nil {
 		if rdpSettings, ok := r.Platform.GetProtocolSetting(rdp); ok {
-			if ValidateSecurityValue(rdpSettings.Setting.Security) {
-				rdpSecurityValue = rdpSettings.Setting.Security
+			setObj := rdpSettings.GetSetting()
+			if setObj.Security != "" {
+				rdpSecurityValue = setObj.Security
 			}
-			if rdpSettings.Setting.Console {
+			if setObj.Console {
 				conf.SetParameter(guacd.RDPConsole, BoolTrue)
 			}
 		}
