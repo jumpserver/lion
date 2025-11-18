@@ -7,16 +7,19 @@ import { useMessage, NTag } from 'naive-ui';
 import { computed, h, reactive, ref, watch } from 'vue';
 import type { Composer } from 'vue-i18n';
 import { useDebounceFn } from '@vueuse/core';
+import { useClipboard } from '@vueuse/core';
+
 export type TranslateFunction = Composer['t'];
 
 import { useColor } from '@/hooks/useColor';
 import { createShareURL } from '@/api';
-import { writeToClipboard } from '@/utils/clipboard.ts';
 import { BASE_URL } from '@/utils/config.ts';
 const props = defineProps<{
   session: string;
   disabledCreateLink: boolean;
 }>();
+
+const { copy } = useClipboard({ legacy: true });
 const getMinuteLabel = (item: number, t: TranslateFunction): string => {
   let minuteLabel = t('Minute');
   if (item > 1) {
@@ -89,8 +92,8 @@ const searchUsers = useDebounceFn(async (value: string, isLoadMore: boolean = fa
       limit: '10', // 每页加载10条数据
     });
 
-    const response = await fetch(`${BASE_URL}/api/v1/users/users/suggestions/?${params}`).then((res: any) =>
-      res.json(),
+    const response = await fetch(`${BASE_URL}/api/v1/users/users/suggestions/?${params}`).then(
+      (res: any) => res.json(),
     );
 
     // 假设分页响应格式为：{ results: [...], count: number, next: string|null }
@@ -290,8 +293,13 @@ const handleCopyShareURL = () => {
   const linkTitle = t('LinkAddr');
   const codeTitle = t('VerifyCode');
   const text = `${linkTitle}: ${url}\n${codeTitle}: ${shareCode}`;
-  writeToClipboard(text);
-  message.info(t('CopyShareURLSuccess'));
+  copy(text)
+    .then(() => {
+      message.info(t('CopyShareURLSuccess'));
+    })
+    .catch((err) => {
+      console.log('copy share url err: ', err);
+    });
 };
 
 /**

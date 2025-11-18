@@ -10,10 +10,9 @@ export const alovaInstance = createAlova({
 const getSuggestionUsers = (query: string) => {
   const params = {
     search: query,
-  }
+  };
   return alovaInstance.Get('/api/v1/users/users/suggestions/', { params: params });
-}
-
+};
 
 const createShareURL = (data: any) => {
   return alovaInstance.Post(`/lion/api/share/`, data);
