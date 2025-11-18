@@ -221,6 +221,7 @@ onMounted(async () => {
   const token = params['data'].token || '';
   const param = {
     TOKEN_ID: encodeURIComponent(token),
+    GUAC_KEYBOARD: keyboardLayout.value,
   };
   connectToGuacamole(wsPrefix.value, param, window.innerWidth, window.innerHeight, true);
   const displayEl = document.getElementById('display');
