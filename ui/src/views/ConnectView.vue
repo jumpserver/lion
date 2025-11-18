@@ -281,7 +281,7 @@ const getKeyboardLayout = () => {
   if (lunaSetting) {
     const setting = JSON.parse(lunaSetting);
     const graphics = setting['graphics'] || {};
-    const keyboardLayout = graphics['keyboardLayout'] || setting['keyboardLayout'];
+    const keyboardLayout = graphics['keyboard_layout'] || setting['keyboard_layout'];
     if (keyboardLayout) {
       return keyboardLayout;
     }
