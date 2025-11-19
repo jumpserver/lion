@@ -13,7 +13,7 @@ require (
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/gorilla/websocket v1.5.3
 	github.com/huaweicloud/huaweicloud-sdk-go-obs v3.25.4+incompatible
-	github.com/jumpserver-dev/sdk-go v0.0.0-20251113100002-8cc2e224e537
+	github.com/jumpserver-dev/sdk-go v0.0.0-20251119062736-f025e5399a93
 	github.com/spf13/viper v1.21.0
 	golang.org/x/crypto v0.42.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0

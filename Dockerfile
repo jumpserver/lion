@@ -1,5 +1,5 @@
 FROM jumpserver/guacd:1.6.0-trixie AS stage-guacd
-FROM jumpserver/lion-base:20251118_090210 AS stage-build
+FROM jumpserver/lion-base:20251119_063218 AS stage-build
 ARG TARGETARCH
 
 ARG GOPROXY=https://goproxy.io
