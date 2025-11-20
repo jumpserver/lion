@@ -3,6 +3,7 @@ package tunnel
 import (
 	"bufio"
 	"encoding/json"
+	"lion/pkg/config"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -16,6 +17,7 @@ import (
 	"github.com/jumpserver-dev/sdk-go/common"
 	"github.com/jumpserver-dev/sdk-go/model"
 	"github.com/jumpserver-dev/sdk-go/service"
+	"github.com/jumpserver-dev/sdk-go/service/videoworker"
 )
 
 /*
@@ -54,6 +56,8 @@ type PartUploader struct {
 
 	replayMeta SessionReplayMeta
 	partFiles  []os.DirEntry
+
+	Info guacd.ClientInformation
 }
 
 func (p *PartUploader) preCheckSessionMeta() error {
@@ -193,6 +197,25 @@ func (p *PartUploader) GetStorage() storage.ReplayStorage {
 const recordDirTimeFormat = "2006-01-02"
 
 func (p *PartUploader) uploadToStorage(uploadPath string) {
+	// check whether to use ENABLE_VIDEO_WORKER
+	if videoWorkerClient := NewWorkerClient(*config.GlobalConfig); videoWorkerClient != nil {
+		taskCfg := videoworker.TaskConfig{
+			Width:   p.Info.OptimalScreenWidth,
+			Height:  p.Info.OptimalScreenHeight,
+			Bitrate: 1,
+		}
+		taskId, err := videoWorkerClient.CreateReplaySessionTask(p.SessionId, uploadPath, &taskCfg)
+		if err == nil {
+			logger.Infof("Create replay session VideoWorker task success, task id: %s", taskId)
+			if err = os.RemoveAll(p.RootPath); err != nil {
+				logger.Errorf("PartUploader %s remove root path %s error: %v", p.SessionId, p.RootPath, err)
+			}
+			return
+		}
+		// videoWorkerClient failed then try to use self storage to upload
+		logger.Errorf("Create replay session task error: %v, try to use self storage", err)
+	}
+
 	// 上传到存储
 	uploadFiles, err := os.ReadDir(uploadPath)
 	if err != nil {
@@ -310,4 +333,22 @@ func LoadPartReplayTime(partFile string) (startTime int64, endTime int64, err er
 		}
 	}
 	return startTime, endTime, nil
+}
+
+func NewWorkerClient(cfg config.Config) *videoworker.WorkClient {
+	if !cfg.EnableVideoWorker {
+		return nil
+	}
+	workerURL := cfg.VideoWorkerHost
+	var key model.AccessKey
+	if err := key.LoadFromFile(cfg.AccessKeyFilePath); err != nil {
+		logger.Errorf("Create video worker client failed: loading access key err %s", err)
+		return nil
+	}
+	workClient := videoworker.NewClient(workerURL, key, cfg.IgnoreVerifyCerts)
+	if workClient == nil {
+		logger.Errorf("Create video worker client failed: worker url %s", workerURL)
+		return nil
+	}
+	return workClient
 }

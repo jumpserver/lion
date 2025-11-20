@@ -221,6 +221,7 @@ onMounted(async () => {
   const token = params['data'].token || '';
   const param = {
     TOKEN_ID: encodeURIComponent(token),
+    GUAC_KEYBOARD: keyboardLayout.value,
   };
   connectToGuacamole(wsPrefix.value, param, window.innerWidth, window.innerHeight, true);
   const displayEl = document.getElementById('display');
@@ -280,7 +281,7 @@ const getKeyboardLayout = () => {
   if (lunaSetting) {
     const setting = JSON.parse(lunaSetting);
     const graphics = setting['graphics'] || {};
-    const keyboardLayout = graphics['keyboardLayout'] || setting['keyboardLayout'];
+    const keyboardLayout = graphics['keyboard_layout'] || setting['keyboard_layout'];
     if (keyboardLayout) {
       return keyboardLayout;
     }

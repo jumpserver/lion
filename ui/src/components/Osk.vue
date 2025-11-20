@@ -113,16 +113,16 @@ const setLayout = (layoutName: string) => {
 
 // 触摸事件
 const handleTouchStart = (e: TouchEvent) => {
-  if (e.touches.length !== 1) return
-  isDragging.value = true
-  const touch = e.touches[0]
-  dragStartX.value = touch.clientX - keyboardPosition.value.x
-  dragStartY.value = touch.clientY - keyboardPosition.value.y
-}
+  if (e.touches.length !== 1) return;
+  isDragging.value = true;
+  const touch = e.touches[0];
+  dragStartX.value = touch.clientX - keyboardPosition.value.x;
+  dragStartY.value = touch.clientY - keyboardPosition.value.y;
+};
 
 const handleTouchMove = (e: TouchEvent) => {
-  if (!isDragging.value || e.touches.length !== 1) return
-  const touch = e.touches[0]
+  if (!isDragging.value || e.touches.length !== 1) return;
+  const touch = e.touches[0];
   keyboardPosition.value.x = touch.clientX - dragStartX.value;
   keyboardPosition.value.y = touch.clientY - dragStartY.value;
 
@@ -135,11 +135,11 @@ const handleTouchMove = (e: TouchEvent) => {
     0,
     Math.min(window.innerHeight - 200, keyboardPosition.value.y),
   );
-}
+};
 
 const handleTouchEnd = () => {
-  isDragging.value = false
-}
+  isDragging.value = false;
+};
 </script>
 
 <template>

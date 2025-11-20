@@ -30,7 +30,6 @@ import (
 	"github.com/jumpserver-dev/sdk-go/model"
 	"github.com/jumpserver-dev/sdk-go/service"
 	"github.com/jumpserver-dev/sdk-go/service/panda"
-	"github.com/jumpserver-dev/sdk-go/service/videoworker"
 )
 
 var (
@@ -62,7 +61,6 @@ func main() {
 	config.Setup(configPath)
 	logger.SetupLogger(config.GlobalConfig)
 	jmsService := MustJMService()
-	videoWorkerClient := NewWorkerClient(*config.GlobalConfig)
 	pandaClient := NewPandaClient(*config.GlobalConfig)
 	bootstrap(jmsService)
 	tunnelService := tunnel.GuacamoleTunnelServer{
@@ -71,8 +69,7 @@ func main() {
 		},
 		JmsService: jmsService,
 		SessionService: &session.Server{JmsService: jmsService,
-			VideoWorkerClient: videoWorkerClient,
-			PandaClient:       pandaClient},
+			PandaClient: pandaClient},
 	}
 	eng := registerRouter(jmsService, &tunnelService)
 	go runHeartTask(jmsService, tunnelService.Cache)
@@ -630,24 +627,6 @@ func MustValidKey(key model.AccessKey) model.AccessKey {
 	logger.Error("校验 access key failed退出")
 	os.Exit(1)
 	return key
-}
-
-func NewWorkerClient(cfg config.Config) *videoworker.Client {
-	if !cfg.EnableVideoWorker {
-		return nil
-	}
-	workerURL := cfg.VideoWorkerHost
-	var key model.AccessKey
-	if err := key.LoadFromFile(cfg.AccessKeyFilePath); err != nil {
-		logger.Errorf("Create video worker client failed: loading access key err %s", err)
-		return nil
-	}
-	workClient := videoworker.NewClient(workerURL, key, cfg.IgnoreVerifyCerts)
-	if workClient == nil {
-		logger.Errorf("Create video worker client failed: worker url %s", workerURL)
-		return nil
-	}
-	return workClient
 }
 
 func NewPandaClient(cfg config.Config) *panda.Client {
