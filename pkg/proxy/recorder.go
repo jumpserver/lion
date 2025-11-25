@@ -9,11 +9,11 @@ import (
 
 	"lion/pkg/config"
 	"lion/pkg/logger"
-	"lion/pkg/storage"
 
 	"github.com/jumpserver-dev/sdk-go/common"
 	"github.com/jumpserver-dev/sdk-go/model"
 	"github.com/jumpserver-dev/sdk-go/service"
+	"github.com/jumpserver-dev/sdk-go/storage"
 )
 
 const (
