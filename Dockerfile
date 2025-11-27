@@ -1,4 +1,4 @@
-FROM jumpserver/guacd:1.5.5-bullseye AS stage-guacd
+FROM jumpserver/guacd:1.6.0-trixie-dev AS stage-guacd
 FROM jumpserver/lion-base:20251125_031411 AS stage-build
 ARG TARGETARCH
 
@@ -25,7 +25,7 @@ RUN export GOFlAGS="-X 'main.Buildstamp=`date -u '+%Y-%m-%d %I:%M:%S%p'`'" \
 
 RUN chmod +x entrypoint.sh
 
-FROM debian:bullseye-slim
+FROM debian:trixie-slim
 ARG TARGETARCH
 ENV LANG=en_US.UTF-8
 
@@ -41,7 +41,7 @@ COPY --from=stage-guacd ${PREFIX_DIR} ${PREFIX_DIR}
 ARG APT_MIRROR=http://deb.debian.org
 
 RUN set -ex \
-    && sed -i "s@http://.*.debian.org@${APT_MIRROR}@g" /etc/apt/sources.list \
+    && sed -i "s@http://.*.debian.org@${APT_MIRROR}@g" /etc/apt/sources.list.d/debian.sources \
     && ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
     && apt-get update \
     && apt-get install -y --no-install-recommends ${DEPENDENCIES} \
