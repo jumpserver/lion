@@ -27,7 +27,7 @@ RUN chmod +x entrypoint.sh
 FROM jumpserver/guacd:1.6.0-trixie-dev
 ARG TARGETARCH
 ENV LANG=en_US.UTF-8
-
+USER root
 ARG DEPENDENCIES="                    \
         ca-certificates               \
         supervisor"
