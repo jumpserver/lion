@@ -1,4 +1,3 @@
-FROM jumpserver/guacd:1.6.0-trixie-dev AS stage-guacd
 FROM jumpserver/lion-base:20251125_031411 AS stage-build
 ARG TARGETARCH
 
@@ -25,7 +24,7 @@ RUN export GOFlAGS="-X 'main.Buildstamp=`date -u '+%Y-%m-%d %I:%M:%S%p'`'" \
 
 RUN chmod +x entrypoint.sh
 
-FROM debian:trixie-slim
+FROM jumpserver/guacd:1.6.0-trixie-dev
 ARG TARGETARCH
 ENV LANG=en_US.UTF-8
 
@@ -35,8 +34,6 @@ ARG DEPENDENCIES="                    \
 
 ARG PREFIX_DIR=/opt/guacamole
 ENV LD_LIBRARY_PATH=${PREFIX_DIR}/lib
-
-COPY --from=stage-guacd ${PREFIX_DIR} ${PREFIX_DIR} 
 
 ARG APT_MIRROR=http://deb.debian.org
 
