@@ -105,6 +105,30 @@ func (r *ReplayRecorder) IsConnectFailed() bool {
 	return false
 }
 
+func (r *ReplayRecorder) CleanFailedPartFileReplay() {
+	// 删除后续异常的文件
+	minSize := int64(1024) * 5
+	for i := 0; i < r.currentIndex; i++ {
+		partFilename := r.GetPartFilenameByIndex(i)
+		partFilePath := filepath.Join(r.RootPath, partFilename)
+		fi, err := os.Stat(partFilePath)
+		if err != nil {
+			logger.Errorf("ReplayRecorder %s get part file %s error: %v", r.SessionId, partFilename, err)
+			continue
+		}
+		if fi.IsDir() {
+			continue
+		}
+		if fi.Size() <= minSize {
+			logger.Infof("ReplayRecorder %s part file %s size < 5KB, remove it and its meta file",
+				r.SessionId, partFilename)
+			partMeatFilePath := partFilePath + MetaSuffix
+			_ = os.Remove(partFilePath)
+			_ = os.Remove(partMeatFilePath)
+		}
+	}
+}
+
 func (r *ReplayRecorder) Stop() {
 	r.wg.Wait()
 	r.WriteSessionMeta(common.NewNowUTCTime())
@@ -124,6 +148,7 @@ func (r *ReplayRecorder) Stop() {
 		}
 		return
 	}
+	r.CleanFailedPartFileReplay()
 	go uploader.Start()
 	logger.Infof("Replay recorder %s stop and uploading replay parts", r.SessionId)
 }
