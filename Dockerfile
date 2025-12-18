@@ -24,7 +24,7 @@ RUN export GOFlAGS="-X 'main.Buildstamp=`date -u '+%Y-%m-%d %I:%M:%S%p'`'" \
 
 RUN chmod +x entrypoint.sh
 
-FROM jumpserver/guacd:1.6.0-trixie-dev
+FROM jumpserver/guacd:1.5.5-bullseye
 ARG TARGETARCH
 ENV LANG=en_US.UTF-8
 USER root
@@ -38,7 +38,7 @@ ENV LD_LIBRARY_PATH=${PREFIX_DIR}/lib
 ARG APT_MIRROR=http://deb.debian.org
 
 RUN set -ex \
-    && sed -i "s@http://.*.debian.org@${APT_MIRROR}@g" /etc/apt/sources.list.d/debian.sources \
+    && sed -i "s@http://.*.debian.org@${APT_MIRROR}@g" /etc/apt/sources.list \
     && ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime \
     && apt-get update \
     && apt-get install -y --no-install-recommends ${DEPENDENCIES} \
