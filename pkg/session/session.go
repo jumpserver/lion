@@ -2,6 +2,7 @@ package session
 
 import (
 	"lion/pkg/guacd"
+	"os"
 
 	"github.com/jumpserver-dev/sdk-go/common"
 	"github.com/jumpserver-dev/sdk-go/model"
@@ -85,7 +86,12 @@ func (s TunnelSession) configurationRDP() guacd.Configuration {
 		TerminalConfig: s.TerminalConfig,
 		ActionsPerm:    s.ActionPerm,
 	}
-	return rdpConf.GetGuacdConfiguration()
+	conf := rdpConf.GetGuacdConfiguration()
+	val := os.Getenv("JUMPSERVER_DISABLE_GFX")
+	if val != "" {
+		conf.SetParameter(guacd.DisableGFX, guacd.BoolTrue)
+	}
+	return conf
 }
 
 func (s TunnelSession) configurationRemoteAppRDP() guacd.Configuration {

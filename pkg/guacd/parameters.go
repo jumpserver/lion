@@ -62,3 +62,7 @@ const (
 	BoolFalse = "false"
 	BoolTrue  = "true"
 )
+
+const (
+	DisableGFX = "disable-gfx"
+)
