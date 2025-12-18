@@ -1,5 +1,4 @@
-FROM jumpserver/guacd:1.5.5-bullseye AS stage-guacd
-FROM jumpserver/lion-base:20251119_063218 AS stage-build
+FROM jumpserver/lion-base:20251125_031411 AS stage-build
 ARG TARGETARCH
 
 ARG GOPROXY=https://goproxy.io
@@ -25,18 +24,16 @@ RUN export GOFlAGS="-X 'main.Buildstamp=`date -u '+%Y-%m-%d %I:%M:%S%p'`'" \
 
 RUN chmod +x entrypoint.sh
 
-FROM debian:bullseye-slim
+FROM jumpserver/guacd:1.5.5-bullseye
 ARG TARGETARCH
 ENV LANG=en_US.UTF-8
-
+USER root
 ARG DEPENDENCIES="                    \
         ca-certificates               \
         supervisor"
 
 ARG PREFIX_DIR=/opt/guacamole
 ENV LD_LIBRARY_PATH=${PREFIX_DIR}/lib
-
-COPY --from=stage-guacd ${PREFIX_DIR} ${PREFIX_DIR} 
 
 ARG APT_MIRROR=http://deb.debian.org
 
