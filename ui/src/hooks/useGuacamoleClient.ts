@@ -625,7 +625,7 @@ export function useGuacamoleClient(t: any) {
         msg = msg + ': ' + status.message;
         break;
     }
-    message.error(msg);
+    message.error(msg, {duration: 10000});
   };
 
   const clientStateChanged = (state: any) => {
