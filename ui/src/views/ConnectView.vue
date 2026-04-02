@@ -403,7 +403,10 @@ const isRemoteApp = computed(() => {
     <div
       id="display"
       v-show="!loading"
-      class="w-screen h-screen flex justify-center relative"
+      :class="[
+        'w-screen h-screen flex justify-start items-start relative',
+        scale > 1 ? 'overflow-auto' : 'overflow-hidden',
+      ]"
     ></div>
     <Osk v-if="showOsk" :keyboard="keyboardLayout" @keyboard-change="handleScreenKeyboard" />
   </div>
