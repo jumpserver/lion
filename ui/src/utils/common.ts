@@ -1,3 +1,12 @@
+import {
+  BASE_URL,
+  BASE_WS_URL,
+  ORIGIN,
+  withBasePath,
+  withBaseUrl,
+  withLionWsUrl,
+} from './base';
+
 export function sanitizeFilename(filename: string): string {
   return filename.replace(/[\\\/]+/g, '_');
 }
@@ -11,30 +20,15 @@ export function isDirectory(guacFile: { type: string }): boolean {
   return guacFile.type === FileType.DIRECTORY;
 }
 
-let streamOrigin;
-// Work-around for IE missing window.location.origin
-if (!window.location.origin) {
-  streamOrigin =
-    window.location.protocol +
-    '//' +
-    window.location.hostname +
-    (window.location.port ? ':' + window.location.port : '');
-} else {
-  streamOrigin = window.location.origin;
-}
-const scheme = document.location.protocol === 'https:' ? 'wss' : 'ws';
-const port = document.location.port ? ':' + document.location.port : '';
-const BASE_WS_URL = scheme + '://' + document.location.hostname + port;
-const BASE_URL = document.location.protocol + '//' + document.location.hostname + port;
 export { BASE_WS_URL, BASE_URL };
 
-export const OriginSite = streamOrigin;
+export const OriginSite = ORIGIN;
 
-export const BaseAPIURL = streamOrigin + '/lion/api';
+export const BaseAPIURL = withBaseUrl('/lion/api');
 
-const sessionBaseAPI = '/api';
-const wsURL = '/lion/ws/connect/';
-const monitorWsURL = '/lion/ws/monitor/';
+const sessionBaseAPI = withBasePath('/api');
+const wsURL = withLionWsUrl('/ws/connect/');
+const monitorWsURL = withLionWsUrl('/ws/monitor/');
 
 export function getCurrentConnectParams() {
   const urlParams = getURLParams();
@@ -62,7 +56,17 @@ export function getMonitorConnectParams() {
 }
 
 export function getURLParams() {
-  return new URLSearchParams(window.location.search.slice(1));
+  if (window.location.search) {
+    return new URLSearchParams(window.location.search.slice(1));
+  }
+
+  const hash = window.location.hash || '';
+  const queryIndex = hash.indexOf('?');
+  if (queryIndex >= 0) {
+    return new URLSearchParams(hash.slice(queryIndex + 1));
+  }
+
+  return new URLSearchParams();
 }
 
 export function localStorageGet(key: string): string | object | null {

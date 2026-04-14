@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
-import { BASE_URL, LanguageCode, ThemeCode } from '@/utils/config';
+import { LanguageCode, ThemeCode } from '@/utils/config';
 import { useDebounceFn } from '@vueuse/core';
 import { alovaInstance } from '@/api';
+import { withBasePath } from '@/utils/base';
 import type { GlobalThemeOverrides, NLocale } from 'naive-ui';
 import { onMounted, ref, nextTick, provide, onUnmounted } from 'vue';
 import { createThemeOverrides } from './overrides';
@@ -44,7 +45,7 @@ onMounted(async () => {
   themeOverrides.value = createThemeOverrides(ThemeCode as 'default' | 'deepBlue' | 'darkGary');
   try {
     const translations = await alovaInstance
-      .Get(`/api/v1/settings/i18n/lion/?lang=${LanguageCode}&flat=0`)
+      .Get(`${withBasePath('/api/v1/settings/i18n/lion/')}?lang=${LanguageCode}&flat=0`)
       .then((response) => (response as Response).json());
 
     for (const [key, value] of Object.entries(translations)) {
