@@ -6,13 +6,14 @@ import { nextTick, onMounted, ref, computed, watch } from 'vue';
 import Osk from '@/components/Osk.vue';
 import { useGuacamoleClient } from '@/hooks/useGuacamoleClient';
 import SessionShare from '@/components/SessionShare/index.vue';
+import { withLionWsUrl } from '@/utils/base';
 
 import { useWindowSize, useDebounceFn } from '@vueuse/core';
 
 const { width, height } = useWindowSize();
 const message = useMessage();
 const { t } = useI18n();
-const wsUrl = '/lion/ws/share/';
+const wsUrl = withLionWsUrl('/ws/share/');
 const verifyValue = ref<string>('');
 const showModal = ref<boolean>(true);
 const shareCode = ref<string>('');
