@@ -1,9 +1,10 @@
 package config
 
 import (
+	"crypto/rand"
 	"fmt"
 	"log"
-	"math/rand"
+	"math/big"
 	"net"
 	"os"
 	"path/filepath"
@@ -74,7 +75,12 @@ func (c *Config) SelectGuacdAddr() string {
 		return net.JoinHostPort(c.GuaHost, c.GuaPort)
 	}
 	addresses := strings.Split(c.GuacdAddrs, ",")
-	return addresses[rand.Intn(len(addresses))]
+	if len(addresses) == 0 {
+		return net.JoinHostPort(c.GuaHost, c.GuaPort)
+	}
+	var maxLetterIndex = big.NewInt(int64(len(addresses)))
+	n, _ := rand.Int(rand.Reader, maxLetterIndex)
+	return addresses[n.Int64()]
 }
 
 func Setup(configPath string) {

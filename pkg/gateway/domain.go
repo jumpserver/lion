@@ -113,7 +113,7 @@ func (d *DomainGateway) createGatewaySSHClient(gateway *model.Gateway) (*gossh.C
 	sshConfig := gossh.ClientConfig{
 		User:            loginAccount.Username,
 		Auth:            auths,
-		HostKeyCallback: gossh.InsecureIgnoreHostKey(),
+		HostKeyCallback: NewTrustHostKeyCallback(),
 		Timeout:         miniTimeout,
 	}
 	port := gateway.Protocols.GetProtocolPort("ssh")
@@ -129,4 +129,10 @@ func (d *DomainGateway) closeOnce() {
 		_ = d.ln.Close()
 		_ = d.sshClient.Close()
 	})
+}
+
+func NewTrustHostKeyCallback() gossh.HostKeyCallback {
+	return func(hostname string, remote net.Addr, key gossh.PublicKey) error {
+		return nil
+	}
 }
