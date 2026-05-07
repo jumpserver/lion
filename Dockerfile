@@ -29,7 +29,8 @@ ARG TARGETARCH
 ENV LANG=en_US.UTF-8
 USER root
 ARG DEPENDENCIES="                    \
-        ca-certificates"
+        ca-certificates               \
+        xz-utils"
 
 ARG PREFIX_DIR=/opt/guacamole
 ENV LD_LIBRARY_PATH=${PREFIX_DIR}/lib
