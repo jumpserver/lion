@@ -358,6 +358,12 @@ const scaleGuaDisplay = (value: number) => {
   console.log('Scaling Guacamole display to:', value);
   const newScale = value / 100; // 限制缩放范围在0.1到5之间
 
+// 只要是加号放大就显示滚动条
+  if (newScale > scale.value) {
+    shouldEnableScroll.value = true;
+  } else if (newScale <= 1) {
+    shouldEnableScroll.value = false;
+  }
   guaDisplay.value.scale(newScale);
   scale.value = newScale;
 };
@@ -392,6 +398,9 @@ const isRemoteApp = computed(() => {
   }
   return true;
 });
+
+// 滚动条控制
+const shouldEnableScroll = ref(false);
 </script>
 
 <template>
@@ -403,7 +412,10 @@ const isRemoteApp = computed(() => {
     <div
       id="display"
       v-show="!loading"
-      class="w-screen h-screen flex justify-center relative"
+      :class="[
+        'w-screen h-screen flex justify-center relative',
+        shouldEnableScroll ? 'overflow-auto' : 'overflow-hidden',
+      ]"
     ></div>
     <Osk v-if="showOsk" :keyboard="keyboardLayout" @keyboard-change="handleScreenKeyboard" />
   </div>
