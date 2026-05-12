@@ -1,4 +1,4 @@
-FROM jumpserver/lion-base:20260507_103514 AS stage-build
+FROM jumpserver/lion-base:20260512_073724 AS stage-build
 ARG TARGETARCH
 
 ARG GOPROXY=https://goproxy.io
