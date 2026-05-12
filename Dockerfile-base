@@ -1,4 +1,4 @@
-FROM golang:1.26.2-trixie AS stage-go-build
+FROM golang:1.26.3-trixie AS stage-go-build
 
 FROM node:20-trixie
 COPY --from=stage-go-build /usr/local/go/ /usr/local/go/
