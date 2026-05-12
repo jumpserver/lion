@@ -48,7 +48,9 @@ RUN set -ex \
     && cp /opt/s6-overlay/s6-overlay-arch.tar.xz /tmp/s6-overlay-arch.tar.xz \
     && tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz \
     && tar -C / -Jxpf /tmp/s6-overlay-arch.tar.xz \
+    && apt-get remove -y ghostscript xfonts-terminus \
     && apt-get clean all \
+    && apt-get autoremvoe \
     && rm -rf /var/lib/apt/lists/* /opt/s6-overlay /tmp/s6-overlay-noarch.tar.xz /tmp/s6-overlay-arch.tar.xz \
     && mkdir -p /lib32 /libx32
 
