@@ -1,0 +1,41 @@
+#!/command/with-contenv sh
+
+set -eu
+
+if [ -n "${CORE_HOST:-}" ]; then
+    until check "${CORE_HOST}/api/health/"; do
+        echo "wait for jms_core ${CORE_HOST} ready"
+        sleep 2
+    done
+fi
+
+mkdir -p /opt/lion/data/logs
+
+: "${LOG_LEVEL:=ERROR}"
+
+case "${LOG_LEVEL}" in
+    DEBUG)
+        level="debug"
+        ;;
+    INFO)
+        level="info"
+        ;;
+    WARN)
+        level="warning"
+        ;;
+    ERROR|FATAL|CRITICAL)
+        level="error"
+        ;;
+    *)
+        level="error"
+        ;;
+esac
+
+export GUACD_LOG_LEVEL="${level}"
+printf '%s' "${GUACD_LOG_LEVEL}" > /run/s6/container_environment/GUACD_LOG_LEVEL
+
+echo
+date
+echo "LION Version ${VERSION}, more see https://www.jumpserver.org"
+echo "Quit the server with CONTROL-C."
+echo

@@ -1,4 +1,4 @@
-FROM jumpserver/lion-base:20260303_032936 AS stage-build
+FROM jumpserver/lion-base:20260512_073724 AS stage-build
 ARG TARGETARCH
 
 ARG GOPROXY=https://goproxy.io
@@ -30,12 +30,13 @@ ENV LANG=en_US.UTF-8
 USER root
 ARG DEPENDENCIES="                    \
         ca-certificates               \
-        supervisor"
+        xz-utils"
 
 ARG PREFIX_DIR=/opt/guacamole
 ENV LD_LIBRARY_PATH=${PREFIX_DIR}/lib
 
 ARG APT_MIRROR=http://deb.debian.org
+COPY --from=stage-build /opt/s6-overlay/ /opt/s6-overlay/
 
 RUN set -ex \
     && sed -i "s@http://.*.debian.org@${APT_MIRROR}@g" /etc/apt/sources.list.d/debian.sources \
@@ -43,8 +44,14 @@ RUN set -ex \
     && apt-get update \
     && apt-get install -y --no-install-recommends ${DEPENDENCIES} \
     && apt-get install -y --no-install-recommends $(cat "${PREFIX_DIR}"/DEPENDENCIES) \
+    && cp /opt/s6-overlay/s6-overlay-noarch.tar.xz /tmp/s6-overlay-noarch.tar.xz \
+    && cp /opt/s6-overlay/s6-overlay-arch.tar.xz /tmp/s6-overlay-arch.tar.xz \
+    && tar -C / -Jxpf /tmp/s6-overlay-noarch.tar.xz \
+    && tar -C / -Jxpf /tmp/s6-overlay-arch.tar.xz \
+    && apt-get remove -y ghostscript xfonts-terminus \
+    && apt-get -y autoremove \
     && apt-get clean all \
-    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /var/lib/apt/lists/* /opt/s6-overlay /tmp/s6-overlay-noarch.tar.xz /tmp/s6-overlay-arch.tar.xz \
     && mkdir -p /lib32 /libx32
 
 WORKDIR /opt/lion
@@ -54,17 +61,16 @@ COPY --from=stage-build /opt/lion/ui/dist ui/dist/
 COPY --from=stage-build /opt/lion/lion .
 COPY --from=stage-build /opt/lion/config_example.yml .
 COPY --from=stage-build /opt/lion/entrypoint.sh .
-COPY --from=stage-build /opt/lion/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY s6-overlay/ /etc/
+RUN chmod +x /etc/cont-init.d/10-lion-init /etc/services.d/guacd/run /etc/services.d/lion/run
 
 ARG VERSION
 ENV VERSION=$VERSION
 
 VOLUME /opt/lion/data
 
-ENTRYPOINT ["./entrypoint.sh"]
+ENTRYPOINT ["/init"]
 
 EXPOSE 8081
 
 STOPSIGNAL SIGQUIT
-
-CMD [ "supervisord", "-c", "/etc/supervisor/supervisord.conf" ]
