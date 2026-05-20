@@ -7,7 +7,7 @@ require (
 	github.com/gin-gonic/gin v1.11.0
 	github.com/go-redis/redis/v8 v8.11.5
 	github.com/gorilla/websocket v1.5.3
-	github.com/jumpserver-dev/sdk-go v0.0.0-20260303030710-709165abd15f
+	github.com/jumpserver-dev/sdk-go v0.0.0-20260520022428-47f0d4d20dc6
 	github.com/spf13/viper v1.21.0
 	golang.org/x/crypto v0.47.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
