@@ -3,7 +3,6 @@ import { useI18n } from 'vue-i18n';
 import { useMessage } from 'naive-ui';
 import { getShareSession } from '@/api/index';
 import { nextTick, onMounted, ref, computed, watch } from 'vue';
-import Osk from '@/components/Osk.vue';
 import { useGuacamoleClient } from '@/hooks/useGuacamoleClient';
 import SessionShare from '@/components/SessionShare/index.vue';
 
@@ -107,12 +106,6 @@ const connectShareSession = (code: string) => {
     });
 };
 
-const showOsk = ref<boolean>(false);
-const keyboardLayout = ref<string>('default');
-const handleScreenKeyboard = (layout: string) => {
-  keyboardLayout.value = layout;
-  showOsk.value = true;
-};
 const connectStatus = ref<string>('Connecting...');
 
 const {
@@ -182,7 +175,6 @@ onMounted(() => {
       v-show="!loading && !errMessage"
       class="w-screen h-screen flex justify-center relative"
     ></div>
-    <Osk v-if="showOsk" :keyboard="keyboardLayout" @keyboard-change="handleScreenKeyboard" />
     <n-gradient-text type="error" v-if="errMessage">{{ errMessage }}</n-gradient-text>
   </div>
 

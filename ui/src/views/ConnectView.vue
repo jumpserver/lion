@@ -11,8 +11,6 @@ import ClipBoardText from '@/components/ClipBoardText.vue';
 import SessionShare from '@/components/SessionShare/index.vue';
 import FileManager from '@/components/FileManager.vue';
 import { readClipboardText } from '@/utils/clipboard';
-import Osk from '@/components/Osk.vue';
-import KeyboardOption from '@/components/KeyboardOption.vue';
 import OtherOption from '@/components/OtherOption.vue';
 import { FolderKanban, Keyboard as KeyboardIcon, Share2 } from 'lucide-vue-next';
 import { useGuacamoleClient } from '@/hooks/useGuacamoleClient';
@@ -156,7 +154,6 @@ const processUploadQueue = async () => {
   isUploading.value = false;
 };
 
-const showOsk = ref<boolean>(false);
 
 const fileDrop = (event: any) => {
   event.stopPropagation();
@@ -221,7 +218,6 @@ onMounted(async () => {
   const token = params['data'].token || '';
   const param = {
     TOKEN_ID: encodeURIComponent(token),
-    GUAC_KEYBOARD: keyboardLayout.value,
   };
   connectToGuacamole(wsPrefix.value, param, window.innerWidth, window.innerHeight, true);
   const displayEl = document.getElementById('display');
@@ -276,34 +272,6 @@ document.addEventListener(
   false,
 );
 
-const getKeyboardLayout = () => {
-  const lunaSetting = localStorage.getItem('LunaSetting');
-  if (lunaSetting) {
-    const setting = JSON.parse(lunaSetting);
-    const graphics = setting['graphics'] || {};
-    const keyboardLayout = graphics['keyboard_layout'] || setting['keyboard_layout'];
-    if (keyboardLayout) {
-      return keyboardLayout;
-    }
-  }
-  return 'en-us-qwerty'; // 默认键盘布局
-};
-
-const keyboardLayout = ref<string>(getKeyboardLayout());
-
-const handleScreenKeyboard = (name: string, keysym: any) => {
-  console.log('Screen keyboard change:', name, keysym);
-  switch (name) {
-    case 'keydown':
-      sendKeyEvent(1, keysym);
-      break;
-    case 'keyup':
-      sendKeyEvent(0, keysym);
-      break;
-    default:
-      console.warn('Unknown screen keyboard event:', name);
-  }
-};
 
 const handleDownloadFile = (file: GuacamoleFile) => {
   if (!file || !file.streamName) {
@@ -405,7 +373,6 @@ const isRemoteApp = computed(() => {
       v-show="!loading"
       class="w-screen h-screen flex justify-center relative"
     ></div>
-    <Osk v-if="showOsk" :keyboard="keyboardLayout" @keyboard-change="handleScreenKeyboard" />
   </div>
 
   <n-drawer
@@ -435,7 +402,6 @@ const isRemoteApp = computed(() => {
               @update:text="ClipBoardTextChange"
             />
             <br />
-            <KeyboardOption v-model:opened="showOsk" v-model:keyboard="keyboardLayout" />
             <br />
             <CombinationKey :is-remote-app="isRemoteApp" @combine-keys="handleCombineKeys" />
             <br />
