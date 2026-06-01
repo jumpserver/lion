@@ -435,7 +435,7 @@ const isRemoteApp = computed(() => {
               @update:text="ClipBoardTextChange"
             />
             <br />
-            <KeyboardOption v-model:opened="showOsk" v-model:keyboard="keyboardLayout" />
+            <KeyboardOption v-if="!isRemoteApp" v-model:opened="showOsk" v-model:keyboard="keyboardLayout" />
             <br />
             <CombinationKey :is-remote-app="isRemoteApp" @combine-keys="handleCombineKeys" />
             <br />
