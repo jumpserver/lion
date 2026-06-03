@@ -64,7 +64,7 @@ type Config struct {
 
 	VncClipboardEncoding string `mapstructure:"VNC_CLIPBOARD_ENCODING"`
 
-	DisableKeyboardRecord bool `mapstructure:"JUMPSERVER_DISABLE_KEYBOARD_RECORD"`
+	DisableKeyboardRecord bool `mapstructure:"DISABLE_KEYBOARD_RECORD"`
 }
 
 func (c *Config) UpdateRedisPassword(val string) {
