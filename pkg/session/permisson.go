@@ -1,20 +1,10 @@
 package session
 
 import (
-	"encoding/json"
 	"lion/pkg/config"
 
 	"github.com/jumpserver-dev/sdk-go/model"
 )
-
-type ClipboardPolicy struct {
-	FileUpload         bool `json:"file_upload"`
-	FileDownload       bool `json:"file_download"`
-	TextCopy           bool `json:"text_copy"`
-	TextPaste          bool `json:"text_paste"`
-	TextCopyMaxLength  int  `json:"text_copy_max_length"`
-	TextPasteMaxLength int  `json:"text_paste_max_length"`
-}
 
 type ActionPermission struct {
 	EnableConnect bool `json:"enable_connect"`
@@ -26,7 +16,7 @@ type ActionPermission struct {
 	EnableDownload bool `json:"enable_download"`
 	EnableShare    bool `json:"enable_share"`
 
-	ClipboardPolicy ClipboardPolicy `json:"clipboard_policy"`
+	ClipboardPolicy model.ClipboardPolicy `json:"clipboard_policy"`
 }
 
 func NewActionPermission(perm *model.Permission, connectType string, connectOptions model.ConnectOptions) *ActionPermission {
@@ -37,7 +27,7 @@ func NewActionPermission(perm *model.Permission, connectType string, connectOpti
 		EnableUpload:   perm.EnableUpload(),
 		EnableDownload: perm.EnableDownload(),
 		EnableShare:    perm.EnableShare(),
-		ClipboardPolicy: ClipboardPolicy{
+		ClipboardPolicy: model.ClipboardPolicy{
 			FileUpload:   true,
 			FileDownload: true,
 			TextCopy:     true,
@@ -70,13 +60,10 @@ func NewActionPermission(perm *model.Permission, connectType string, connectOpti
 }
 
 func (a *ActionPermission) applyClipboardPolicy(connectOptions model.ConnectOptions) {
-	if connectOptions.Language == "" {
+	if connectOptions.ClipboardPolicy == nil {
 		return
 	}
-	var policy ClipboardPolicy
-	if err := json.Unmarshal([]byte(connectOptions.Language), &policy); err != nil {
-		return
-	}
+	policy := *connectOptions.ClipboardPolicy
 	a.ClipboardPolicy = policy
 	// SFTP drive transfer.
 	a.EnableUpload = a.EnableUpload && policy.FileUpload
