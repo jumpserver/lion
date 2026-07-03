@@ -7,6 +7,8 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -104,7 +106,15 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	defer func() {
 		if err2 := tunnelSession.ReleaseAppletAccount(); err2 != nil {
 			logger.Errorf("Release account failed: %s", err2)
-
+		}
+		if config.GlobalConfig.DriveScope == config.DriverScopeSession {
+			// clean driver path
+			driveRootPath := config.GlobalConfig.DrivePath
+			sessionDrivePath := filepath.Join(driveRootPath, tunnelSession.ID)
+			logger.Debugf("Remove drive folder %s", sessionDrivePath)
+			if err3 := os.RemoveAll(sessionDrivePath); err3 != nil {
+				logger.Errorf("Remove drive folder %s err: %+v", sessionDrivePath, err3)
+			}
 		}
 	}()
 	user := userItem.(*model.User)

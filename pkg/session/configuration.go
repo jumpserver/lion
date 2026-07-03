@@ -117,7 +117,11 @@ func (r RDPConfiguration) GetGuacdConfiguration() guacd.Configuration {
 
 	// 设置 挂载目录 上传下载
 	{
-		drivePath := filepath.Join(config.GlobalConfig.DrivePath, r.SessionId)
+		driverShareId := r.User.ID
+		if config.GlobalConfig.DriveScope == config.DriverScopeSession {
+			driverShareId = r.SessionId
+		}
+		drivePath := filepath.Join(config.GlobalConfig.DrivePath, driverShareId)
 		enableDrive := ConvertBoolToString(r.ActionsPerm.EnableDownload || r.ActionsPerm.EnableUpload)
 		disableDownload := ConvertBoolToString(!r.ActionsPerm.EnableDownload)
 		disableUpload := ConvertBoolToString(!r.ActionsPerm.EnableUpload)

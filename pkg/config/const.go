@@ -13,3 +13,8 @@ const (
 	ShareTypeRedis = "redis"
 	ShareTypeLocal = "local"
 )
+
+const (
+	DriverScopeUser    = "user"
+	DriverScopeSession = "session"
+)

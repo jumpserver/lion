@@ -66,6 +66,8 @@ type Config struct {
 	VncClipboardEncoding string `mapstructure:"VNC_CLIPBOARD_ENCODING"`
 
 	DisableKeyboardRecord bool `mapstructure:"DISABLE_KEYBOARD_RECORD"`
+
+	DriveScope string `mapstructure:"LION_DRIVE_SCOPE"` // user or session
 }
 
 func (c *Config) UpdateRedisPassword(val string) {
@@ -139,6 +141,7 @@ func getDefaultConfig() Config {
 		PandaHost:                 "http://panda:9001",
 		ReplayMaxSize:             defaultMaxSize,
 		VideoWorkerHost:           "http://video:9000",
+		DriveScope:                DriverScopeUser,
 	}
 
 }
