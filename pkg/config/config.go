@@ -68,6 +68,8 @@ type Config struct {
 	DisableKeyboardRecord bool `mapstructure:"DISABLE_KEYBOARD_RECORD"`
 
 	DriveScope string `mapstructure:"LION_DRIVE_SCOPE"` // user or session
+	// DOMAINS=* "demo.example.com:443,172.17.200.191:80"
+	DOMAINS string `mapstructure:"DOMAINS"`
 }
 
 func (c *Config) UpdateRedisPassword(val string) {
