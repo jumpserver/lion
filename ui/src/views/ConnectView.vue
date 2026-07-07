@@ -10,7 +10,6 @@ import { LUNA_MESSAGE_TYPE } from '@/types/postmessage.type';
 import ClipBoardText from '@/components/ClipBoardText.vue';
 import SessionShare from '@/components/SessionShare/index.vue';
 import FileManager from '@/components/FileManager.vue';
-import { readClipboardText } from '@/utils/clipboard';
 import Osk from '@/components/Osk.vue';
 import KeyboardOption from '@/components/KeyboardOption.vue';
 import OtherOption from '@/components/OtherOption.vue';
@@ -43,11 +42,13 @@ const {
   currentFolder,
   currentFolderFiles,
   hasClipboardPermission,
+  debouncedSendClipboardToRemote,
   fileFsLoading,
   currentGuacFsObject,
   enableShare,
   action_permission,
   remoteClipboardText,
+  clipboardPasteTextLimit,
   sendInputActive,
 } = useGuacamoleClient(t);
 
@@ -190,14 +191,6 @@ const fileDrop = (event: any) => {
     handleUploadFile(uploadOptions, currentFolder.value);
   });
 };
-
-const debouncedSendClipboardToRemote = useDebounceFn(async () => {
-  const text = await readClipboardText();
-  if (!text || !text.trim()) {
-    return;
-  }
-  sendTextToRemote(text);
-}, 300);
 
 onMounted(async () => {
   loading.value = true;
@@ -358,7 +351,7 @@ const scaleGuaDisplay = (value: number) => {
   console.log('Scaling Guacamole display to:', value);
   const newScale = value / 100; // 限制缩放范围在0.1到5之间
 
-// 只要是加号放大就显示滚动条
+  // 只要是加号放大就显示滚动条
   if (newScale > scale.value) {
     shouldEnableScroll.value = true;
   } else if (newScale <= 1) {
@@ -443,11 +436,18 @@ const shouldEnableScroll = ref(false);
             </template>
             <ClipBoardText
               :disabled="!hasClipboardPermission"
+              :copy-disabled="!action_permission.enable_copy"
+              :paste-disabled="!action_permission.enable_paste"
               :remote-text="remoteClipboardText"
+              :text-limit="clipboardPasteTextLimit"
               @update:text="ClipBoardTextChange"
             />
             <br />
-            <KeyboardOption v-if="!isRemoteApp" v-model:opened="showOsk" v-model:keyboard="keyboardLayout" />
+            <KeyboardOption
+              v-if="!isRemoteApp"
+              v-model:opened="showOsk"
+              v-model:keyboard="keyboardLayout"
+            />
             <br />
             <CombinationKey :is-remote-app="isRemoteApp" @combine-keys="handleCombineKeys" />
             <br />

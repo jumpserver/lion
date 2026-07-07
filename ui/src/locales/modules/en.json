@@ -1,1 +1,7 @@
-{}
+{
+  "ClipboardTextLimitExceeded": "clipboard text exceeds the limit",
+  "ClipboardFileSizeLimitExceeded": "clipboard file exceeds the limit",
+  "Copy": "Copy",
+  "Paste": "Paste",
+  "NoPermission": "permission denied"
+}

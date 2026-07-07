@@ -116,6 +116,8 @@ github.com/json-iterator/go v1.1.12/go.mod h1:e30LSqwooZae/UwlEbR2852Gd8hjQvJoHm
 github.com/juju/gnuflag v0.0.0-20171113085948-2ce1bb71843d/go.mod h1:2PavIy+JPciBPrBUjwbNvtwB6RQlve+hkpll6QSNmOE=
 github.com/jumpserver-dev/sdk-go v0.0.0-20260520022428-47f0d4d20dc6 h1:K3DJEekApUoQUuVX9x6U8pvP/g7qaHy8TcCVmsIlf64=
 github.com/jumpserver-dev/sdk-go v0.0.0-20260520022428-47f0d4d20dc6/go.mod h1:QmnL7BRb74/XY1nu8kWQWs6DHXt3uIaWkDCkQSRyZlM=
+github.com/jumpserver-dev/sdk-go v0.0.0-20260707072327-59c76e43904f h1:7C5PoXuDuux091WUO3IGGfvKfQt7jGYZXWTSA8JovlU=
+github.com/jumpserver-dev/sdk-go v0.0.0-20260707072327-59c76e43904f/go.mod h1:QmnL7BRb74/XY1nu8kWQWs6DHXt3uIaWkDCkQSRyZlM=
 github.com/klauspost/cpuid/v2 v2.3.0 h1:S4CRMLnYUhGeDFDqkGriYKdfoFlDnMtqTiI/sFzhA9Y=
 github.com/klauspost/cpuid/v2 v2.3.0/go.mod h1:hqwkgyIinND0mEev00jJYCxPNVRVXFQeu1XKlok6oO0=
 github.com/kr/pretty v0.2.1/go.mod h1:ipq/a2n7PKx3OHsz4KJII5eveXtPO4qwEXGdVfWzfnI=

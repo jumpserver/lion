@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { readClipboardText } from '@/utils/clipboard';
 import { useDebounceFn } from '@vueuse/core';
 import { NInput } from 'naive-ui';
@@ -15,15 +15,42 @@ const message = useMessage();
 const props = defineProps<{
   remoteText?: string;
   disabled?: boolean;
+  copyDisabled?: boolean;
+  pasteDisabled?: boolean;
+  textLimit?: number;
 }>();
 
 const showRemoteText = ref<boolean>(false);
+const defaultMaxlength = 1024 * 4;
+const maxlength = computed(() => {
+  if (!props.textLimit || props.textLimit <= 0 || props.textLimit > defaultMaxlength) {
+    return defaultMaxlength;
+  }
+  return props.textLimit;
+});
+
+const getTextLength = (text: string) => Array.from(text).length;
+
+const validateTextLimit = (text: string) => {
+  if (props.disabled || props.pasteDisabled) {
+    message.warning(`${t('Paste')} ${t('NoPermission')}`);
+    return false;
+  }
+  if (getTextLength(text) > maxlength.value) {
+    message.warning(`${t('Paste')} ${t('ClipboardTextLimitExceeded')}: ${maxlength.value}`);
+    return false;
+  }
+  return true;
+};
 
 // 手动读取剪贴板内容
 const loadClipboardText = async () => {
   try {
     isLoading.value = true;
     const text = await readClipboardText();
+    if (!validateTextLimit(text)) {
+      return;
+    }
     inputValue.value = text;
     await handleInput(text);
   } catch (error) {
@@ -36,6 +63,9 @@ const loadClipboardText = async () => {
 
 // 处理输入事件
 const handleInput = useDebounceFn((value: string) => {
+  if (!validateTextLimit(value)) {
+    return;
+  }
   emit('update:text', value);
 }, 300);
 
@@ -60,14 +90,12 @@ const size = {
   minRows: 4,
   maxRows: 6,
 };
-
-const maxlength = 1024 * 4;
 </script>
 
 <template>
   <CardContainer :title="t('Clipboard')">
     <n-form-item :label="t('ShowRemoteClip')" label-placement="left">
-      <n-switch v-model:value="showRemoteText" :disabled="props.disabled" />
+      <n-switch v-model:value="showRemoteText" :disabled="props.disabled || props.copyDisabled" />
     </n-form-item>
     <n-input
       v-model:value="inputValue"
@@ -80,7 +108,7 @@ const maxlength = 1024 * 4;
       show-count
       clearable
       :placeholder="t('AutoPasteOnClick')"
-      :disabled="props.disabled"
+      :disabled="props.disabled || props.pasteDisabled"
     >
     </n-input>
     <n-form-item v-if="showRemoteText">
@@ -91,7 +119,7 @@ const maxlength = 1024 * 4;
         readonly
         placeholder=""
         show-count
-        :disabled="props.disabled"
+        :disabled="props.disabled || props.copyDisabled"
       />
     </n-form-item>
   </CardContainer>

@@ -309,6 +309,7 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	}
 	conn.outputFilter = &outFilter
 	conn.inputFilter = &inputFilter
+	conn.clipboardFilter = newClipboardPolicyFilter(tunnelSession.ActionPerm)
 	logger.Infof("Session[%s] connect success", sessionId)
 	g.Cache.Add(&conn)
 	replayRecorder := &ReplayRecorder{
