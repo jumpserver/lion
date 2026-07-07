@@ -111,10 +111,12 @@ func (d *DomainGateway) createGatewaySSHClient(gateway *model.Gateway) (*gossh.C
 		}))
 	}
 	sshConfig := gossh.ClientConfig{
-		User:            loginAccount.Username,
-		Auth:            auths,
-		HostKeyCallback: NewTrustHostKeyCallback(),
-		Timeout:         miniTimeout,
+		User:              loginAccount.Username,
+		Auth:              auths,
+		HostKeyCallback:   NewTrustHostKeyCallback(),
+		Config:            createSSHConfig(),
+		Timeout:           miniTimeout,
+		HostKeyAlgorithms: allHostKeyAlgorithms(),
 	}
 	port := gateway.Protocols.GetProtocolPort("ssh")
 	addr := net.JoinHostPort(gateway.Address, strconv.Itoa(port))
@@ -135,4 +137,39 @@ func NewTrustHostKeyCallback() gossh.HostKeyCallback {
 	return func(hostname string, remote net.Addr, key gossh.PublicKey) error {
 		return nil
 	}
+}
+
+func createSSHConfig() gossh.Config {
+	var cfg gossh.Config
+	cfg.SetDefaults()
+	algos := gossh.SupportedAlgorithms()
+	insecureAlgos := gossh.InsecureAlgorithms()
+	ciphers := make([]string, 0, len(algos.Ciphers)+len(insecureAlgos.Ciphers))
+	/*
+		Change the ciphers order, placing aes128-ctr first.
+		Compatible with old ssh servers.
+	*/
+	ciphers = append(ciphers, gossh.CipherAES128CTR)
+	ciphers = append(ciphers, insecureAlgos.Ciphers...)
+	ciphers = append(ciphers, algos.Ciphers...)
+	keyExchanges := make([]string, 0, len(algos.KeyExchanges)+len(insecureAlgos.KeyExchanges))
+	keyExchanges = append(keyExchanges, insecureAlgos.KeyExchanges...)
+	keyExchanges = append(keyExchanges, algos.KeyExchanges...)
+	cfg.Ciphers = ciphers
+	cfg.KeyExchanges = keyExchanges
+	return cfg
+}
+
+func allHostKeyAlgorithms() []string {
+	supportedAlgos := gossh.SupportedAlgorithms()
+	insecureAlgos := gossh.InsecureAlgorithms()
+	hostKeyAlgos := make([]string, 0, len(supportedAlgos.HostKeys)+len(insecureAlgos.HostKeys)+1)
+	/*
+		Change the algorithm order, placing KeyAlgoED25519 first.
+		Compatible with certain SSH servers.
+	*/
+	hostKeyAlgos = append(hostKeyAlgos, gossh.KeyAlgoED25519)
+	hostKeyAlgos = append(hostKeyAlgos, supportedAlgos.HostKeys...)
+	hostKeyAlgos = append(hostKeyAlgos, insecureAlgos.HostKeys...)
+	return hostKeyAlgos
 }
