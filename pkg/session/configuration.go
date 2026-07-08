@@ -157,6 +157,17 @@ func (r RDPConfiguration) GetGuacdConfiguration() guacd.Configuration {
 	conf.SetParameter(guacd.RDPSecurity, rdpSecurityValue)
 	conf.SetParameter(guacd.RDPIgnoreCert, BoolTrue)
 
+	if rdpSecurityValue == SecurityNla {
+		// 部分 NLA 的场景里，如果使用 domain\username 不支持改成  username@domain
+		// Username 和 domain 都需要单独设置，这里重置
+		usernameWithoutDomain := username
+		if strings.Contains(usernameWithoutDomain, "@") {
+			usernameWithoutDomain = strings.Split(usernameWithoutDomain, "@")[0]
+			conf.SetParameter(guacd.RDPUsername, usernameWithoutDomain)
+		}
+
+	}
+
 	// 设置客户端名称，任务管理器--用户---客户端名称显示
 	conf.SetParameter(guacd.RDPClientName, "Lion")
 
