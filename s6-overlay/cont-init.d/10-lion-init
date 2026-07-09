@@ -9,7 +9,11 @@ if [ -n "${CORE_HOST:-}" ]; then
     done
 fi
 
-mkdir -p /opt/lion/data/logs
+mkdir -p /opt/lion/data/logs/guacd
+
+if [ -e /opt/lion/data/logs/guacd.log ] || [ -L /opt/lion/data/logs/guacd.log ]; then
+    mv /opt/lion/data/logs/guacd.log "/opt/lion/data/logs/guacd.log.$(date +%Y%m%d%H%M%S).bak"
+fi
 
 : "${LOG_LEVEL:=ERROR}"
 

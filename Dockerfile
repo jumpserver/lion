@@ -62,7 +62,10 @@ COPY --from=stage-build /opt/lion/lion .
 COPY --from=stage-build /opt/lion/config_example.yml .
 COPY --from=stage-build /opt/lion/entrypoint.sh .
 COPY s6-overlay/ /etc/
-RUN chmod +x /etc/cont-init.d/10-lion-init /etc/services.d/guacd/run /etc/services.d/lion/run
+RUN chmod +x /etc/cont-init.d/10-lion-init \
+    /etc/services.d/guacd/run \
+    /etc/services.d/guacd/log/run \
+    /etc/services.d/lion/run
 
 ARG VERSION
 ENV VERSION=$VERSION
