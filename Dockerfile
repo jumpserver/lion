@@ -65,8 +65,7 @@ COPY s6-overlay/ /etc/
 RUN chmod +x /etc/cont-init.d/10-lion-init \
     /etc/services.d/guacd/run \
     /etc/services.d/guacd/log/run \
-    /etc/services.d/lion/run \
-    /etc/services.d/lion/log/run
+    /etc/services.d/lion/run
 
 ARG VERSION
 ENV VERSION=$VERSION
