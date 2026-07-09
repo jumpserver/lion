@@ -9,7 +9,7 @@ if [ -n "${CORE_HOST:-}" ]; then
     done
 fi
 
-mkdir -p /opt/lion/data/logs
+mkdir -p /opt/lion/data/logs/guacd /opt/lion/data/logs/lion
 
 : "${LOG_LEVEL:=ERROR}"
 
