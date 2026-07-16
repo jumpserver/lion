@@ -1,4 +1,4 @@
-FROM golang:1.24-trixie AS stage-go-build
+FROM golang:1.26.3-trixie AS stage-go-build
 
 FROM node:20-trixie
 COPY --from=stage-go-build /usr/local/go/ /usr/local/go/
@@ -8,6 +8,7 @@ ENV PATH=/go/bin:/usr/local/go/bin:$PATH
 ARG TARGETARCH
 ARG NPM_REGISTRY="https://registry.npmmirror.com"
 ENV NPM_REGISTY=$NPM_REGISTRY
+ARG S6_OVERLAY_VERSION=3.2.2.0
 
 RUN set -ex \
     && npm config set registry ${NPM_REGISTRY} \
@@ -15,13 +16,20 @@ RUN set -ex \
 
 WORKDIR /opt
 
-ARG CHECK_VERSION=v1.0.5
 RUN set -ex \
-    && wget https://github.com/jumpserver-dev/healthcheck/releases/download/${CHECK_VERSION}/check-${CHECK_VERSION}-linux-${TARGETARCH}.tar.gz \
-    && tar -xf check-${CHECK_VERSION}-linux-${TARGETARCH}.tar.gz -C /usr/local/bin/ check \
-    && chown root:root /usr/local/bin/check \
-    && chmod 755 /usr/local/bin/check \
-    && rm -f check-${CHECK_VERSION}-linux-${TARGETARCH}.tar.gz
+    && wget https://github.com/jumpserver-dev/healthcheck/releases/latest/download/check_linux_${TARGETARCH}.deb \
+    && dpkg -i check_linux_${TARGETARCH}.deb \
+    && rm -f check_linux_${TARGETARCH}.deb
+
+RUN set -ex \
+    && case "${TARGETARCH}" in \
+        amd64) s6_arch="x86_64" ;; \
+        arm64) s6_arch="aarch64" ;; \
+        *) echo "Unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac \
+    && mkdir -p /opt/s6-overlay \
+    && wget -O /opt/s6-overlay/s6-overlay-noarch.tar.xz "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-noarch.tar.xz" \
+    && wget -O /opt/s6-overlay/s6-overlay-arch.tar.xz "https://github.com/just-containers/s6-overlay/releases/download/v${S6_OVERLAY_VERSION}/s6-overlay-${s6_arch}.tar.xz"
 
 WORKDIR /opt/lion/ui
 

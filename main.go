@@ -78,7 +78,8 @@ func main() {
 	addr := net.JoinHostPort(config.GlobalConfig.BindHost, config.GlobalConfig.HTTPPort)
 	fmt.Printf("Lion Version %s, more see https://www.jumpserver.org\n", Version)
 	logger.Infof("listen on: %s", addr)
-	logger.Fatal(http.ListenAndServe(addr, eng))
+	srv := &http.Server{Addr: addr, Handler: eng}
+	logger.Fatal(srv.ListenAndServe())
 }
 
 func NewGuaTunnelCache() tunnel.GuaTunnelCache {

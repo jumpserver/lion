@@ -2,14 +2,3 @@ ARG VERSION=dev
 
 FROM jumpserver/lion:${VERSION}-ce
 ARG TARGETARCH
-
-ARG DEPENDENCIES="                    \
-        curl                          \
-        iputils-ping                  \
-        telnet                        \
-        vim                           \
-        wget"
-
-RUN set -ex \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends ${DEPENDENCIES}

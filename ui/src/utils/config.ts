@@ -1,10 +1,6 @@
+export { BASE_URL, BASE_WS_URL } from './base';
+
 import { useCookies } from 'vue3-cookies';
-
-const PORT = document.location.port ? `:${document.location.port}` : '';
-const SCHEME = document.location.protocol === 'https:' ? 'wss' : 'ws';
-
-export const BASE_WS_URL = SCHEME + '://' + document.location.hostname + PORT;
-export const BASE_URL = document.location.protocol + '//' + document.location.hostname + PORT;
 
 const { cookies } = useCookies();
 

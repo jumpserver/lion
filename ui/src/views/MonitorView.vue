@@ -4,11 +4,12 @@ import { nextTick, onMounted, ref, computed, watch } from 'vue';
 import { useGuacamoleClient } from '@/hooks/useGuacamoleClient';
 import { useRoute } from 'vue-router';
 import { useWindowSize } from '@vueuse/core';
+import { withLionWsUrl } from '@/utils/base';
 const route = useRoute();
 const { t } = useI18n();
 const { width, height } = useWindowSize();
 const sessionId = route.query.session as string;
-const wsUrl = '/lion/ws/monitor/';
+const wsUrl = withLionWsUrl('/ws/monitor/');
 const params = {
   type: 'monitor',
   SESSION_ID: sessionId,

@@ -13,7 +13,7 @@ export type TranslateFunction = Composer['t'];
 
 import { useColor } from '@/hooks/useColor';
 import { createShareURL } from '@/api';
-import { BASE_URL } from '@/utils/config.ts';
+import { withBaseUrl } from '@/utils/base';
 const props = defineProps<{
   session: string;
   disabledCreateLink: boolean;
@@ -92,7 +92,7 @@ const searchUsers = useDebounceFn(async (value: string, isLoadMore: boolean = fa
       limit: '10', // 每页加载10条数据
     });
 
-    const response = await fetch(`${BASE_URL}/api/v1/users/users/suggestions/?${params}`).then(
+    const response = await fetch(withBaseUrl(`/api/v1/users/users/suggestions/?${params}`)).then(
       (res: any) => res.json(),
     );
 
@@ -278,7 +278,7 @@ const handleCreateLink = () => {
 
 const generateShareURL = (shareId: string, shareCode: string) => {
   const encodedShareCode = encodeURIComponent(shareCode);
-  return `${BASE_URL}/luna/share/${shareId}?type=lion&code=${encodedShareCode}`;
+  return withBaseUrl(`/luna/share/${shareId}?type=lion&code=${encodedShareCode}`);
 };
 
 /**

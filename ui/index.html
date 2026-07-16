@@ -2,12 +2,41 @@
 <html lang="">
   <head>
     <meta charset="UTF-8">
-    <link rel="icon" href="/favicon.ico">
+    <script>
+      (function () {
+        var pathname = window.location.pathname || '/';
+        var lionSegment = '/lion';
+        var marker = lionSegment + '/';
+        var idx = pathname.indexOf(marker);
+
+        if (idx < 0 && pathname === lionSegment) {
+          idx = 0;
+        } else if (idx < 0 && pathname.endsWith(lionSegment)) {
+          idx = pathname.length - lionSegment.length;
+        }
+
+        var prefix = '';
+        if (idx > 0) {
+          prefix = pathname.slice(0, idx);
+        }
+
+        prefix = prefix.replace(/\/+$/, '');
+
+        window.__BASE_PATH__ = prefix;
+        window.__LION_BASE__ = idx >= 0 ? prefix + marker : '/';
+
+        var faviconElement = document.createElement('link');
+        faviconElement.rel = 'icon';
+        faviconElement.href = window.__LION_BASE__ + 'favicon.ico';
+        document.head.appendChild(faviconElement);
+      })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lion Terminal</title>
   </head>
   <body>
     <div id="app"></div>
-    <script type="module" src="/src/main.ts"></script>
+    <!-- LION_RUNTIME_ENTRY -->
+    <script type="module" src="./src/main.ts"></script>
   </body>
 </html>

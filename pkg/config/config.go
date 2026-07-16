@@ -1,9 +1,10 @@
 package config
 
 import (
+	"crypto/rand"
 	"fmt"
 	"log"
-	"math/rand"
+	"math/big"
 	"net"
 	"os"
 	"path/filepath"
@@ -63,6 +64,12 @@ type Config struct {
 	SecretEncryptKey string `mapstructure:"SECRET_ENCRYPT_KEY"`
 
 	VncClipboardEncoding string `mapstructure:"VNC_CLIPBOARD_ENCODING"`
+
+	DisableKeyboardRecord bool `mapstructure:"DISABLE_KEYBOARD_RECORD"`
+
+	DriveScope string `mapstructure:"LION_DRIVE_SCOPE"` // user or session
+	// DOMAINS=* "demo.example.com:443,172.17.200.191:80"
+	DOMAINS string `mapstructure:"DOMAINS"`
 }
 
 func (c *Config) UpdateRedisPassword(val string) {
@@ -74,7 +81,12 @@ func (c *Config) SelectGuacdAddr() string {
 		return net.JoinHostPort(c.GuaHost, c.GuaPort)
 	}
 	addresses := strings.Split(c.GuacdAddrs, ",")
-	return addresses[rand.Intn(len(addresses))]
+	if len(addresses) == 0 {
+		return net.JoinHostPort(c.GuaHost, c.GuaPort)
+	}
+	var maxLetterIndex = big.NewInt(int64(len(addresses)))
+	n, _ := rand.Int(rand.Reader, maxLetterIndex)
+	return addresses[n.Int64()]
 }
 
 func Setup(configPath string) {
@@ -131,6 +143,7 @@ func getDefaultConfig() Config {
 		PandaHost:                 "http://panda:9001",
 		ReplayMaxSize:             defaultMaxSize,
 		VideoWorkerHost:           "http://video:9000",
+		DriveScope:                DriverScopeUser,
 	}
 
 }

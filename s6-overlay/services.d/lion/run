@@ -1,0 +1,7 @@
+#!/command/with-contenv sh
+
+set -eu
+
+cd /opt/lion
+exec 2>&1
+exec /opt/lion/lion

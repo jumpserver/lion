@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 
+	"lion/pkg/config"
 	"lion/pkg/guacd"
 	"lion/pkg/logger"
 	"lion/pkg/session"
@@ -466,6 +467,10 @@ func (t *Connection) recordCommand(cmdRecordChan chan *session.ExecutedCommand) 
 	cmdRecorder := t.Service.GetCommandRecorder(t.Sess)
 	for item := range cmdRecordChan {
 		if item.Command == "" {
+			continue
+		}
+		if config.GlobalConfig.DisableKeyboardRecord {
+			logger.Info("[tunnel] disable keyboard record")
 			continue
 		}
 		cmd := t.generateCommandResult(item)

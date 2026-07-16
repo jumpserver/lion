@@ -7,6 +7,10 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/netip"
+	"net/url"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -30,13 +34,77 @@ const (
 	defaultBufferSize = 1024
 )
 
+func normalizeHost(h string) string {
+	h = strings.TrimSpace(strings.ToLower(h))
+	host, _, err := net.SplitHostPort(h)
+	if err == nil {
+		return strings.Trim(host, "[]")
+	}
+	return strings.Trim(h, "[]")
+}
+
+func hostMatches(allowedHost, originHost string) bool {
+	allowedName := normalizeHost(allowedHost)
+	originName := normalizeHost(originHost)
+	if allowedName == "" || originName == "" {
+		return false
+	}
+	return allowedName == originName
+}
+
+func isInternalHost(host string) bool {
+	host = normalizeHost(host)
+	if host == "localhost" {
+		return true
+	}
+
+	addr, err := netip.ParseAddr(host)
+	if err != nil {
+		return false
+	}
+	return addr.IsLoopback() || addr.IsPrivate() || addr.IsLinkLocalUnicast()
+}
+
+func domainsAllowOrigin(originHost, domains string) bool {
+	for _, domain := range strings.Split(domains, ",") {
+		domain = strings.TrimSpace(domain)
+		if domain == "" {
+			continue
+		}
+		if domain == "*" || hostMatches(domain, originHost) {
+			return true
+		}
+	}
+	return false
+}
+
+func checkOrigin(r *http.Request) bool {
+	origin := r.Header.Get("Origin")
+	// 允许非浏览器，客户端访问
+	if len(origin) == 0 {
+		return true
+	}
+	u, err := url.Parse(origin)
+	if err != nil {
+		return false
+	}
+	originHost := normalizeHost(u.Host)
+	reqHost := normalizeHost(r.Host)
+	if hostMatches(originHost, reqHost) {
+		return true
+	}
+	if isInternalHost(originHost) {
+		return true
+	}
+
+	return domainsAllowOrigin(originHost, config.GlobalConfig.DOMAINS)
+}
+
 var upGrader = websocket.Upgrader{
 	ReadBufferSize:  defaultBufferSize,
 	WriteBufferSize: defaultBufferSize,
 	Subprotocols:    []string{"guacamole"},
-	CheckOrigin: func(r *http.Request) bool {
-		return true
-	},
+	CheckOrigin:     checkOrigin,
 }
 
 type GuacamoleTunnelServer struct {
@@ -104,7 +172,15 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	defer func() {
 		if err2 := tunnelSession.ReleaseAppletAccount(); err2 != nil {
 			logger.Errorf("Release account failed: %s", err2)
-
+		}
+		if config.GlobalConfig.DriveScope == config.DriverScopeSession {
+			// clean driver path
+			driveRootPath := config.GlobalConfig.DrivePath
+			sessionDrivePath := filepath.Join(driveRootPath, tunnelSession.ID)
+			logger.Debugf("Remove drive folder %s", sessionDrivePath)
+			if err3 := os.RemoveAll(sessionDrivePath); err3 != nil {
+				logger.Errorf("Remove drive folder %s err: %+v", sessionDrivePath, err3)
+			}
 		}
 	}()
 	user := userItem.(*model.User)

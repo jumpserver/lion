@@ -25,6 +25,7 @@ var keyidentifierKeysym = map[int]string{
 	0xFFFF: "Delete",
 	0xFF57: "End",
 	0xFF0D: "Enter\r",
+	0xFF8D: "Enter\r", // KP_Enter
 	0xFD06: "EraseEof",
 	0xFF1B: "Escape",
 	0xFF62: "Execute",
@@ -85,7 +86,23 @@ var keyidentifierKeysym = map[int]string{
 	0xFF66: "Redo",
 	0xFF14: "Scroll",
 	0xFF60: "Select",
-	0xFFAC: "Separator",
+	0xFFAA: "*",         // KP_Multiply
+	0xFFAB: "+",         // KP_Add
+	0xFFAC: "Separator", // KP_Separator is locale-dependent
+	0xFFAD: "-",         // KP_Subtract
+	0xFFAE: ".",         // KP_Decimal
+	0xFFAF: "/",         // KP_Divide
+	0xFFB0: "0",         // KP_0
+	0xFFB1: "1",         // KP_1
+	0xFFB2: "2",         // KP_2
+	0xFFB3: "3",         // KP_3
+	0xFFB4: "4",         // KP_4
+	0xFFB5: "5",         // KP_5
+	0xFFB6: "6",         // KP_6
+	0xFFB7: "7",         // KP_7
+	0xFFB8: "8",         // KP_8
+	0xFFB9: "9",         // KP_9
+	0xFFBD: "=",         // KP_Equal
 	0xFFE1: "Shift",
 	0xFFE2: "Shift",
 	0xFF3C: "SingleCandidate",
