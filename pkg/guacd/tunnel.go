@@ -2,6 +2,7 @@ package guacd
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -18,11 +19,26 @@ const (
 )
 
 func NewTunnel(address string, config Configuration, info ClientInformation) (tunnel *Tunnel, err error) {
+	return NewTunnelContext(context.Background(), address, config, info)
+}
+
+func NewTunnelContext(ctx context.Context, address string, config Configuration,
+	info ClientInformation) (tunnel *Tunnel, err error) {
 	var conn net.Conn
-	conn, err = net.DialTimeout("tcp", address, defaultSocketTimeOut)
+	dialer := net.Dialer{Timeout: defaultSocketTimeOut}
+	conn, err = dialer.DialContext(ctx, "tcp", address)
 	if err != nil {
 		return nil, err
 	}
+	handshakeDone := make(chan struct{})
+	defer close(handshakeDone)
+	go func() {
+		select {
+		case <-ctx.Done():
+			_ = conn.Close()
+		case <-handshakeDone:
+		}
+	}()
 	defer func() {
 		// 如果err 则直接关闭 连接
 		if err != nil {

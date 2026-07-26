@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"sync"
+	"sync/atomic"
 
 	"github.com/jumpserver-dev/sdk-go/common"
 	"github.com/jumpserver-dev/sdk-go/model"
@@ -28,46 +29,79 @@ type ReplayRecorder struct {
 	conf          guacd.Configuration
 	info          guacd.ClientInformation
 	newPartChan   chan struct{}
-	currentIndex  int
+	currentIndex  atomic.Int64
 	MaxSize       int
 	apiClient     *service.JMService
 
 	RootPath string
 	wg       sync.WaitGroup
+	started  atomic.Bool
 }
 
 func (r *ReplayRecorder) run(ctx context.Context) {
-	r.startRecordPartReplay(ctx)
+	defer r.wg.Done()
+	r.startRecordPartReplay(ctx, 0)
+	nextIndex := 1
 	for {
+		// Prefer cancellation over a queued rollover. This prevents a new
+		// recorder from being started while Stop is already waiting.
+		if ctx.Err() != nil {
+			logger.Infof("ReplayRecorder %s done", r.SessionId)
+			return
+		}
 		select {
 		case <-ctx.Done():
 			logger.Infof("ReplayRecorder %s done", r.SessionId)
 			return
 		case <-r.newPartChan:
-			r.currentIndex++
-			r.startRecordPartReplay(ctx)
+			if ctx.Err() != nil {
+				return
+			}
+			r.startRecordPartReplay(ctx, nextIndex)
+			nextIndex++
 		}
 	}
 }
 
-func (r *ReplayRecorder) startRecordPartReplay(ctx context.Context) {
+func (r *ReplayRecorder) startRecordPartReplay(ctx context.Context, index int) {
+	r.currentIndex.Store(int64(index))
 	r.wg.Add(1)
-	go r.recordReplay(ctx, &r.wg)
+	go r.recordReplay(ctx, index)
 }
 
 func (r *ReplayRecorder) Start(ctx context.Context) {
+	if r.tunnelSession == nil || r.tunnelSession.TerminalConfig == nil ||
+		r.tunnelSession.ModelSession == nil {
+		logger.Errorf("ReplayRecorder %s session metadata or terminal config is nil, not record", r.SessionId)
+		return
+	}
 	if r.tunnelSession.TerminalConfig.ReplayStorage.TypeName == "null" {
 		logger.Warnf("ReplayRecorder %s storage is null, not record", r.SessionId)
 		return
 	}
+	if !r.started.CompareAndSwap(false, true) {
+		logger.Warnf("ReplayRecorder %s already started", r.SessionId)
+		return
+	}
 	rootPath := filepath.Join(config.GlobalConfig.SessionFolderPath, r.SessionId)
-	_ = os.MkdirAll(rootPath, os.ModePerm)
+	if err := os.MkdirAll(rootPath, 0o750); err != nil {
+		r.started.Store(false)
+		logger.Errorf("ReplayRecorder %s create root path %s failed: %v", r.SessionId, rootPath, err)
+		return
+	}
 	r.RootPath = rootPath
-	r.WriteSessionMeta(r.tunnelSession.Created)
+	if err := r.WriteSessionMeta(r.tunnelSession.Created); err != nil {
+		r.started.Store(false)
+		return
+	}
+	if r.newPartChan == nil {
+		r.newPartChan = make(chan struct{}, 1)
+	}
+	r.wg.Add(1)
 	go r.run(ctx)
 }
 
-func (r *ReplayRecorder) WriteSessionMeta(t common.UTCTime) {
+func (r *ReplayRecorder) WriteSessionMeta(t common.UTCTime) error {
 	var sessionData struct {
 		model.Session
 		DateEnd common.UTCTime `json:"date_end"`
@@ -76,62 +110,60 @@ func (r *ReplayRecorder) WriteSessionMeta(t common.UTCTime) {
 	sessionData.DateEnd = t
 	metaFilename := r.SessionId + ".json"
 	metaFilePath := filepath.Join(r.RootPath, metaFilename)
-	metaBuf, _ := json.Marshal(sessionData)
-	if err := os.WriteFile(metaFilePath, metaBuf, os.ModePerm); err != nil {
+	metaBuf, err := json.Marshal(sessionData)
+	if err != nil {
+		logger.Errorf("ReplayRecorder(%s) marshal session meta failed: %v", r.SessionId, err)
+		return err
+	}
+	if err = writeFileAtomically(metaFilePath, metaBuf, 0o600); err != nil {
 		logger.Errorf("ReplayRecorder(%s) Write session meta file %s failed: %v", r.SessionId, metaFilename, err)
-		return
+		return err
 	}
 	logger.Infof("ReplayRecorder(%s) Write session meta file %s success", r.SessionId, metaFilename)
+	return nil
 }
 
 func (r *ReplayRecorder) IsConnectFailed() bool {
-	// 检测录像文件是否存在，且大小大于 5KB 只检测第一个录像文件大小
-	minSize := int64(1024) * 5
-	partFilename := r.GetPartFilenameByIndex(0)
-	partFilePath := filepath.Join(r.RootPath, partFilename)
-	fi, err := os.Stat(partFilePath)
+	partFiles, err := collectReplayPartFiles(r.RootPath, r.SessionId)
 	if err != nil {
-		logger.Errorf("ReplayRecorder %s get part file %s error: %v", r.SessionId, partFilename, err)
+		logger.Errorf("ReplayRecorder %s collect part files error: %v", r.SessionId, err)
 		return true
 	}
-	if fi.IsDir() {
-		logger.Warnf("ReplayRecorder %s part file %s is a directory, not connect failed", r.SessionId, partFilename)
-		return true
+	for _, partFile := range partFiles {
+		partFilePath := filepath.Join(r.RootPath, partFile.Name())
+		if _, err = loadPartMeta(partFilePath); err == nil {
+			return false
+		}
 	}
-	if fi.Size() <= minSize {
-		logger.Infof("ReplayRecorder %s part file %s size %d < 5KB, not connect failed", r.SessionId, partFilename, fi.Size())
-		return true
-	}
-	return false
+	return true
 }
 
 func (r *ReplayRecorder) CleanFailedPartFileReplay() {
-	// 删除后续异常的文件
-	minSize := int64(1024) * 5
-	for i := 0; i < r.currentIndex; i++ {
-		partFilename := r.GetPartFilenameByIndex(i)
-		partFilePath := filepath.Join(r.RootPath, partFilename)
-		fi, err := os.Stat(partFilePath)
-		if err != nil {
-			logger.Errorf("ReplayRecorder %s get part file %s error: %v", r.SessionId, partFilename, err)
-			continue
-		}
-		if fi.IsDir() {
-			continue
-		}
-		if fi.Size() <= minSize {
-			logger.Infof("ReplayRecorder %s part file %s size < 5KB, remove it and its meta file",
-				r.SessionId, partFilename)
-			partMeatFilePath := partFilePath + MetaSuffix
+	partFiles, err := collectReplayPartFiles(r.RootPath, r.SessionId)
+	if err != nil {
+		logger.Errorf("ReplayRecorder %s collect part files error: %v", r.SessionId, err)
+		return
+	}
+	for _, partFile := range partFiles {
+		partFilePath := filepath.Join(r.RootPath, partFile.Name())
+		if _, err = loadPartMeta(partFilePath); err != nil {
+			logger.Warnf("ReplayRecorder %s remove unusable part file %s: %v",
+				r.SessionId, partFile.Name(), err)
 			_ = os.Remove(partFilePath)
-			_ = os.Remove(partMeatFilePath)
+			_ = os.Remove(partFilePath + MetaSuffix)
 		}
 	}
 }
 
 func (r *ReplayRecorder) Stop() {
+	if !r.started.CompareAndSwap(true, false) {
+		return
+	}
 	r.wg.Wait()
-	r.WriteSessionMeta(common.NewNowUTCTime())
+	if err := r.WriteSessionMeta(common.NewNowUTCTime()); err != nil {
+		logger.Errorf("ReplayRecorder %s update session meta failed: %v", r.SessionId, err)
+		return
+	}
 	uploader := PartUploader{
 		RootPath:  r.RootPath,
 		SessionId: r.SessionId,
@@ -140,7 +172,9 @@ func (r *ReplayRecorder) Stop() {
 		Info:      r.info,
 	}
 
-	// 检测会话文件大小是否满足录像要求，否则判断连接失败，不上传录像文件。
+	r.CleanFailedPartFileReplay()
+	// A replay is usable when at least one part contains a valid sync
+	// instruction. File size alone incorrectly rejects short valid sessions.
 	if r.IsConnectFailed() {
 		logger.Warnf("ReplayRecorder %s connect failed, not upload replay parts", r.SessionId)
 		if err := os.RemoveAll(r.RootPath); err != nil {
@@ -148,13 +182,12 @@ func (r *ReplayRecorder) Stop() {
 		}
 		return
 	}
-	r.CleanFailedPartFileReplay()
 	go uploader.Start()
 	logger.Infof("Replay recorder %s stop and uploading replay parts", r.SessionId)
 }
 
 func (r *ReplayRecorder) GetPartFilename() string {
-	return fmt.Sprintf("%s.%d.part", r.SessionId, r.currentIndex)
+	return r.GetPartFilenameByIndex(int(r.currentIndex.Load()))
 }
 
 func (r *ReplayRecorder) GetPartFilenameByIndex(index int) string {
@@ -166,6 +199,7 @@ type PartMeta struct {
 	EndTime   int64 `json:"end,omitempty"`
 	Duration  int64 `json:"duration,omitempty"`
 	Size      int64 `json:"size,omitempty"`
+	SyncCount int64 `json:"sync_count,omitempty"`
 }
 
 const (
@@ -173,15 +207,27 @@ const (
 	MetaSuffix = ".meta"
 )
 
-func (r *ReplayRecorder) recordReplay(ctx context.Context, wg *sync.WaitGroup) {
-	defer wg.Done()
-	joinTunnel, err1 := guacd.NewTunnel(r.guacdAddr, r.conf, r.info)
+type replayTunnel interface {
+	ReadInstruction() (guacd.Instruction, error)
+	WriteInstructionAndFlush(guacd.Instruction) error
+	Close() error
+}
+
+func (r *ReplayRecorder) recordReplay(ctx context.Context, index int) {
+	defer r.wg.Done()
+	if ctx.Err() != nil {
+		return
+	}
+	joinTunnel, err1 := guacd.NewTunnelContext(ctx, r.guacdAddr, r.conf, r.info)
 	if err1 != nil {
+		if ctx.Err() != nil {
+			return
+		}
 		logger.Errorf("Join replay tunnel %s failed: %v", r.SessionId, err1)
 		return
 	}
 	defer joinTunnel.Close()
-	partFilename := r.GetPartFilename()
+	partFilename := r.GetPartFilenameByIndex(index)
 	partMetaFilename := partFilename + MetaSuffix
 	partFilePath := filepath.Join(r.RootPath, partFilename)
 	partMetaFilePath := filepath.Join(r.RootPath, partMetaFilename)
@@ -192,9 +238,12 @@ func (r *ReplayRecorder) recordReplay(ctx context.Context, wg *sync.WaitGroup) {
 		PartFilename: partFilename,
 		PartFilePath: partFilePath,
 		MaxSize:      r.MaxSize,
-		currentIndex: r.currentIndex,
+		currentIndex: index,
 		ExitSignal: func() {
-			r.newPartChan <- struct{}{}
+			select {
+			case r.newPartChan <- struct{}{}:
+			case <-ctx.Done():
+			}
 		},
 	}
 	partRecorder.Start(ctx, joinTunnel)
@@ -221,29 +270,42 @@ type PartRecorder struct {
 
 	StartTime int64
 	EndTime   int64
+	SyncCount int64
 }
 
 func (p *PartRecorder) String() string {
 	return fmt.Sprintf("%s, part %d", p.Id, p.currentIndex)
 }
 
-func (p *PartRecorder) Start(ctx context.Context, joinTunnel *guacd.Tunnel) {
-	fd, err := os.Create(p.PartFilePath)
+func (p *PartRecorder) Start(ctx context.Context, joinTunnel replayTunnel) {
+	fd, err := os.OpenFile(p.PartFilePath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o600)
 	if err != nil {
 		logger.Errorf("PartRecorder create replay file %s failed: %v", p.PartFilePath, err)
 		return
 	}
 	defer fd.Close()
 	writer := bufio.NewWriter(fd)
-	defer writer.Flush()
 	totalWrittenSize := 0
 	disconnectInst := guacd.NewInstruction(guacd.InstructionClientDisconnect)
-	var (
-		waitExit bool
-	)
+	waitExit := false
+	watchDone := make(chan struct{})
+	defer close(watchDone)
+	go func() {
+		select {
+		case <-ctx.Done():
+			_ = joinTunnel.Close()
+		case <-watchDone:
+		}
+	}()
 	for {
+		if ctx.Err() != nil {
+			break
+		}
 		inst, err2 := joinTunnel.ReadInstruction()
 		if err2 != nil {
+			if ctx.Err() != nil {
+				break
+			}
 			if waitExit && (err2 == io.EOF) {
 				logger.Infof("PartRecorder(%s) tunnel EOF", p)
 				break
@@ -252,31 +314,25 @@ func (p *PartRecorder) Start(ctx context.Context, joinTunnel *guacd.Tunnel) {
 			break
 		}
 		if inst.Opcode == INTERNALDATAOPCODE && len(inst.Args) >= 2 && inst.Args[0] == PINGOPCODE {
-			if err3 := joinTunnel.WriteInstruction(guacd.NewInstruction(INTERNALDATAOPCODE, PINGOPCODE)); err3 != nil {
+			if err3 := joinTunnel.WriteInstructionAndFlush(
+				guacd.NewInstruction(INTERNALDATAOPCODE, PINGOPCODE)); err3 != nil {
 				logger.Warnf("Join tunnel %s write ping failed: %v", p.Id, err3)
 			}
 			continue
 		}
-		select {
-		case <-ctx.Done():
-			if !waitExit {
-				_ = joinTunnel.WriteInstructionAndFlush(disconnectInst)
-				waitExit = true
-				logger.Infof("PartRecorder(%s) ctx done and sned disconnect to guacd", p)
-			} else {
-				logger.Infof("PartRecorder(%s) ctx done and wait exit", p)
-			}
-		default:
-
-		}
 		switch inst.Opcode {
 		case guacd.InstructionClientSync:
 			_ = joinTunnel.WriteInstructionAndFlush(inst)
-			if syncTime, err3 := strconv.ParseInt(inst.Args[0], 10, 64); err3 == nil {
+			if len(inst.Args) > 0 {
+				syncTime, err3 := strconv.ParseInt(inst.Args[0], 10, 64)
+				if err3 != nil {
+					break
+				}
 				p.EndTime = syncTime
-				if p.StartTime == 0 {
+				if p.SyncCount == 0 {
 					p.StartTime = syncTime
 				}
+				p.SyncCount++
 			}
 		case guacd.InstructionClientNop:
 			logger.Debugf("PartRecorder(%s) receive nop", p)
@@ -287,10 +343,14 @@ func (p *PartRecorder) Start(ctx context.Context, joinTunnel *guacd.Tunnel) {
 		wr, err3 := writer.WriteString(inst.String())
 		if err3 != nil {
 			logger.Errorf("PartRecorder(%s) write failed: %v", p, err3)
+			break
 		}
 		totalWrittenSize += wr
-		if totalWrittenSize > p.MaxSize && !waitExit {
-			_ = joinTunnel.WriteInstructionAndFlush(disconnectInst)
+		if p.MaxSize > 0 && totalWrittenSize >= p.MaxSize && !waitExit &&
+			inst.Opcode != guacd.InstructionClientDisconnect {
+			if err3 = joinTunnel.WriteInstructionAndFlush(disconnectInst); err3 != nil {
+				logger.Warnf("PartRecorder(%s) send disconnect failed: %v", p, err3)
+			}
 			waitExit = true
 			logger.Infof("PartRecorder(%s) finish, start new part", p)
 			if p.ExitSignal != nil {
@@ -302,6 +362,14 @@ func (p *PartRecorder) Start(ctx context.Context, joinTunnel *guacd.Tunnel) {
 			break
 		}
 	}
+	if err = writer.Flush(); err != nil {
+		logger.Errorf("PartRecorder(%s) flush replay file failed: %v", p, err)
+		return
+	}
+	if err = fd.Sync(); err != nil {
+		logger.Errorf("PartRecorder(%s) sync replay file failed: %v", p, err)
+		return
+	}
 	p.WritePartMeta(totalWrittenSize)
 }
 
@@ -311,9 +379,43 @@ func (p *PartRecorder) WritePartMeta(size int) {
 		EndTime:   p.EndTime,
 		Duration:  p.EndTime - p.StartTime,
 		Size:      int64(size),
+		SyncCount: p.SyncCount,
 	}
-	metaBuf, _ := json.Marshal(meta)
-	if err := os.WriteFile(p.MetaFilePath, metaBuf, os.ModePerm); err != nil {
+	metaBuf, err := json.Marshal(meta)
+	if err != nil {
+		logger.Errorf("Marshal replay meta file %s failed: %v", p.MetaFilename, err)
+		return
+	}
+	if err = writeFileAtomically(p.MetaFilePath, metaBuf, 0o600); err != nil {
 		logger.Errorf("Write replay meta file %s failed: %v", p.MetaFilename, err)
 	}
+}
+
+func writeFileAtomically(filename string, data []byte, perm os.FileMode) (err error) {
+	tempFile, err := os.CreateTemp(filepath.Dir(filename), "."+filepath.Base(filename)+".tmp-")
+	if err != nil {
+		return err
+	}
+	tempName := tempFile.Name()
+	defer func() {
+		_ = tempFile.Close()
+		_ = os.Remove(tempName)
+	}()
+	if err = tempFile.Chmod(perm); err != nil {
+		return err
+	}
+	written, err := tempFile.Write(data)
+	if err != nil {
+		return err
+	}
+	if written != len(data) {
+		return io.ErrShortWrite
+	}
+	if err = tempFile.Sync(); err != nil {
+		return err
+	}
+	if err = tempFile.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tempName, filename)
 }

@@ -320,7 +320,6 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 		newPartChan:   make(chan struct{}, 1),
 		MaxSize:       config.GlobalConfig.ReplayMaxSize,
 		apiClient:     g.JmsService,
-		currentIndex:  0,
 	}
 	childCtx, cancel := context.WithCancel(ctx)
 	replayRecorder.Start(childCtx)

@@ -3,8 +3,11 @@ package tunnel
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -72,23 +75,39 @@ func (p *PartUploader) preCheckSessionMeta() error {
 		return err
 	}
 	if err1 := json.Unmarshal(metaBuf, &p.replayMeta); err1 != nil {
-		logger.Errorf("PartUploader %s unmarshal meta file error: %v", p.SessionId, err)
+		logger.Errorf("PartUploader %s unmarshal meta file error: %v", p.SessionId, err1)
 		return err1
+	}
+	if p.replayMeta.DateStart.IsZero() {
+		return errors.New("session replay meta has no start time")
 	}
 	if p.replayMeta.DateStart == p.replayMeta.DateEnd {
 		// 未结束的录像, 计算结束时间，并上传到 core api 作为会话结束时间
 		endTime := GetMaxModTime(p.partFiles)
+		if endTime.IsZero() {
+			return errors.New("cannot determine unfinished session end time")
+		}
 		p.replayMeta.DateEnd = common.NewUTCTime(endTime)
 		// api finish time
+		if p.ApiClient == nil {
+			return errors.New("API client is nil")
+		}
 		if _, err1 := p.ApiClient.SessionFinished(p.SessionId, p.replayMeta.DateEnd); err1 != nil {
 			logger.Errorf("PartUploader %s finish session error: %v", p.SessionId, err1)
-			return err
+			return err1
 		}
 		// write meta file
-		metaBuf, _ = json.Marshal(p.replayMeta)
-		if err1 := os.WriteFile(metaPath, metaBuf, os.ModePerm); err1 != nil {
-			logger.Errorf("PartUploader %s write meta file error: %v", p.SessionId, err1)
+		metaBuf, err = json.Marshal(p.replayMeta)
+		if err != nil {
+			return err
 		}
+		if err1 := writeFileAtomically(metaPath, metaBuf, 0o600); err1 != nil {
+			logger.Errorf("PartUploader %s write meta file error: %v", p.SessionId, err1)
+			return err1
+		}
+	}
+	if p.replayMeta.DateEnd.Before(p.replayMeta.DateStart.Time) {
+		return errors.New("session replay end time is before start time")
 	}
 	p.replayMeta.ReplayType = ReplayType
 	return nil
@@ -118,76 +137,132 @@ func (p *PartUploader) Start() {
 		3、生成新的 meta 文件
 		4、上传
 	*/
-	p.CollectionPartFiles()
-	if err := p.preCheckSessionMeta(); err != nil {
+	if p.TermCfg == nil {
+		logger.Errorf("PartUploader %s terminal config is nil", p.SessionId)
 		return
+	}
+	if p.ApiClient == nil {
+		logger.Errorf("PartUploader %s API client is nil", p.SessionId)
+		return
+	}
+	uploadPath, err := p.prepareUpload()
+	if err != nil {
+		logger.Errorf("PartUploader %s prepare upload failed: %v", p.SessionId, err)
+		return
+	}
+	p.uploadToStorage(uploadPath)
+}
+
+func (p *PartUploader) prepareUpload() (string, error) {
+	if err := p.CollectionPartFiles(); err != nil {
+		return "", err
 	}
 	if len(p.partFiles) == 0 {
-		logger.Errorf("PartUploader %s no part file", p.SessionId)
-		return
+		return "", errors.New("no part file")
 	}
-	// 1、创建 upload 目录
+	if err := p.preCheckSessionMeta(); err != nil {
+		return "", err
+	}
+	// Build a clean staging directory first. Raw parts remain untouched, so
+	// compression or process failures can be retried safely on the next boot.
 	uploadPath := filepath.Join(p.RootPath, "upload")
-	if err := os.MkdirAll(uploadPath, os.ModePerm); err != nil {
-		logger.Errorf("PartUploader %s create upload dir error: %v", p.SessionId, err)
-		return
+	stagingPath := filepath.Join(p.RootPath, "upload.tmp")
+	if err := os.RemoveAll(stagingPath); err != nil {
+		return "", fmt.Errorf("clean staging directory: %w", err)
 	}
+	if err := os.MkdirAll(stagingPath, 0o750); err != nil {
+		return "", fmt.Errorf("create staging directory: %w", err)
+	}
+	p.replayMeta.PartMetas = p.replayMeta.PartMetas[:0]
 	// 2、将所有的 part 文件压缩移动到 upload 目录
 	for i := range p.partFiles {
 		partFile := p.partFiles[i]
 		partFilePath := filepath.Join(p.RootPath, partFile.Name())
 		partGzFilename := partFile.Name() + ".gz"
-		uploadFilePath := filepath.Join(uploadPath, partGzFilename)
+		uploadFilePath := filepath.Join(stagingPath, partGzFilename)
 
+		partMeta, err := loadPartMeta(partFilePath)
+		if err != nil {
+			logger.Warnf("PartUploader %s skip unusable part file %s: %v",
+				p.SessionId, partFile.Name(), err)
+			continue
+		}
 		if err := common.CompressToGzipFile(partFilePath, uploadFilePath); err != nil {
-			logger.Errorf("PartUploader %s compress part file %s error: %v", p.SessionId, partFile.Name(), err)
-			return
+			_ = os.RemoveAll(stagingPath)
+			return "", fmt.Errorf("compress part file %s: %w", partFile.Name(), err)
 		}
 
 		// 3、生成新的 meta 文件
-
-		partFileMeta := PartFileMeta{Name: partGzFilename}
-		// 读取 {part}.meta 文件
-		if buf, err := os.ReadFile(filepath.Join(p.RootPath, partFile.Name()+".meta")); err == nil {
-			_ = json.Unmarshal(buf, &partFileMeta.PartMeta)
-		} else {
-			meta, err1 := LoadPartMetaByFile(partFilePath)
-			if err1 != nil {
-				logger.Errorf("PartUploader %s load part file %s meta error: %v", p.SessionId, partFile.Name(), err1)
-				return
-			}
-			// 存储一份 meta 文件
-			metaBuf, _ := json.Marshal(meta)
-			_ = os.WriteFile(filepath.Join(p.RootPath, partFile.Name()+".meta"), metaBuf, os.ModePerm)
-			partFileMeta.PartMeta = meta
-		}
+		partFileMeta := PartFileMeta{Name: partGzFilename, PartMeta: partMeta}
 		p.replayMeta.PartMetas = append(p.replayMeta.PartMetas, partFileMeta)
 	}
-	// upload 写入 replayMeta json
-	replayMetaBuf, _ := json.Marshal(p.replayMeta)
-	if err := os.WriteFile(filepath.Join(uploadPath, p.SessionId+".replay.json"), replayMetaBuf, os.ModePerm); err != nil {
-		logger.Errorf("PartUploader %s write replay meta file error: %v", p.SessionId, err)
-		return
+	if len(p.replayMeta.PartMetas) == 0 {
+		_ = os.RemoveAll(stagingPath)
+		return "", errors.New("no usable part file")
 	}
-	// 4、上传 upload 目录下的所有文件到 存储
-	p.uploadToStorage(uploadPath)
+	// upload 写入 replayMeta json
+	replayMetaBuf, err := json.Marshal(p.replayMeta)
+	if err != nil {
+		_ = os.RemoveAll(stagingPath)
+		return "", fmt.Errorf("marshal replay meta: %w", err)
+	}
+	if err = os.WriteFile(filepath.Join(stagingPath, p.SessionId+".replay.json"), replayMetaBuf, 0o600); err != nil {
+		_ = os.RemoveAll(stagingPath)
+		return "", fmt.Errorf("write replay meta file: %w", err)
+	}
+	if err = os.RemoveAll(uploadPath); err != nil {
+		return "", fmt.Errorf("clean upload directory: %w", err)
+	}
+	if err = os.Rename(stagingPath, uploadPath); err != nil {
+		return "", fmt.Errorf("publish staging directory: %w", err)
+	}
+	return uploadPath, nil
 }
 
-func (p *PartUploader) CollectionPartFiles() {
-	entries, err := os.ReadDir(p.RootPath)
+func collectReplayPartFiles(rootPath, sessionID string) ([]os.DirEntry, error) {
+	entries, err := os.ReadDir(rootPath)
 	if err != nil {
-		logger.Errorf("PartUploader %s read dir %s error: %v", p.SessionId, p.RootPath, err)
-		return
+		return nil, err
 	}
-	p.partFiles = make([]os.DirEntry, 0, 5)
+	type indexedPart struct {
+		index int
+		entry os.DirEntry
+	}
+	indexedParts := make([]indexedPart, 0, 5)
+	prefix := sessionID + "."
 	for _, entry := range entries {
 		if entry.IsDir() {
 			continue
 		}
-		if strings.HasSuffix(entry.Name(), ".part") {
-			p.partFiles = append(p.partFiles, entry)
+		name := entry.Name()
+		if !strings.HasPrefix(name, prefix) || !strings.HasSuffix(name, PartSuffix) {
+			continue
 		}
+		indexText := strings.TrimSuffix(strings.TrimPrefix(name, prefix), PartSuffix)
+		index, err1 := strconv.Atoi(indexText)
+		if err1 != nil || index < 0 || strconv.Itoa(index) != indexText {
+			continue
+		}
+		indexedParts = append(indexedParts, indexedPart{index: index, entry: entry})
 	}
+	sort.Slice(indexedParts, func(i, j int) bool {
+		return indexedParts[i].index < indexedParts[j].index
+	})
+	partFiles := make([]os.DirEntry, 0, len(indexedParts))
+	for _, part := range indexedParts {
+		partFiles = append(partFiles, part.entry)
+	}
+	return partFiles, nil
+}
+
+func (p *PartUploader) CollectionPartFiles() error {
+	partFiles, err := collectReplayPartFiles(p.RootPath, p.SessionId)
+	if err != nil {
+		logger.Errorf("PartUploader %s read dir %s error: %v", p.SessionId, p.RootPath, err)
+		return err
+	}
+	p.partFiles = partFiles
+	return nil
 }
 
 func (p *PartUploader) GetStorage() storage.ReplayStorage {
@@ -237,7 +312,9 @@ func (p *PartUploader) uploadToStorage(uploadPath string) {
 		fileInfo, err := uploadFile.Info()
 		if err != nil {
 			logger.Errorf("PartUploader %s get file info %s error: %v", p.SessionId, uploadFile.Name(), err)
-			continue
+			reason := model.SessionLifecycleLog{Reason: err.Error()}
+			p.RecordLifecycleLog(model.ReplayUploadFailure, reason)
+			return
 		}
 		totalSize += fileInfo.Size()
 		uploadFilePath := filepath.Join(uploadPath, uploadFile.Name())
@@ -252,6 +329,8 @@ func (p *PartUploader) uploadToStorage(uploadPath string) {
 	}
 	if _, err = p.ApiClient.FinishReplyWithSize(p.SessionId, totalSize); err != nil {
 		logger.Errorf("PartUploader %s finish replay error: %v", p.SessionId, err)
+		reason := model.SessionLifecycleLog{Reason: err.Error()}
+		p.RecordLifecycleLog(model.ReplayUploadFailure, reason)
 		return
 	}
 
@@ -295,7 +374,7 @@ func LoadPartMetaByFile(partFile string) (PartMeta, error) {
 		return partMeta, err
 	}
 	partMeta.Size = info.Size()
-	startTime, endTime, err := LoadPartReplayTime(partFile)
+	startTime, endTime, syncCount, err := scanPartReplayTime(partFile)
 	if err != nil {
 		logger.Errorf("LoadPartMetaByFile %s load replay time error: %v", partFile, err)
 		return partMeta, err
@@ -303,13 +382,19 @@ func LoadPartMetaByFile(partFile string) (PartMeta, error) {
 	partMeta.StartTime = startTime
 	partMeta.EndTime = endTime
 	partMeta.Duration = endTime - startTime
+	partMeta.SyncCount = syncCount
+	if partMeta.Duration < 0 {
+		return PartMeta{}, fmt.Errorf("replay sync time moved backwards")
+	}
 	return partMeta, nil
 }
 
-func LoadPartReplayTime(partFile string) (startTime int64, endTime int64, err error) {
+var errNoReplaySync = errors.New("replay part contains no sync instruction")
+
+func scanPartReplayTime(partFile string) (startTime int64, endTime int64, syncCount int64, err error) {
 	fd, err := os.Open(partFile)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, 0, err
 	}
 	defer fd.Close()
 	reader := bufio.NewReader(fd)
@@ -327,12 +412,57 @@ func LoadPartReplayTime(partFile string) (startTime int64, endTime int64, err er
 				continue
 			}
 			endTime = syncMill
-			if startTime == 0 {
+			if syncCount == 0 {
 				startTime = syncMill
+			}
+			syncCount++
+		}
+	}
+	if syncCount == 0 {
+		return 0, 0, 0, errNoReplaySync
+	}
+	return startTime, endTime, syncCount, nil
+}
+
+func LoadPartReplayTime(partFile string) (startTime int64, endTime int64, err error) {
+	startTime, endTime, _, err = scanPartReplayTime(partFile)
+	return startTime, endTime, err
+}
+
+func loadPartMeta(partFile string) (PartMeta, error) {
+	var meta PartMeta
+	info, err := os.Stat(partFile)
+	if err != nil {
+		return meta, err
+	}
+	if !info.Mode().IsRegular() || info.Size() == 0 {
+		return meta, fmt.Errorf("replay part is not a non-empty regular file")
+	}
+	metaPath := partFile + MetaSuffix
+	if buf, readErr := os.ReadFile(metaPath); readErr == nil {
+		if jsonErr := json.Unmarshal(buf, &meta); jsonErr == nil {
+			// sync_count was added after the original format. Old metadata is
+			// accepted when it already contains a meaningful time range.
+			hasSync := meta.SyncCount > 0 ||
+				(meta.StartTime != 0 && meta.EndTime >= meta.StartTime)
+			if hasSync && meta.EndTime >= meta.StartTime && meta.Size == info.Size() {
+				meta.Duration = meta.EndTime - meta.StartTime
+				return meta, nil
 			}
 		}
 	}
-	return startTime, endTime, nil
+	meta, err = LoadPartMetaByFile(partFile)
+	if err != nil {
+		return meta, err
+	}
+	metaBuf, marshalErr := json.Marshal(meta)
+	if marshalErr != nil {
+		return meta, marshalErr
+	}
+	if writeErr := writeFileAtomically(metaPath, metaBuf, 0o600); writeErr != nil {
+		logger.Warnf("Write recovered replay meta file %s failed: %v", metaPath, writeErr)
+	}
+	return meta, nil
 }
 
 func NewWorkerClient(cfg config.Config) *videoworker.WorkClient {

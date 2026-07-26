@@ -531,7 +531,11 @@ func uploadRemainSessionPartReplay(jmsService *service.JMService, sessionDir str
 	logger.Infof("Start upload remain %d session replay files 10 min later", len(sessions))
 	time.Sleep(10 * time.Minute)
 
-	terminalConf, _ := jmsService.GetTerminalConfig()
+	terminalConf, err := jmsService.GetTerminalConfig()
+	if err != nil {
+		logger.Errorf("Get terminal config before uploading remain session replay failed: %s", err)
+		return
+	}
 	for _, sessionEntry := range sessions {
 		sessionId := sessionEntry.Name()
 		if !common.IsUUID(sessionId) {
