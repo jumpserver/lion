@@ -272,19 +272,7 @@ func (p *PartUploader) RecordLifecycleLog(event model.LifecycleEvent, logObj mod
 }
 
 func ReadInstruction(r *bufio.Reader) (guacd.Instruction, error) {
-	var ret strings.Builder
-	for {
-		msg, err := r.ReadString(guacd.ByteSemicolonDelimiter)
-		if err != nil && msg == "" {
-			return guacd.Instruction{}, err
-		}
-		ret.WriteString(msg)
-		if retInstruction, err1 := guacd.ParseInstructionString(ret.String()); err1 == nil {
-			return retInstruction, nil
-		} else {
-			logger.Infof("ReadInstruction err:  %v\n", err1.Error())
-		}
-	}
+	return guacd.NewInstructionDecoder(r).ReadInstruction()
 }
 
 func LoadPartMetaByFile(partFile string) (PartMeta, error) {
