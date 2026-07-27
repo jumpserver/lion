@@ -54,6 +54,7 @@ func (p *Parser) ParseStream(userInChan chan *Message) {
 	logger.Infof("Session %s: Parser start", p.id)
 	go func() {
 		defer func() {
+			p.ParseUserInput(charEnter)
 			// 会话结束，结算命令结果
 			p.sendCommandRecord()
 			close(p.cmdRecordChan)
