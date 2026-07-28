@@ -1,1 +1,7 @@
-{}
+{
+  "ClipboardTextLimitExceeded": "剪貼簿文字超過限制",
+  "ClipboardFileSizeLimitExceeded": "剪貼簿檔案超過限制",
+  "Copy": "複製",
+  "Paste": "貼上",
+  "NoPermission": "無權限"
+}

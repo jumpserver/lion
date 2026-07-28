@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 // @ts-ignore
 import Guacamole from 'guacamole-common-js';
 
@@ -83,6 +83,20 @@ const FileType = {
   NORMAL: 'NORMAL',
   DIRECTORY: 'DIRECTORY',
 };
+
+interface ClipboardPolicyItem {
+  text_limit?: number;
+  file_size_limit?: number;
+}
+
+interface ClipboardPolicy {
+  copy?: ClipboardPolicyItem;
+  paste?: ClipboardPolicyItem;
+}
+
+const DEFAULT_CLIPBOARD_TEXT_LIMIT = 4096;
+const BYTES_PER_MEGABYTE = 1024 * 1024;
+const getTextLength = (text: string) => Array.from(text).length;
 
 export async function getSupportedImages(): Promise<string[]> {
   // 清空之前的结果
@@ -184,6 +198,7 @@ export function useGuacamoleClient(t: any) {
   const isRemoteApp = ref<boolean>(false);
   const isHttpProtocol = ref<boolean>(false);
   const remoteClipboardText = ref<string>('');
+  const clipboardPasteTextLimit = computed(() => getClipboardTextLimit('paste'));
   function connectToGuacamole(
     wsUrl: string,
     connectParams: Record<string, any>,
@@ -402,7 +417,68 @@ export function useGuacamoleClient(t: any) {
     }
     sendTextToRemote(text);
   }, 300);
+  const getClipboardPolicyItem = (direction: 'copy' | 'paste'): ClipboardPolicyItem | null => {
+    const policy = action_permission.value?.clipboard_policy as ClipboardPolicy | undefined;
+    return policy?.[direction] || null;
+  };
+  const getClipboardTextLimit = (direction: 'copy' | 'paste') => {
+    const limit = getClipboardPolicyItem(direction)?.text_limit || 0;
+    if (!Number.isFinite(limit) || limit <= 0 || limit > DEFAULT_CLIPBOARD_TEXT_LIMIT) {
+      return DEFAULT_CLIPBOARD_TEXT_LIMIT;
+    }
+    return limit;
+  };
+  const getClipboardFileSizeLimit = (direction: 'copy' | 'paste') => {
+    const limit = getClipboardPolicyItem(direction)?.file_size_limit || 0;
+    return Number.isFinite(limit) && limit > 0 ? limit : 0;
+  };
+  const getClipboardFileSizeLimitBytes = (direction: 'copy' | 'paste') =>
+    getClipboardFileSizeLimit(direction) * BYTES_PER_MEGABYTE;
+  const canUseClipboardDirection = (direction: 'copy' | 'paste') => {
+    return Boolean(
+      direction === 'copy'
+        ? action_permission.value?.enable_copy
+        : action_permission.value?.enable_paste,
+    );
+  };
+  const showClipboardLimitWarning = (direction: 'copy' | 'paste', limit: number) => {
+    const action = direction === 'copy' ? t('Copy') : t('Paste');
+    message.warning(`${action} ${t('ClipboardTextLimitExceeded')}: ${limit}`);
+  };
+  const showClipboardFileSizeLimitWarning = (direction: 'copy' | 'paste', limit: number) => {
+    const action = direction === 'copy' ? t('Copy') : t('Paste');
+    message.warning(`${action} ${t('ClipboardFileSizeLimitExceeded')}: ${limit}`);
+  };
+  const validateClipboardText = (direction: 'copy' | 'paste', text: string) => {
+    if (!canUseClipboardDirection(direction)) {
+      const action = direction === 'copy' ? t('Copy') : t('Paste');
+      message.warning(`${action} ${t('NoPermission')}`);
+      return false;
+    }
+    const limit = getClipboardTextLimit(direction);
+    if (limit > 0 && getTextLength(text) > limit) {
+      showClipboardLimitWarning(direction, limit);
+      return false;
+    }
+    return true;
+  };
+  const validateClipboardBlob = (direction: 'copy' | 'paste', size: number) => {
+    if (!canUseClipboardDirection(direction)) {
+      const action = direction === 'copy' ? t('Copy') : t('Paste');
+      message.warning(`${action} ${t('NoPermission')}`);
+      return false;
+    }
+    const limit = getClipboardFileSizeLimitBytes(direction);
+    if (limit > 0 && size > limit) {
+      showClipboardFileSizeLimitWarning(direction, getClipboardFileSizeLimit(direction));
+      return false;
+    }
+    return true;
+  };
   const sendTextToRemote = (text: string) => {
+    if (!validateClipboardText('paste', text)) {
+      return;
+    }
     const data = {
       type: 'text/plain',
       data: text,
@@ -625,7 +701,7 @@ export function useGuacamoleClient(t: any) {
         msg = msg + ': ' + status.message;
         break;
     }
-    message.error(msg, {duration: 10000});
+    message.error(msg, { duration: 10000 });
   };
 
   const clientStateChanged = (state: any) => {
@@ -967,6 +1043,9 @@ export function useGuacamoleClient(t: any) {
       // Set clipboard contents once stream is finished
       reader.onend = async () => {
         console.log('clipboard received from remote: ', data);
+        if (!validateClipboardText('copy', data)) {
+          return;
+        }
         remoteClipboardText.value = data;
         if (navigator.clipboard) {
           await navigator.clipboard.writeText(data);
@@ -982,6 +1061,9 @@ export function useGuacamoleClient(t: any) {
       reader.onend = () => {
         const blob = reader.getBlob();
         console.log('clipboard blob received from remote: ', blob);
+        if (!validateClipboardBlob('copy', blob.size)) {
+          return;
+        }
         navigator.clipboard.write(blob);
       };
     }
@@ -1126,6 +1208,7 @@ export function useGuacamoleClient(t: any) {
     fileFsLoading,
     currentGuacFsObject,
     remoteClipboardText,
+    clipboardPasteTextLimit,
     sendInputActive,
   };
 }

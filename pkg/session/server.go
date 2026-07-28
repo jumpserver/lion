@@ -296,7 +296,7 @@ func (s *Server) Create(ctx *gin.Context, opts ...TunnelOption) (sess TunnelSess
 	sess.ExpireInfo = opt.ExpireInfo
 	sess.Permission = &perm
 	sess.Account = opt.Account
-	sess.ActionPerm = NewActionPermission(&perm, targetType)
+	sess.ActionPerm = NewActionPermission(&perm, targetType, opt.authInfo.ClipboardPolicy)
 	jmsSession := model.Session{
 		ID:         sess.ID,
 		User:       sess.User.String(),

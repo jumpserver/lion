@@ -1,5 +1,11 @@
 package guacd
 
+import (
+	"os"
+	"strings"
+	"time"
+)
+
 const (
 	defaultOptimalScreenWidth  = 1024
 	defaultOptimalScreenHeight = 768
@@ -8,12 +14,28 @@ const (
 	defaultTimezone = "Asia/Shanghai"
 )
 
+func getDefaultTimezone() string {
+	timezone := strings.TrimSpace(os.Getenv("TZ"))
+	if isValidTimezone(timezone) {
+		return timezone
+	}
+	return defaultTimezone
+}
+
+func isValidTimezone(timezone string) bool {
+	if timezone == "" {
+		return false
+	}
+	_, err := time.LoadLocation(timezone)
+	return err == nil
+}
+
 func NewClientInformation() ClientInformation {
 	return ClientInformation{
 		OptimalScreenWidth:  defaultOptimalScreenWidth,
 		OptimalScreenHeight: defaultOptimalScreenHeight,
 		OptimalResolution:   defaultOptimalResolution,
-		Timezone:            defaultTimezone,
+		Timezone:            getDefaultTimezone(),
 		AudioMimetypes:      []string{"audio/L8", "audio/L16"},
 		ImageMimetypes:      []string{"image/jpeg", "image/png", "image/webp"},
 		VideoMimetypes:      []string{},
@@ -60,6 +82,13 @@ type ClientInformation struct {
 	 * qwerty keyboard layout
 	 */
 	KeyboardLayout string
+}
+
+func (info *ClientInformation) SetTimezone(timezone string) {
+	timezone = strings.TrimSpace(timezone)
+	if isValidTimezone(timezone) {
+		info.Timezone = timezone
+	}
 }
 
 func (info *ClientInformation) ExtraConfig() map[string]string {

@@ -59,6 +59,8 @@ type Connection struct {
 
 	inputFilter *InputStreamInterceptingFilter
 
+	clipboardFilter *clipboardPolicyFilter
+
 	done chan struct{}
 
 	traceLock sync.Mutex
@@ -115,6 +117,12 @@ func (t *Connection) readTunnelInstruction() (*guacd.Instruction, error) {
 		}
 		if t.outputFilter != nil {
 			newInstruction = t.outputFilter.Filter(newInstruction)
+			if newInstruction == nil {
+				continue
+			}
+		}
+		if t.clipboardFilter != nil {
+			newInstruction = t.clipboardFilter.filterToClient(newInstruction)
 			if newInstruction == nil {
 				continue
 			}
@@ -292,6 +300,13 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 					case activeChan <- struct{}{}:
 					default:
 					}
+				}
+				if t.clipboardFilter != nil {
+					filtered := t.clipboardFilter.filterToServer(&ret)
+					if filtered == nil {
+						continue
+					}
+					message = []byte(filtered.String())
 				}
 			} else {
 				logger.Errorf("Session[%s] parse instruction err %s", t, err)
