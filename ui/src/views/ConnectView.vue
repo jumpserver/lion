@@ -59,6 +59,15 @@ const drawShow = ref(false);
 const connectStatus = ref('Connecting');
 
 const autoFit = ref<boolean>(true);
+const getBrowserTimezone = () => {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+  } catch (error) {
+    console.warn('Unable to detect browser timezone:', error);
+    return '';
+  }
+};
+
 const debouncedResize = useDebounceFn(() => {
   resizeGuaScale(width.value, height.value);
   if (!autoFit.value) {
@@ -215,6 +224,7 @@ onMounted(async () => {
   const param = {
     TOKEN_ID: encodeURIComponent(token),
     GUAC_KEYBOARD: keyboardLayout.value,
+    GUAC_TIMEZONE: getBrowserTimezone(),
   };
   connectToGuacamole(wsPrefix.value, param, window.innerWidth, window.innerHeight, true);
   const displayEl = document.getElementById('display');

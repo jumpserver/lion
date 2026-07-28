@@ -137,6 +137,9 @@ func (g *GuacamoleTunnelServer) getClientInfo(ctx *gin.Context, token *model.Con
 	if keyboardLayout, ok := ctx.GetQuery("GUAC_KEYBOARD"); ok {
 		info.KeyboardLayout = keyboardLayout
 	}
+	if timezone, ok := ctx.GetQuery("GUAC_TIMEZONE"); ok {
+		info.SetTimezone(timezone)
+	}
 	return info
 }
 
