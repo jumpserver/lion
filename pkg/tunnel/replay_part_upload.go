@@ -3,6 +3,7 @@ package tunnel
 import (
 	"bufio"
 	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -304,7 +305,10 @@ func LoadPartReplayTime(partFile string) (startTime int64, endTime int64, err er
 	for {
 		inst, err1 := ReadInstruction(reader)
 		if err1 != nil {
-			break
+			if err1 == io.EOF {
+				break
+			}
+			return startTime, endTime, err1
 		}
 		if inst.Opcode != "sync" {
 			continue

@@ -266,7 +266,7 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 					}
 					_, err4 := t.writeTunnelMessage(message)
 					if err4 != nil {
-						logger.Errorf("Session[%s] guacamole server write err: %+v", t, err2)
+						logger.Errorf("Session[%s] guacamole server write err: %+v", t, err4)
 						exit <- err4
 						break
 					}
@@ -309,7 +309,7 @@ func (t *Connection) Run(ctx *gin.Context) (err error) {
 					message = []byte(filtered.String())
 				}
 			} else {
-				logger.Errorf("Session[%s] parse instruction err %s", t, err)
+				logger.Errorf("Session[%s] parse instruction err %s", t, err2)
 			}
 			_, err = t.writeTunnelMessage(message)
 			if err != nil {
