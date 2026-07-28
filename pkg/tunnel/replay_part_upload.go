@@ -360,6 +360,17 @@ type partReplayScan struct {
 	lastSyncOffset int64
 }
 
+type countingReader struct {
+	reader    io.Reader
+	bytesRead int64
+}
+
+func (r *countingReader) Read(p []byte) (int, error) {
+	n, err := r.reader.Read(p)
+	r.bytesRead += int64(n)
+	return n, err
+}
+
 func scanPartReplay(partFile string) (partReplayScan, error) {
 	var scan partReplayScan
 	fd, err := os.Open(partFile)
@@ -373,7 +384,8 @@ func scanPartReplay(partFile string) (partReplayScan, error) {
 	}
 	scan.meta.Size = info.Size()
 
-	reader := bufio.NewReader(fd)
+	source := &countingReader{reader: fd}
+	reader := bufio.NewReader(source)
 	decoder := guacd.NewInstructionDecoder(reader)
 	hasSync := false
 	for {
@@ -399,11 +411,7 @@ func scanPartReplay(partFile string) (partReplayScan, error) {
 			hasSync = true
 		}
 		scan.meta.EndTime = syncMill
-		offset, err2 := fd.Seek(0, io.SeekCurrent)
-		if err2 != nil {
-			return scan, err2
-		}
-		scan.lastSyncOffset = offset - int64(reader.Buffered())
+		scan.lastSyncOffset = source.bytesRead - int64(reader.Buffered())
 	}
 	if !hasSync {
 		return scan, errors.New("replay part has no valid sync instruction")
