@@ -3,9 +3,12 @@ package tunnel
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -119,16 +122,30 @@ func (p *PartUploader) Start() {
 		3、生成新的 meta 文件
 		4、上传
 	*/
-	p.CollectionPartFiles()
-	if err := p.preCheckSessionMeta(); err != nil {
+	if err := p.CollectionPartFiles(); err != nil {
+		logger.Errorf("PartUploader %s collect part files error: %v, manual handling required", p.SessionId, err)
 		return
 	}
 	if len(p.partFiles) == 0 {
 		logger.Errorf("PartUploader %s no part file", p.SessionId)
 		return
 	}
+	partMetas, err := p.preCheckPartFiles()
+	if err != nil {
+		logger.Errorf("PartUploader %s check part files error: %v, manual handling required", p.SessionId, err)
+		return
+	}
+	if err = p.preCheckSessionMeta(); err != nil {
+		return
+	}
+	p.replayMeta.PartMetas = partMetas
+
 	// 1、创建 upload 目录
 	uploadPath := filepath.Join(p.RootPath, "upload")
+	if err = os.RemoveAll(uploadPath); err != nil {
+		logger.Errorf("PartUploader %s clean upload dir error: %v", p.SessionId, err)
+		return
+	}
 	if err := os.MkdirAll(uploadPath, os.ModePerm); err != nil {
 		logger.Errorf("PartUploader %s create upload dir error: %v", p.SessionId, err)
 		return
@@ -144,26 +161,8 @@ func (p *PartUploader) Start() {
 			logger.Errorf("PartUploader %s compress part file %s error: %v", p.SessionId, partFile.Name(), err)
 			return
 		}
-
-		// 3、生成新的 meta 文件
-
-		partFileMeta := PartFileMeta{Name: partGzFilename}
-		// 读取 {part}.meta 文件
-		if buf, err := os.ReadFile(filepath.Join(p.RootPath, partFile.Name()+".meta")); err == nil {
-			_ = json.Unmarshal(buf, &partFileMeta.PartMeta)
-		} else {
-			meta, err1 := LoadPartMetaByFile(partFilePath)
-			if err1 != nil {
-				logger.Errorf("PartUploader %s load part file %s meta error: %v", p.SessionId, partFile.Name(), err1)
-				return
-			}
-			// 存储一份 meta 文件
-			metaBuf, _ := json.Marshal(meta)
-			_ = os.WriteFile(filepath.Join(p.RootPath, partFile.Name()+".meta"), metaBuf, os.ModePerm)
-			partFileMeta.PartMeta = meta
-		}
-		p.replayMeta.PartMetas = append(p.replayMeta.PartMetas, partFileMeta)
 	}
+	// 3、生成新的 meta 文件
 	// upload 写入 replayMeta json
 	replayMetaBuf, _ := json.Marshal(p.replayMeta)
 	if err := os.WriteFile(filepath.Join(uploadPath, p.SessionId+".replay.json"), replayMetaBuf, os.ModePerm); err != nil {
@@ -174,21 +173,87 @@ func (p *PartUploader) Start() {
 	p.uploadToStorage(uploadPath)
 }
 
-func (p *PartUploader) CollectionPartFiles() {
+func (p *PartUploader) CollectionPartFiles() error {
 	entries, err := os.ReadDir(p.RootPath)
 	if err != nil {
-		logger.Errorf("PartUploader %s read dir %s error: %v", p.SessionId, p.RootPath, err)
-		return
+		return err
 	}
 	p.partFiles = make([]os.DirEntry, 0, 5)
+	partPrefix := p.SessionId + "."
 	for _, entry := range entries {
 		if entry.IsDir() {
 			continue
 		}
-		if strings.HasSuffix(entry.Name(), ".part") {
-			p.partFiles = append(p.partFiles, entry)
+		name := entry.Name()
+		if !strings.HasPrefix(name, partPrefix) || !strings.HasSuffix(name, PartSuffix) {
+			continue
+		}
+		if _, err = replayPartIndex(name, partPrefix); err != nil {
+			return err
+		}
+		p.partFiles = append(p.partFiles, entry)
+	}
+	sort.Slice(p.partFiles, func(i, j int) bool {
+		left, _ := replayPartIndex(p.partFiles[i].Name(), partPrefix)
+		right, _ := replayPartIndex(p.partFiles[j].Name(), partPrefix)
+		return left < right
+	})
+	for i := range p.partFiles {
+		index, _ := replayPartIndex(p.partFiles[i].Name(), partPrefix)
+		if index != i {
+			return fmt.Errorf("part sequence is not continuous: expected %d, got %d", i, index)
 		}
 	}
+	return nil
+}
+
+func replayPartIndex(name, prefix string) (int, error) {
+	indexText := strings.TrimSuffix(strings.TrimPrefix(name, prefix), PartSuffix)
+	index, err := strconv.Atoi(indexText)
+	if err != nil || index < 0 {
+		return 0, fmt.Errorf("invalid replay part filename %q", name)
+	}
+	return index, nil
+}
+
+func (p *PartUploader) preCheckPartFiles() ([]PartFileMeta, error) {
+	partMetas := make([]PartFileMeta, 0, len(p.partFiles))
+	lastPart := len(p.partFiles) - 1
+	for i := range p.partFiles {
+		partFile := p.partFiles[i]
+		partFilePath := filepath.Join(p.RootPath, partFile.Name())
+		scan, err := scanPartReplay(partFilePath)
+		if err != nil {
+			if i != lastPart || !errors.Is(err, io.ErrUnexpectedEOF) || scan.lastSyncOffset == 0 {
+				return nil, fmt.Errorf("part %s is invalid: %w", partFile.Name(), err)
+			}
+			if err = os.Truncate(partFilePath, scan.lastSyncOffset); err != nil {
+				return nil, fmt.Errorf("truncate last part %s: %w", partFile.Name(), err)
+			}
+			logger.Warnf("PartUploader %s truncated incomplete tail of last part %s to %d bytes",
+				p.SessionId, partFile.Name(), scan.lastSyncOffset)
+			scan, err = scanPartReplay(partFilePath)
+			if err != nil {
+				return nil, fmt.Errorf("check repaired last part %s: %w", partFile.Name(), err)
+			}
+		}
+		partMetas = append(partMetas, PartFileMeta{
+			Name:     partFile.Name() + ".gz",
+			PartMeta: scan.meta,
+		})
+	}
+
+	for i := range p.partFiles {
+		metaBuf, err := json.Marshal(partMetas[i].PartMeta)
+		if err != nil {
+			return nil, fmt.Errorf("marshal part %s meta: %w", p.partFiles[i].Name(), err)
+		}
+		metaPath := filepath.Join(p.RootPath, p.partFiles[i].Name()+MetaSuffix)
+		if err = os.WriteFile(metaPath, metaBuf, os.ModePerm); err != nil {
+			return nil, fmt.Errorf("write part %s meta: %w", p.partFiles[i].Name(), err)
+		}
+	}
+	return partMetas, nil
 }
 
 func (p *PartUploader) GetStorage() storage.ReplayStorage {
@@ -277,54 +342,74 @@ func ReadInstruction(r *bufio.Reader) (guacd.Instruction, error) {
 }
 
 func LoadPartMetaByFile(partFile string) (PartMeta, error) {
-	var partMeta PartMeta
-	info, err := os.Stat(partFile)
-	if err != nil {
-		logger.Errorf("LoadPartMetaByFile stat %s error: %v", partFile, err)
-		return partMeta, err
-	}
-	partMeta.Size = info.Size()
-	startTime, endTime, err := LoadPartReplayTime(partFile)
+	scan, err := scanPartReplay(partFile)
 	if err != nil {
 		logger.Errorf("LoadPartMetaByFile %s load replay time error: %v", partFile, err)
-		return partMeta, err
+		return PartMeta{}, err
 	}
-	partMeta.StartTime = startTime
-	partMeta.EndTime = endTime
-	partMeta.Duration = endTime - startTime
-	return partMeta, nil
+	return scan.meta, nil
 }
 
 func LoadPartReplayTime(partFile string) (startTime int64, endTime int64, err error) {
+	scan, err := scanPartReplay(partFile)
+	return scan.meta.StartTime, scan.meta.EndTime, err
+}
+
+type partReplayScan struct {
+	meta           PartMeta
+	lastSyncOffset int64
+}
+
+func scanPartReplay(partFile string) (partReplayScan, error) {
+	var scan partReplayScan
 	fd, err := os.Open(partFile)
 	if err != nil {
-		return 0, 0, err
+		return scan, err
 	}
 	defer fd.Close()
+	info, err := fd.Stat()
+	if err != nil {
+		return scan, err
+	}
+	scan.meta.Size = info.Size()
+
 	reader := bufio.NewReader(fd)
+	decoder := guacd.NewInstructionDecoder(reader)
+	hasSync := false
 	for {
-		inst, err1 := ReadInstruction(reader)
+		inst, err1 := decoder.ReadInstruction()
 		if err1 != nil {
-			if err1 == io.EOF {
+			if errors.Is(err1, io.EOF) {
 				break
 			}
-			return startTime, endTime, err1
+			return scan, err1
 		}
-		if inst.Opcode != "sync" {
+		if inst.Opcode != guacd.InstructionClientSync {
 			continue
 		}
-		if len(inst.Args) > 0 {
-			syncMill, err2 := strconv.ParseInt(inst.Args[0], 10, 64)
-			if err2 != nil {
-				continue
-			}
-			endTime = syncMill
-			if startTime == 0 {
-				startTime = syncMill
-			}
+		if len(inst.Args) == 0 {
+			return scan, errors.New("sync instruction has no timestamp")
 		}
+		syncMill, err2 := strconv.ParseInt(inst.Args[0], 10, 64)
+		if err2 != nil {
+			return scan, fmt.Errorf("invalid sync timestamp %q: %w", inst.Args[0], err2)
+		}
+		if !hasSync {
+			scan.meta.StartTime = syncMill
+			hasSync = true
+		}
+		scan.meta.EndTime = syncMill
+		offset, err2 := fd.Seek(0, io.SeekCurrent)
+		if err2 != nil {
+			return scan, err2
+		}
+		scan.lastSyncOffset = offset - int64(reader.Buffered())
 	}
-	return startTime, endTime, nil
+	if !hasSync {
+		return scan, errors.New("replay part has no valid sync instruction")
+	}
+	scan.meta.Duration = scan.meta.EndTime - scan.meta.StartTime
+	return scan, nil
 }
 
 func NewWorkerClient(cfg config.Config) *videoworker.WorkClient {
