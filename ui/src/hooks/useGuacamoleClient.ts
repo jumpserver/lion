@@ -298,6 +298,7 @@ export function useGuacamoleClient(t: any) {
 
     const handleMouseEnter = () => {
       document.body.focus();
+      display.showCursor(false);
       nextTick(() => {
         sink.focus();
       });

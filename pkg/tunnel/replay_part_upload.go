@@ -86,7 +86,7 @@ func (p *PartUploader) preCheckSessionMeta() error {
 		// api finish time
 		if _, err1 := p.ApiClient.SessionFinished(p.SessionId, p.replayMeta.DateEnd); err1 != nil {
 			logger.Errorf("PartUploader %s finish session error: %v", p.SessionId, err1)
-			return err
+			return err1
 		}
 		// write meta file
 		metaBuf, _ = json.Marshal(p.replayMeta)
