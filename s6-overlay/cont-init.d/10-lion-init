@@ -9,6 +9,11 @@ if [ -n "${CORE_HOST:-}" ]; then
     done
 fi
 
+# Set timezone according to the TZ environment variable, if it is set and valid
+if [ -n "${TZ:-}" ] && [ -e "/usr/share/zoneinfo/${TZ}" ]; then
+    ln -sf "/usr/share/zoneinfo/${TZ}" /etc/localtime
+fi
+
 mkdir -p /opt/lion/data/logs/guacd
 
 if [ -e /opt/lion/data/logs/guacd.log ] || [ -L /opt/lion/data/logs/guacd.log ]; then
