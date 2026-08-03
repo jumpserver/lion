@@ -21,12 +21,8 @@ const props = defineProps<{
 }>();
 
 const showRemoteText = ref<boolean>(false);
-const defaultMaxlength = 1024 * 4;
 const maxlength = computed(() => {
-  if (!props.textLimit || props.textLimit <= 0 || props.textLimit > defaultMaxlength) {
-    return defaultMaxlength;
-  }
-  return props.textLimit;
+  return props.textLimit && props.textLimit > 0 ? props.textLimit : undefined;
 });
 
 const getTextLength = (text: string) => Array.from(text).length;
@@ -36,7 +32,7 @@ const validateTextLimit = (text: string) => {
     message.warning(`${t('Paste')} ${t('NoPermission')}`);
     return false;
   }
-  if (getTextLength(text) > maxlength.value) {
+  if (maxlength.value && getTextLength(text) > maxlength.value) {
     message.warning(`${t('Paste')} ${t('ClipboardTextLimitExceeded')}: ${maxlength.value}`);
     return false;
   }

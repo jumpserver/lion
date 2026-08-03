@@ -94,7 +94,6 @@ interface ClipboardPolicy {
   paste?: ClipboardPolicyItem;
 }
 
-const DEFAULT_CLIPBOARD_TEXT_LIMIT = 4096;
 const BYTES_PER_MEGABYTE = 1024 * 1024;
 const getTextLength = (text: string) => Array.from(text).length;
 
@@ -424,10 +423,7 @@ export function useGuacamoleClient(t: any) {
   };
   const getClipboardTextLimit = (direction: 'copy' | 'paste') => {
     const limit = getClipboardPolicyItem(direction)?.text_limit || 0;
-    if (!Number.isFinite(limit) || limit <= 0 || limit > DEFAULT_CLIPBOARD_TEXT_LIMIT) {
-      return DEFAULT_CLIPBOARD_TEXT_LIMIT;
-    }
-    return limit;
+    return Number.isFinite(limit) && limit > 0 ? limit : 0;
   };
   const getClipboardFileSizeLimit = (direction: 'copy' | 'paste') => {
     const limit = getClipboardPolicyItem(direction)?.file_size_limit || 0;
