@@ -448,6 +448,7 @@ const shouldEnableScroll = ref(false);
               :disabled="!hasClipboardPermission"
               :copy-disabled="!action_permission.enable_copy"
               :paste-disabled="!action_permission.enable_paste"
+              :paste-policy-disabled="action_permission.clipboard_policy?.paste?.enabled === false"
               :remote-text="remoteClipboardText"
               :text-limit="clipboardPasteTextLimit"
               @update:text="ClipBoardTextChange"

@@ -1,6 +1,8 @@
 {
   "ClipboardTextLimitExceeded": "クリップボードのテキストが制限を超えています",
   "ClipboardFileSizeLimitExceeded": "クリップボードのファイルが制限を超えています",
+  "ClipboardCopyDeniedByPolicy": "クリップボード制御ルールによりコピーできません",
+  "ClipboardPasteDeniedByPolicy": "クリップボード制御ルールにより貼り付けできません",
   "Copy": "コピー",
   "Paste": "貼り付け",
   "NoPermission": "権限がありません"

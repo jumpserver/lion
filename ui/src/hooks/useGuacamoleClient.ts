@@ -85,6 +85,7 @@ const FileType = {
 };
 
 interface ClipboardPolicyItem {
+  enabled?: boolean;
   text_limit?: number;
   file_size_limit?: number;
 }
@@ -438,6 +439,19 @@ export function useGuacamoleClient(t: any) {
         : action_permission.value?.enable_paste,
     );
   };
+  const isClipboardDirectionDeniedByPolicy = (direction: 'copy' | 'paste') => {
+    return getClipboardPolicyItem(direction)?.enabled === false;
+  };
+  const showClipboardPermissionWarning = (direction: 'copy' | 'paste') => {
+    if (isClipboardDirectionDeniedByPolicy(direction)) {
+      const key =
+        direction === 'copy' ? 'ClipboardCopyDeniedByPolicy' : 'ClipboardPasteDeniedByPolicy';
+      message.warning(t(key));
+      return;
+    }
+    const action = direction === 'copy' ? t('Copy') : t('Paste');
+    message.warning(`${action} ${t('NoPermission')}`);
+  };
   const showClipboardLimitWarning = (direction: 'copy' | 'paste', limit: number) => {
     const action = direction === 'copy' ? t('Copy') : t('Paste');
     message.warning(`${action} ${t('ClipboardTextLimitExceeded')}: ${limit}`);
@@ -448,8 +462,7 @@ export function useGuacamoleClient(t: any) {
   };
   const validateClipboardText = (direction: 'copy' | 'paste', text: string) => {
     if (!canUseClipboardDirection(direction)) {
-      const action = direction === 'copy' ? t('Copy') : t('Paste');
-      message.warning(`${action} ${t('NoPermission')}`);
+      showClipboardPermissionWarning(direction);
       return false;
     }
     const limit = getClipboardTextLimit(direction);
@@ -461,8 +474,7 @@ export function useGuacamoleClient(t: any) {
   };
   const validateClipboardBlob = (direction: 'copy' | 'paste', size: number) => {
     if (!canUseClipboardDirection(direction)) {
-      const action = direction === 'copy' ? t('Copy') : t('Paste');
-      message.warning(`${action} ${t('NoPermission')}`);
+      showClipboardPermissionWarning(direction);
       return false;
     }
     const limit = getClipboardFileSizeLimitBytes(direction);

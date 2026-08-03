@@ -17,6 +17,7 @@ const props = defineProps<{
   disabled?: boolean;
   copyDisabled?: boolean;
   pasteDisabled?: boolean;
+  pastePolicyDisabled?: boolean;
   textLimit?: number;
 }>();
 
@@ -28,6 +29,10 @@ const maxlength = computed(() => {
 const getTextLength = (text: string) => Array.from(text).length;
 
 const validateTextLimit = (text: string) => {
+  if (props.pastePolicyDisabled) {
+    message.warning(t('ClipboardPasteDeniedByPolicy'));
+    return false;
+  }
   if (props.disabled || props.pasteDisabled) {
     message.warning(`${t('Paste')} ${t('NoPermission')}`);
     return false;

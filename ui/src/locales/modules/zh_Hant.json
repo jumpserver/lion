@@ -1,6 +1,8 @@
 {
   "ClipboardTextLimitExceeded": "剪貼簿文字超過限制",
   "ClipboardFileSizeLimitExceeded": "剪貼簿檔案超過限制",
+  "ClipboardCopyDeniedByPolicy": "觸發剪貼簿控制規則，無法複製",
+  "ClipboardPasteDeniedByPolicy": "觸發剪貼簿控制規則，無法貼上",
   "Copy": "複製",
   "Paste": "貼上",
   "NoPermission": "無權限"
