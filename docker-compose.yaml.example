@@ -1,19 +1,31 @@
-version: "3.0"
-
 networks:
-  guacd:
+  lion:
     driver: bridge
 
 services:
-  guacd:
-    image: jumpserver/guacd:1.4.0
-    container_name: guacd
+  lion:
+    image: jumpserver/lion:dev
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VERSION: dev
+    container_name: jms_lion
     ports:
+      - "8081:8081"
       - "4822:4822"
     environment:
+      CORE_HOST: ${CORE_HOST:-http://10.0.0.5:8080}
+      BOOTSTRAP_TOKEN: ${BOOTSTRAP_TOKEN:-ICAgICAgICBUWCBl}
+      BIND_HOST: 0.0.0.0
+      HTTPD_PORT: 8081
+      LOG_LEVEL: DEBUG
+      GUA_HOST: 127.0.0.1
+      GUA_PORT: 4822
+      SHARE_ROOM_TYPE: local
       GUACD_LOG_LEVEL: debug
     networks:
-      - guacd
+      - lion
     restart: always
     volumes:
       - ./data/:/opt/lion/data/:rw # /opt/lion/-> 本地项目路径, 修改 ./data 目录权限为777

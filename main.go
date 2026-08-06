@@ -61,15 +61,19 @@ func main() {
 	config.Setup(configPath)
 	logger.SetupLogger(config.GlobalConfig)
 	jmsService := MustJMService()
-	pandaClient := NewPandaClient(*config.GlobalConfig)
+	pandaClientFactory := NewPandaClientFactory(*config.GlobalConfig)
+	pandaClient := pandaClientFactory(config.GlobalConfig.PandaHost)
 	bootstrap(jmsService)
 	tunnelService := tunnel.GuacamoleTunnelServer{
 		Cache: &tunnel.GuaTunnelCacheManager{
 			GuaTunnelCache: NewGuaTunnelCache(),
 		},
 		JmsService: jmsService,
-		SessionService: &session.Server{JmsService: jmsService,
-			PandaClient: pandaClient},
+		SessionService: &session.Server{
+			JmsService:         jmsService,
+			PandaClient:        pandaClient,
+			PandaClientFactory: pandaClientFactory,
+		},
 	}
 	eng := registerRouter(jmsService, &tunnelService)
 	go runHeartTask(jmsService, tunnelService.Cache)
@@ -631,11 +635,16 @@ func MustValidKey(key model.AccessKey) model.AccessKey {
 }
 
 func NewPandaClient(cfg config.Config) *panda.Client {
-	pandaHost := cfg.PandaHost
+	return NewPandaClientFactory(cfg)(cfg.PandaHost)
+}
+
+func NewPandaClientFactory(cfg config.Config) func(string) *panda.Client {
 	var key model.AccessKey
 	if err := key.LoadFromFile(cfg.AccessKeyFilePath); err != nil {
 		logger.Errorf("Create panda client failed: loading access key err %s", err)
-		return nil
+		return func(string) *panda.Client { return nil }
 	}
-	return panda.NewClient(pandaHost, key, cfg.IgnoreVerifyCerts)
+	return func(pandaHost string) *panda.Client {
+		return panda.NewClient(pandaHost, key, cfg.IgnoreVerifyCerts)
+	}
 }
