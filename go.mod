@@ -88,3 +88,5 @@ require (
 	golang.org/x/time v0.12.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
+
+replace github.com/jumpserver-dev/sdk-go => ../sdk-go

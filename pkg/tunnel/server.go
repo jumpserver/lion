@@ -231,12 +231,13 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	for argName, argValue := range info.ExtraConfig() {
 		conf.SetParameter(argName, argValue)
 	}
-	if tunnelSession.Gateway != nil {
+	if tunnelSession.Gateway != nil || tunnelSession.GatewayTarget != nil {
 		dstAddr := net.JoinHostPort(conf.GetParameter(guacd.Hostname),
 			conf.GetParameter(guacd.Port))
 		domainGateway := gateway.DomainGateway{
 			DstAddr:         dstAddr,
 			SelectedGateway: tunnelSession.Gateway,
+			Destination:     tunnelSession.GatewayTarget,
 		}
 		if err = domainGateway.Start(); err != nil {
 			logger.Errorf("Start domain gateway err: %+v", err)
@@ -253,7 +254,7 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 		localAddr := domainGateway.GetListenAddr()
 		conf.SetParameter(guacd.Hostname, localAddr.IP.String())
 		conf.SetParameter(guacd.Port, strconv.Itoa(localAddr.Port))
-		logger.Infof("Start domain gateway %s listen on %s:%d", domainGateway.SelectedGateway.Name,
+		logger.Infof("Start SSH forwarder %s listen on %s:%d", domainGateway.Name(),
 			localAddr.IP.String(), localAddr.Port)
 	}
 

@@ -42,7 +42,15 @@ var (
 type Server struct {
 	JmsService *service.JMService
 
-	PandaClient *panda.Client
+	PandaClient        *panda.Client
+	PandaClientFactory func(string) *panda.Client
+}
+
+func (s *Server) pandaClientFor(provider *model.VirtualAppProvider) *panda.Client {
+	if provider != nil && provider.ServiceURL != "" && s.PandaClientFactory != nil {
+		return s.PandaClientFactory(provider.ServiceURL)
+	}
+	return s.PandaClient
 }
 
 func ParseWidthAndHeight(ctx *gin.Context, connectToken *model.ConnectToken) (int, int) {
@@ -143,16 +151,36 @@ func (s *Server) CreatByToken(ctx *gin.Context, token string) (TunnelSession, er
 			DesktopWidth:  width,
 			DesktopHeight: height,
 		}
-		virtualContainer, err2 := s.PandaClient.CreateContainer(token, appOpt)
+		if virtualApp.Provider != nil {
+			appOpt.ConnectionMode = virtualApp.Provider.ConnectionMode
+		}
+		pandaClient := s.pandaClientFor(virtualApp.Provider)
+		if pandaClient == nil {
+			return TunnelSession{}, fmt.Errorf("%w: Panda client is not configured", ErrPandaAPIService)
+		}
+		virtualContainer, err2 := pandaClient.CreateContainer(token, appOpt)
 		if err2 != nil {
 			return TunnelSession{}, fmt.Errorf("%w: %s", ErrPandaAPIService, err2.Error())
 		}
 		logger.Infof("Create container %s success", virtualContainer.ContainerId)
 		opts = append(opts, WithVirtualAppOption(&virtualContainer))
+		opts = append(opts, WithVirtualAppClient(pandaClient))
 		logger.Infof("Connect applet(%s) use virtual app %s", connectToken.Asset.String(),
 			virtualContainer.String())
-		// 连接虚拟应用，不需要使用虚拟应用的网关
-		opts = append(opts, WithGateway(nil))
+		if virtualApp.Provider != nil && virtualApp.Provider.ConnectionMode == "ssh" {
+			providerTarget := model.Gateway{
+				ID:        virtualApp.Provider.Host.ID,
+				Name:      virtualApp.Provider.Name,
+				Address:   virtualApp.Provider.Host.Address,
+				Protocols: virtualApp.Provider.Host.Protocols,
+				Account:   virtualApp.Provider.Account,
+			}
+			opts = append(opts, WithGateway(virtualApp.Provider.Gateway))
+			opts = append(opts, WithGatewayTarget(&providerTarget))
+		} else {
+			// Legacy and direct providers remain directly reachable by guacd.
+			opts = append(opts, WithGateway(nil))
+		}
 
 	default:
 		if _, err1 := s.JmsService.GetConnectTokenInfo(token, true); err1 != nil {
@@ -208,6 +236,12 @@ func WithGateway(gateway *model.Gateway) TunnelOption {
 	}
 }
 
+func WithGatewayTarget(target *model.Gateway) TunnelOption {
+	return func(tunnel *tunnelOption) {
+		tunnel.GatewayTarget = target
+	}
+}
+
 func WithTerminalConfig(cfg *model.TerminalConfig) TunnelOption {
 	return func(tunnel *tunnelOption) {
 		tunnel.TerminalConfig = cfg
@@ -226,6 +260,12 @@ func WithVirtualAppOption(virtualAppOpt *model.VirtualAppContainer) TunnelOption
 	}
 }
 
+func WithVirtualAppClient(client *panda.Client) TunnelOption {
+	return func(tunnel *tunnelOption) {
+		tunnel.virtualAppClient = client
+	}
+}
+
 func WithUser(user *model.User) TunnelOption {
 	return func(tunnel *tunnelOption) {
 		tunnel.User = user
@@ -233,20 +273,22 @@ func WithUser(user *model.User) TunnelOption {
 }
 
 type tunnelOption struct {
-	Protocol   string
-	User       *model.User
-	Asset      *model.Asset
-	Account    *model.Account
-	Platform   *model.Platform
-	Domain     *model.Domain
-	Gateway    *model.Gateway
-	Actions    model.Actions
-	ExpireInfo model.ExpireInfo
+	Protocol      string
+	User          *model.User
+	Asset         *model.Asset
+	Account       *model.Account
+	Platform      *model.Platform
+	Domain        *model.Domain
+	Gateway       *model.Gateway
+	GatewayTarget *model.Gateway
+	Actions       model.Actions
+	ExpireInfo    model.ExpireInfo
 
-	authInfo       *model.ConnectToken
-	TerminalConfig *model.TerminalConfig
-	appletOpt      *model.AppletOption
-	virtualAppOPt  *model.VirtualAppContainer
+	authInfo         *model.ConnectToken
+	TerminalConfig   *model.TerminalConfig
+	appletOpt        *model.AppletOption
+	virtualAppOPt    *model.VirtualAppContainer
+	virtualAppClient *panda.Client
 }
 
 type TunnelOption func(*tunnelOption)
@@ -282,6 +324,7 @@ func (s *Server) Create(ctx *gin.Context, opts ...TunnelOption) (sess TunnelSess
 	perm := opt.Actions.Permission()
 	sess.AppletOpts = opt.appletOpt
 	sess.VirtualAppOpts = opt.virtualAppOPt
+	sess.GatewayTarget = opt.GatewayTarget
 	sess.AuthInfo = opt.authInfo
 	comment := ""
 	if opt.appletOpt != nil {
@@ -322,7 +365,10 @@ func (s *Server) Create(ctx *gin.Context, opts ...TunnelOption) (sess TunnelSess
 			return s.JmsService.ReleaseAppletAccount(opt.appletOpt.ID)
 		}
 		if opt.virtualAppOPt != nil {
-			return s.PandaClient.ReleaseContainer(opt.virtualAppOPt.ContainerId)
+			if opt.virtualAppClient == nil {
+				return errors.New("Panda client is not configured")
+			}
+			return opt.virtualAppClient.ReleaseContainer(opt.virtualAppOPt.ContainerId)
 		}
 		return nil
 
