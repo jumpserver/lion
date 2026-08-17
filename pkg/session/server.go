@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/gin-gonic/gin"
 
+	"lion/pkg/config"
 	"lion/pkg/logger"
 
 	"github.com/jumpserver-dev/sdk-go/common"
@@ -42,7 +44,61 @@ var (
 type Server struct {
 	JmsService *service.JMService
 
-	PandaClient *panda.Client
+	pandaClient atomic.Pointer[panda.Client]
+}
+
+func NewServer(jmsService *service.JMService) *Server {
+	s := &Server{JmsService: jmsService}
+	s.updatePandaHost(pandaHostFromConfig())
+	return s
+}
+
+func newPandaClient(host string) (*panda.Client, error) {
+	host = normalizePandaHost(host)
+	if host == "" {
+		return nil, errors.New("empty panda host")
+	}
+	var key model.AccessKey
+	if err := key.LoadFromFile(config.GlobalConfig.AccessKeyFilePath); err != nil {
+		return nil, fmt.Errorf("loading access key: %w", err)
+	}
+	client := panda.NewClient(host, key, config.GlobalConfig.IgnoreVerifyCerts)
+	if client == nil {
+		return nil, fmt.Errorf("invalid panda host %s", host)
+	}
+	return client, nil
+}
+
+func pandaHostFromConfig() string {
+	return normalizePandaHost(config.GlobalConfig.PandaHost)
+}
+
+func normalizePandaHost(host string) string {
+	return strings.TrimSuffix(strings.TrimSpace(host), "/")
+}
+
+func withPandaClient(client *panda.Client) TunnelOption {
+	return func(tunnel *tunnelOption) {
+		tunnel.pandaClient = client
+	}
+}
+
+func (s *Server) updatePandaHost(host string) {
+	host = normalizePandaHost(host)
+	if host == "" {
+		return
+	}
+	curClient := s.pandaClient.Load()
+	if curClient != nil && curClient.BaseURL == host {
+		return
+	}
+	client, err := newPandaClient(host)
+	if err != nil {
+		logger.Errorf("Create panda client failed, keep old panda host: %s", err)
+		return
+	}
+	s.pandaClient.Store(client)
+	logger.Infof("Update panda host to %s", host)
 }
 
 func ParseWidthAndHeight(ctx *gin.Context, connectToken *model.ConnectToken) (int, int) {
@@ -92,6 +148,7 @@ func (s *Server) CreatByToken(ctx *gin.Context, token string) (TunnelSession, er
 	if err != nil {
 		return TunnelSession{}, fmt.Errorf("%w: %s", ErrAPIService, err.Error())
 	}
+	s.updatePandaHost(cfg.PandaHost)
 	if !connectToken.Actions.EnableConnect() {
 		return TunnelSession{}, ErrPermissionDeny
 	}
@@ -143,12 +200,17 @@ func (s *Server) CreatByToken(ctx *gin.Context, token string) (TunnelSession, er
 			DesktopWidth:  width,
 			DesktopHeight: height,
 		}
-		virtualContainer, err2 := s.PandaClient.CreateContainer(token, appOpt)
+		pandaClient := s.pandaClient.Load()
+		if pandaClient == nil {
+			return TunnelSession{}, fmt.Errorf("%w: panda client not ready", ErrPandaAPIService)
+		}
+		virtualContainer, err2 := pandaClient.CreateContainer(token, appOpt)
 		if err2 != nil {
 			return TunnelSession{}, fmt.Errorf("%w: %s", ErrPandaAPIService, err2.Error())
 		}
 		logger.Infof("Create container %s success", virtualContainer.ContainerId)
 		opts = append(opts, WithVirtualAppOption(&virtualContainer))
+		opts = append(opts, withPandaClient(pandaClient))
 		logger.Infof("Connect applet(%s) use virtual app %s", connectToken.Asset.String(),
 			virtualContainer.String())
 		// 连接虚拟应用，不需要使用虚拟应用的网关
@@ -247,6 +309,7 @@ type tunnelOption struct {
 	TerminalConfig *model.TerminalConfig
 	appletOpt      *model.AppletOption
 	virtualAppOPt  *model.VirtualAppContainer
+	pandaClient    *panda.Client
 }
 
 type TunnelOption func(*tunnelOption)
@@ -322,7 +385,10 @@ func (s *Server) Create(ctx *gin.Context, opts ...TunnelOption) (sess TunnelSess
 			return s.JmsService.ReleaseAppletAccount(opt.appletOpt.ID)
 		}
 		if opt.virtualAppOPt != nil {
-			return s.PandaClient.ReleaseContainer(opt.virtualAppOPt.ContainerId)
+			if opt.pandaClient == nil {
+				return fmt.Errorf("%w: panda client not ready", ErrPandaAPIService)
+			}
+			return opt.pandaClient.ReleaseContainer(opt.virtualAppOPt.ContainerId)
 		}
 		return nil
 

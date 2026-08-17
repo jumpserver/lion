@@ -28,7 +28,6 @@ import (
 	"github.com/jumpserver-dev/sdk-go/common"
 	"github.com/jumpserver-dev/sdk-go/model"
 	"github.com/jumpserver-dev/sdk-go/service"
-	"github.com/jumpserver-dev/sdk-go/service/panda"
 	"github.com/jumpserver-dev/sdk-go/storage"
 )
 
@@ -61,15 +60,13 @@ func main() {
 	config.Setup(configPath)
 	logger.SetupLogger(config.GlobalConfig)
 	jmsService := MustJMService()
-	pandaClient := NewPandaClient(*config.GlobalConfig)
 	bootstrap(jmsService)
 	tunnelService := tunnel.GuacamoleTunnelServer{
 		Cache: &tunnel.GuaTunnelCacheManager{
 			GuaTunnelCache: NewGuaTunnelCache(),
 		},
-		JmsService: jmsService,
-		SessionService: &session.Server{JmsService: jmsService,
-			PandaClient: pandaClient},
+		JmsService:     jmsService,
+		SessionService: session.NewServer(jmsService),
 	}
 	eng := registerRouter(jmsService, &tunnelService)
 	go runHeartTask(jmsService, tunnelService.Cache)
@@ -628,14 +625,4 @@ func MustValidKey(key model.AccessKey) model.AccessKey {
 	logger.Error("校验 access key failed退出")
 	os.Exit(1)
 	return key
-}
-
-func NewPandaClient(cfg config.Config) *panda.Client {
-	pandaHost := cfg.PandaHost
-	var key model.AccessKey
-	if err := key.LoadFromFile(cfg.AccessKeyFilePath); err != nil {
-		logger.Errorf("Create panda client failed: loading access key err %s", err)
-		return nil
-	}
-	return panda.NewClient(pandaHost, key, cfg.IgnoreVerifyCerts)
 }
