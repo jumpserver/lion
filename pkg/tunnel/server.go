@@ -137,6 +137,9 @@ func (g *GuacamoleTunnelServer) getClientInfo(ctx *gin.Context, token *model.Con
 	if keyboardLayout, ok := ctx.GetQuery("GUAC_KEYBOARD"); ok {
 		info.KeyboardLayout = keyboardLayout
 	}
+	if timezone, ok := ctx.GetQuery("GUAC_TIMEZONE"); ok {
+		info.SetTimezone(timezone)
+	}
 	return info
 }
 
@@ -309,6 +312,7 @@ func (g *GuacamoleTunnelServer) Connect(ctx *gin.Context) {
 	}
 	conn.outputFilter = &outFilter
 	conn.inputFilter = &inputFilter
+	conn.clipboardFilter = newClipboardPolicyFilter(tunnelSession.ActionPerm)
 	logger.Infof("Session[%s] connect success", sessionId)
 	g.Cache.Add(&conn)
 	replayRecorder := &ReplayRecorder{

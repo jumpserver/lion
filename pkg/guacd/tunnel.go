@@ -33,6 +33,7 @@ func NewTunnel(address string, config Configuration, info ClientInformation) (tu
 	tunnel = &Tunnel{}
 	tunnel.conn = conn
 	tunnel.rw = bufio.NewReadWriter(bufio.NewReader(conn), bufio.NewWriter(conn))
+	tunnel.decoder = NewInstructionDecoder(tunnel.rw.Reader)
 	tunnel.Config = config
 
 	selectArg := config.ConnectionID
@@ -129,8 +130,9 @@ func NewTunnel(address string, config Configuration, info ClientInformation) (tu
 }
 
 type Tunnel struct {
-	rw   *bufio.ReadWriter
-	conn net.Conn
+	rw      *bufio.ReadWriter
+	decoder *InstructionDecoder
+	conn    net.Conn
 
 	uuid   string
 	Config Configuration
@@ -172,22 +174,13 @@ func (t *Tunnel) Flush() error {
 }
 
 func (t *Tunnel) ReadInstruction() (instruction Instruction, err error) {
-	var ret string
-	for {
-		if err = t.conn.SetReadDeadline(time.Now().Add(defaultSocketTimeOut)); err != nil {
-			return Instruction{}, err
-		}
-		msg, err := t.rw.ReadString(ByteSemicolonDelimiter)
-		if err != nil {
-			return Instruction{}, err
-		}
-		ret += msg
-		if retInstruction, err := ParseInstructionString(ret); err == nil {
-			return retInstruction, nil
-		} else {
-			log.Printf("%s %v\n", ret, err.Error())
-		}
+	if err = t.conn.SetReadDeadline(time.Now().Add(defaultSocketTimeOut)); err != nil {
+		return Instruction{}, err
 	}
+	if t.decoder == nil {
+		t.decoder = NewInstructionDecoder(t.rw.Reader)
+	}
+	return t.decoder.ReadInstruction()
 }
 
 func (t *Tunnel) Read() ([]byte, error) {
