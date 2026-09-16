@@ -263,23 +263,33 @@ func (p *PartUploader) GetStorage() storage.ReplayStorage {
 const recordDirTimeFormat = "2006-01-02"
 
 func (p *PartUploader) uploadToStorage(uploadPath string) {
-	// check whether to use ENABLE_VIDEO_WORKER
-	if videoWorkerClient := NewWorkerClient(*config.GlobalConfig); videoWorkerClient != nil {
-		taskCfg := videoworker.TaskConfig{
-			Width:   p.Info.OptimalScreenWidth,
-			Height:  p.Info.OptimalScreenHeight,
-			Bitrate: 1,
-		}
-		taskId, err := videoWorkerClient.CreateReplaySessionTask(p.SessionId, uploadPath, &taskCfg)
-		if err == nil {
-			logger.Infof("Create replay session VideoWorker task success, task id: %s", taskId)
-			if err = os.RemoveAll(p.RootPath); err != nil {
-				logger.Errorf("PartUploader %s remove root path %s error: %v", p.SessionId, p.RootPath, err)
+	if p.TermCfg == nil {
+		// Without Core's storage configuration there is no safe fallback target.
+		// Leave local replay files intact for a later recovery attempt.
+		logger.Errorf("PartUploader %s cannot upload replay without terminal config; retaining local files", p.SessionId)
+		return
+	}
+	// An environment switch alone must not route Community Edition recordings
+	// to Video Worker. Core supplies the license state in terminal configuration.
+	if shouldUseVideoWorker(config.GlobalConfig.EnableVideoWorker, p.TermCfg) {
+		videoWorkerClient := NewWorkerClient(*config.GlobalConfig)
+		if videoWorkerClient != nil {
+			taskCfg := videoworker.TaskConfig{
+				Width:   p.Info.OptimalScreenWidth,
+				Height:  p.Info.OptimalScreenHeight,
+				Bitrate: 1,
 			}
-			return
+			taskId, err := videoWorkerClient.CreateReplaySessionTask(p.SessionId, uploadPath, &taskCfg)
+			if err == nil {
+				logger.Infof("Create replay session VideoWorker task success, task id: %s", taskId)
+				if err = os.RemoveAll(p.RootPath); err != nil {
+					logger.Errorf("PartUploader %s remove root path %s error: %v", p.SessionId, p.RootPath, err)
+				}
+				return
+			}
+			// videoWorkerClient failed then try to use self storage to upload
+			logger.Errorf("Create replay session task error: %v, try to use self storage", err)
 		}
-		// videoWorkerClient failed then try to use self storage to upload
-		logger.Errorf("Create replay session task error: %v, try to use self storage", err)
 	}
 
 	// 上传到存储
@@ -329,6 +339,10 @@ func (p *PartUploader) uploadToStorage(uploadPath string) {
 	}
 	logger.Infof("PartUploader %s remove root path %s success", p.SessionId, p.RootPath)
 
+}
+
+func shouldUseVideoWorker(enabled bool, terminalCfg *model.TerminalConfig) bool {
+	return enabled && terminalCfg != nil && terminalCfg.LicenseIsValid
 }
 
 func (p *PartUploader) RecordLifecycleLog(event model.LifecycleEvent, logObj model.SessionLifecycleLog) {
