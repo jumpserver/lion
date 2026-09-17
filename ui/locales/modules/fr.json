@@ -1,0 +1,15 @@
+{
+  "ClipboardTextLimitExceeded": "le texte du presse-papiers dépasse la limite autorisée",
+  "ClipboardFileSizeLimitExceeded": "le fichier du presse-papiers dépasse la limite autorisée",
+  "ClipboardCopyDeniedByPolicy": "La stratégie de contrôle du presse-papiers interdit la copie",
+  "ClipboardPasteDeniedByPolicy": "La stratégie de contrôle du presse-papiers interdit le collage",
+  "Copy": "Copier",
+  "Paste": "Coller",
+  "NoPermission": "accès refusé",
+  "LoadMore": "Charger plus",
+  "Uploading": "Envoi en cours",
+  "Waiting": "En attente",
+  "Forward": "Transférer",
+  "ZoomIn": "Zoomer",
+  "ZoomOut": "Dézoomer"
+}
