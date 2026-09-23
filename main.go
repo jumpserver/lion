@@ -334,8 +334,8 @@ func registerRouter(jmsService *service.JMService, tunnelService *tunnel.Guacamo
 		apiGroup.POST("/share/:id/", tunnelService.GetShare)
 	}
 
-	pprofRouter := eng.Group("/debug/pprof")
-	{
+	if config.GlobalConfig.Debug {
+		pprofRouter := eng.Group("/debug/pprof")
 		pprofRouter.Use(middleware.HTTPMiddleDebugAuth())
 		pprofRouter.GET("/", gin.WrapF(pprof.Index))
 		pprofRouter.GET("/allocs", gin.WrapF(pprof.Handler("allocs").ServeHTTP))

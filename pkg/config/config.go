@@ -33,6 +33,7 @@ type Config struct {
 	BindHost       string `mapstructure:"BIND_HOST"`
 	HTTPPort       string `mapstructure:"HTTPD_PORT"`
 	LogLevel       string `mapstructure:"LOG_LEVEL"`
+	Debug          bool   `mapstructure:"DEBUG"`
 
 	GuacdAddrs string `mapstructure:"GUACD_ADDRS"`
 
@@ -129,6 +130,7 @@ func getDefaultConfig() Config {
 		BindHost:                  "0.0.0.0",
 		HTTPPort:                  "8081",
 		LogLevel:                  "INFO",
+		Debug:                     false,
 		GuaHost:                   "127.0.0.1",
 		GuaPort:                   "4822",
 		DisableAllCopyPaste:       false,
